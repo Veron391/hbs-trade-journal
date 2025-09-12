@@ -18,11 +18,29 @@ const fetcher = (url: string) => fetch(url).then(res => res.json());
  */
 export function useLineSeries(): { date: string; pnl: number }[] {
   const { range, category } = useFilters();
-  const { data: apiTrades } = useSWR('/api/trades', fetcher);
   
   return useMemo(() => {
-    // Use API trades instead of localStorage
-    const realTrades: any[] = Array.isArray(apiTrades) ? apiTrades : [];
+    // Get real trades from localStorage for all users
+    let realTrades: any[] = [];
+    try {
+      // Get all registered users
+      const registeredUsers = localStorage.getItem('registeredUsers');
+      if (registeredUsers) {
+        const users = JSON.parse(registeredUsers);
+        
+        // Get trades for each user
+        users.forEach((user: any) => {
+          const userTradesKey = `trades_${user.id}`;
+          const userTrades = localStorage.getItem(userTradesKey);
+          if (userTrades) {
+            const parsedTrades = JSON.parse(userTrades);
+            realTrades = realTrades.concat(parsedTrades);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error getting trades from localStorage:', error);
+    }
 
     // If no real trades, return empty array
     if (realTrades.length === 0) {
@@ -33,20 +51,19 @@ export function useLineSeries(): { date: string; pnl: number }[] {
     const formattedTrades = realTrades.map(trade => ({
       id: trade.id,
       userId: trade.userId,
-      date: (typeof trade.exitDate === 'string' ? trade.exitDate : new Date(trade.exitDate).toISOString().split('T')[0]),
+      date: trade.exitDate,
       symbol: trade.symbol,
-      assetClass: (trade.assetType || trade.type) === 'crypto' ? 'crypto' : 'stock',
-      qty: typeof trade.qty === 'number' ? trade.qty : (typeof trade.quantity === 'number' ? trade.quantity : 0),
+      assetClass: trade.type === 'crypto' ? 'crypto' : 'stock',
+      qty: trade.quantity,
       pnl: (() => {
         const entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : parseFloat(String(trade.entryPrice)) || 0;
-        const exitPrice = typeof trade.price === 'number' ? trade.price : (typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice)) || 0);
-        const quantity = typeof trade.qty === 'number' ? trade.qty : (typeof trade.quantity === 'number' ? trade.quantity : 0);
+        const exitPrice = typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice)) || 0;
+        const quantity = typeof trade.quantity === 'number' ? trade.quantity : parseFloat(String(trade.quantity)) || 0;
         
         const entryValue = entryPrice * quantity;
         const exitValue = exitPrice * quantity;
         
-        const direction = trade.direction || (trade.side === 'buy' ? 'long' : 'short');
-        if (direction === 'long') {
+        if (trade.direction === 'long') {
           return exitValue - entryValue;
         } else {
           return entryValue - exitValue;
@@ -56,7 +73,7 @@ export function useLineSeries(): { date: string; pnl: number }[] {
 
     const filteredTrades = filterByRangeAndCategory(formattedTrades, range, category);
     return seriesPLByDay(filteredTrades);
-  }, [apiTrades, range.start.getTime(), range.end.getTime(), category]);
+  }, [range.start.getTime(), range.end.getTime(), category]);
 }
 
 /**
@@ -64,10 +81,29 @@ export function useLineSeries(): { date: string; pnl: number }[] {
  */
 export function useDonutData(): { label: string; value: number }[] {
   const { range, category } = useFilters();
-  const { data: apiTrades } = useSWR('/api/trades', fetcher);
   
   return useMemo(() => {
-    const realTrades: any[] = Array.isArray(apiTrades) ? apiTrades : [];
+    // Get real trades from localStorage for all users
+    let realTrades: any[] = [];
+    try {
+      // Get all registered users
+      const registeredUsers = localStorage.getItem('registeredUsers');
+      if (registeredUsers) {
+        const users = JSON.parse(registeredUsers);
+        
+        // Get trades for each user
+        users.forEach((user: any) => {
+          const userTradesKey = `trades_${user.id}`;
+          const userTrades = localStorage.getItem(userTradesKey);
+          if (userTrades) {
+            const parsedTrades = JSON.parse(userTrades);
+            realTrades = realTrades.concat(parsedTrades);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error getting trades from localStorage:', error);
+    }
 
     // If no real trades, return empty array
     if (realTrades.length === 0) {
@@ -78,20 +114,19 @@ export function useDonutData(): { label: string; value: number }[] {
     const formattedTrades = realTrades.map(trade => ({
       id: trade.id,
       userId: trade.userId,
-      date: (typeof trade.exitDate === 'string' ? trade.exitDate : new Date(trade.exitDate).toISOString().split('T')[0]),
+      date: trade.exitDate,
       symbol: trade.symbol,
-      assetClass: (trade.assetType || trade.type) === 'crypto' ? 'crypto' : 'stock',
-      qty: typeof trade.qty === 'number' ? trade.qty : (typeof trade.quantity === 'number' ? trade.quantity : 0),
+      assetClass: trade.type === 'crypto' ? 'crypto' : 'stock',
+      qty: trade.quantity,
       pnl: (() => {
         const entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : parseFloat(String(trade.entryPrice)) || 0;
-        const exitPrice = typeof trade.price === 'number' ? trade.price : (typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice)) || 0);
-        const quantity = typeof trade.qty === 'number' ? trade.qty : (typeof trade.quantity === 'number' ? trade.quantity : 0);
+        const exitPrice = typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice)) || 0;
+        const quantity = typeof trade.quantity === 'number' ? trade.quantity : parseFloat(String(trade.quantity)) || 0;
         
         const entryValue = entryPrice * quantity;
         const exitValue = exitPrice * quantity;
         
-        const direction = trade.direction || (trade.side === 'buy' ? 'long' : 'short');
-        if (direction === 'long') {
+        if (trade.direction === 'long') {
           return exitValue - entryValue;
         } else {
           return entryValue - exitValue;
@@ -110,7 +145,7 @@ export function useDonutData(): { label: string; value: number }[] {
       label: symbol.label,
       value: symbol.value
     }));
-  }, [apiTrades, range.start.getTime(), range.end.getTime(), category]);
+  }, [range.start.getTime(), range.end.getTime(), category]);
 }
 
 /**
@@ -177,10 +212,29 @@ export function labelForCategory(cat: 'total' | 'stock' | 'crypto'): string {
  */
 export function useTradesByDay(): { date: string; trades: number }[] {
   const { range, category } = useFilters();
-  const { data: apiTrades } = useSWR('/api/trades', fetcher);
   
   return useMemo(() => {
-    const realTrades: any[] = Array.isArray(apiTrades) ? apiTrades : [];
+    // Get real trades from localStorage for all users
+    let realTrades: any[] = [];
+    try {
+      // Get all registered users
+      const registeredUsers = localStorage.getItem('registeredUsers');
+      if (registeredUsers) {
+        const users = JSON.parse(registeredUsers);
+        
+        // Get trades for each user
+        users.forEach((user: any) => {
+          const userTradesKey = `trades_${user.id}`;
+          const userTrades = localStorage.getItem(userTradesKey);
+          if (userTrades) {
+            const parsedTrades = JSON.parse(userTrades);
+            realTrades = realTrades.concat(parsedTrades);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error getting trades from localStorage:', error);
+    }
 
     // If no real trades, return empty array
     if (realTrades.length === 0) {
@@ -191,20 +245,19 @@ export function useTradesByDay(): { date: string; trades: number }[] {
     const formattedTrades = realTrades.map(trade => ({
       id: trade.id,
       userId: trade.userId,
-      date: (typeof trade.exitDate === 'string' ? trade.exitDate : new Date(trade.exitDate).toISOString().split('T')[0]),
+      date: trade.exitDate,
       symbol: trade.symbol,
-      assetClass: (trade.assetType || trade.type) === 'crypto' ? 'crypto' : 'stock',
-      qty: typeof trade.qty === 'number' ? trade.qty : (typeof trade.quantity === 'number' ? trade.quantity : 0),
+      assetClass: trade.type === 'crypto' ? 'crypto' : 'stock',
+      qty: trade.quantity,
       pnl: (() => {
         const entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : parseFloat(String(trade.entryPrice)) || 0;
-        const exitPrice = typeof trade.price === 'number' ? trade.price : (typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice)) || 0);
-        const quantity = typeof trade.qty === 'number' ? trade.qty : (typeof trade.quantity === 'number' ? trade.quantity : 0);
+        const exitPrice = typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice)) || 0;
+        const quantity = typeof trade.quantity === 'number' ? trade.quantity : parseFloat(String(trade.quantity)) || 0;
         
         const entryValue = entryPrice * quantity;
         const exitValue = exitPrice * quantity;
         
-        const direction = trade.direction || (trade.side === 'buy' ? 'long' : 'short');
-        if (direction === 'long') {
+        if (trade.direction === 'long') {
           return exitValue - entryValue;
         } else {
           return entryValue - exitValue;
@@ -226,7 +279,7 @@ export function useTradesByDay(): { date: string; trades: number }[] {
     return Array.from(dailyTrades.entries())
       .map(([date, trades]) => ({ date, trades }))
       .sort((a, b) => a.date.localeCompare(b.date));
-  }, [apiTrades, range.start, range.end, category]);
+  }, [range.start, range.end, category]);
 }
 
 /**
@@ -234,10 +287,29 @@ export function useTradesByDay(): { date: string; trades: number }[] {
  */
 export function useCumulativePnL(): { date: string; pnl: number }[] {
   const { range, category } = useFilters();
-  const { data: apiTrades } = useSWR('/api/trades', fetcher);
   
   return useMemo(() => {
-    const realTrades: any[] = Array.isArray(apiTrades) ? apiTrades : [];
+    // Get real trades from localStorage for all users
+    let realTrades: any[] = [];
+    try {
+      // Get all registered users
+      const registeredUsers = localStorage.getItem('registeredUsers');
+      if (registeredUsers) {
+        const users = JSON.parse(registeredUsers);
+        
+        // Get trades for each user
+        users.forEach((user: any) => {
+          const userTradesKey = `trades_${user.id}`;
+          const userTrades = localStorage.getItem(userTradesKey);
+          if (userTrades) {
+            const parsedTrades = JSON.parse(userTrades);
+            realTrades = realTrades.concat(parsedTrades);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error getting trades from localStorage:', error);
+    }
 
     // If no real trades, return empty array
     if (realTrades.length === 0) {
@@ -248,20 +320,19 @@ export function useCumulativePnL(): { date: string; pnl: number }[] {
     const formattedTrades = realTrades.map(trade => ({
       id: trade.id,
       userId: trade.userId,
-      date: (typeof trade.exitDate === 'string' ? trade.exitDate : new Date(trade.exitDate).toISOString().split('T')[0]),
+      date: trade.exitDate,
       symbol: trade.symbol,
-      assetClass: (trade.assetType || trade.type) === 'crypto' ? 'crypto' : 'stock',
-      qty: typeof trade.qty === 'number' ? trade.qty : (typeof trade.quantity === 'number' ? trade.quantity : 0),
+      assetClass: trade.type === 'crypto' ? 'crypto' : 'stock',
+      qty: trade.quantity,
       pnl: (() => {
         const entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : parseFloat(String(trade.entryPrice)) || 0;
-        const exitPrice = typeof trade.price === 'number' ? trade.price : (typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice)) || 0);
-        const quantity = typeof trade.qty === 'number' ? trade.qty : (typeof trade.quantity === 'number' ? trade.quantity : 0);
+        const exitPrice = typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice)) || 0;
+        const quantity = typeof trade.quantity === 'number' ? trade.quantity : parseFloat(String(trade.quantity)) || 0;
         
         const entryValue = entryPrice * quantity;
         const exitValue = exitPrice * quantity;
         
-        const direction = trade.direction || (trade.side === 'buy' ? 'long' : 'short');
-        if (direction === 'long') {
+        if (trade.direction === 'long') {
           return exitValue - entryValue;
         } else {
           return entryValue - exitValue;
@@ -281,7 +352,7 @@ export function useCumulativePnL(): { date: string; pnl: number }[] {
         pnl: Math.round(cumulative * 100) / 100
       };
     });
-  }, [apiTrades, range.start, range.end, category]);
+  }, [range.start, range.end, category]);
 }
 
 /**
@@ -289,10 +360,29 @@ export function useCumulativePnL(): { date: string; pnl: number }[] {
  */
 export function useAssetClassDistribution(): { label: string; value: number; color: string }[] {
   const { range, category } = useFilters();
-  const { data: apiTrades } = useSWR('/api/trades', fetcher);
   
   return useMemo(() => {
-    const realTrades: any[] = Array.isArray(apiTrades) ? apiTrades : [];
+    // Get real trades from localStorage for all users
+    let realTrades: any[] = [];
+    try {
+      // Get all registered users
+      const registeredUsers = localStorage.getItem('registeredUsers');
+      if (registeredUsers) {
+        const users = JSON.parse(registeredUsers);
+        
+        // Get trades for each user
+        users.forEach((user: any) => {
+          const userTradesKey = `trades_${user.id}`;
+          const userTrades = localStorage.getItem(userTradesKey);
+          if (userTrades) {
+            const parsedTrades = JSON.parse(userTrades);
+            realTrades = realTrades.concat(parsedTrades);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error getting trades from localStorage:', error);
+    }
 
     // If no real trades, return empty array
     if (realTrades.length === 0) {
@@ -303,20 +393,19 @@ export function useAssetClassDistribution(): { label: string; value: number; col
     const formattedTrades = realTrades.map(trade => ({
       id: trade.id,
       userId: trade.userId,
-      date: (typeof trade.exitDate === 'string' ? trade.exitDate : new Date(trade.exitDate).toISOString().split('T')[0]),
+      date: trade.exitDate,
       symbol: trade.symbol,
-      assetClass: (trade.assetType || trade.type) === 'crypto' ? 'crypto' : 'stock',
-      qty: typeof trade.qty === 'number' ? trade.qty : (typeof trade.quantity === 'number' ? trade.quantity : 0),
+      assetClass: trade.type === 'crypto' ? 'crypto' : 'stock',
+      qty: trade.quantity,
       pnl: (() => {
         const entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : parseFloat(String(trade.entryPrice)) || 0;
-        const exitPrice = typeof trade.price === 'number' ? trade.price : (typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice)) || 0);
-        const quantity = typeof trade.qty === 'number' ? trade.qty : (typeof trade.quantity === 'number' ? trade.quantity : 0);
+        const exitPrice = typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice)) || 0;
+        const quantity = typeof trade.quantity === 'number' ? trade.quantity : parseFloat(String(trade.quantity)) || 0;
         
         const entryValue = entryPrice * quantity;
         const exitValue = exitPrice * quantity;
         
-        const direction = trade.direction || (trade.side === 'buy' ? 'long' : 'short');
-        if (direction === 'long') {
+        if (trade.direction === 'long') {
           return exitValue - entryValue;
         } else {
           return entryValue - exitValue;
@@ -334,7 +423,7 @@ export function useAssetClassDistribution(): { label: string; value: number; col
       { label: 'Stocks', value: stockCount, color: '#3b82f6' },
       { label: 'Crypto', value: cryptoCount, color: '#f59e0b' }
     ].filter(item => item.value > 0); // Only include non-zero values
-  }, [apiTrades, range.start, range.end, category]);
+  }, [range.start, range.end, category]);
 }
 
 /**
