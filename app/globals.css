@@ -1,8 +1,12 @@
 @import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 23, 23, 26;
+  --background-end-rgb: 17, 17, 20;
 }
 
 @theme inline {
@@ -20,7 +24,193 @@
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  color: rgb(var(--foreground-rgb));
+  background: #111114;
   font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  background-color: #111114;
+  margin: 0;
+  padding: 0;
+}
+
+/* Custom utilities */
+.main-gradient {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.08) 100%);
+}
+
+/* Panel hover/outline effects */
+.panel {
+  @apply rounded-2xl border transition-all duration-200;
+  outline: 1px solid rgba(59, 130, 246, 0.15);
+}
+
+.panel:hover {
+  outline: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+/* Table row hover effects */
+.table-row:hover {
+  background-color: rgba(30, 58, 138, 0.8);
+}
+
+/* General hover effects for interactive elements */
+.hover-blue:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.hover-blue-light:hover {
+  background-color: rgba(59, 130, 246, 0.05);
+  outline: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+
+
+.rounded-20 {
+  border-radius: 20px;
+}
+
+/* Custom text colors for profit/loss */
+.text-success {
+  color: #10b981;
+}
+
+.text-danger {
+  color: #ef4444;
+}
+
+/* Sticky header styles */
+header.sticky {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Glass background with ~70% transparency and blur */
+.glass-70 {
+  background-color: rgba(0, 0, 0, 0.3);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+/* Night-mode liquid glass active green style for dropdown trigger */
+.active-glass-green {
+  backdrop-filter: blur(24px) saturate(1.2) brightness(1.02);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2) brightness(1.02);
+  background: linear-gradient(135deg, 
+    rgba(34, 197, 94, 0.12) 0%,
+    rgba(16, 185, 129, 0.10) 50%,
+    rgba(6, 182, 212, 0.06) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.22);
+  border-radius: 14px;
+  box-shadow: 
+    0 4px 20px rgba(34, 197, 94, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Hover variant for buttons/links */
+.hover-active-glass-green:hover {
+  background-color: rgba(16, 61, 39, 0.25);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+/* Make common rounded utilities use 24px globally */
+/* Update common rounded utilities to 20px globally */
+.rounded,
+.rounded-md,
+.rounded-lg,
+.rounded-xl,
+.rounded-2xl,
+.rounded-3xl {
+  border-radius: 20px !important;
+}
+
+/* Subtle green outer glow for journal container */
+.journal-glow {
+  background-color: rgba(16, 32, 16, 0.35);
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.25), 0 10px 30px rgba(34, 197, 94, 0.15), 0 0 40px rgba(34, 197, 94, 0.20);
+}
+
+/* Cross-browser glassmorphism helper */
+.glass-card {
+  /* Enhanced glassmorphism with colors like the reference image */
+  backdrop-filter: blur(40px) saturate(2.5) brightness(1.3);
+  -webkit-backdrop-filter: blur(40px) saturate(2.5) brightness(1.3);
+  background: linear-gradient(135deg, 
+    rgba(59, 130, 246, 0.05) 0%,
+    rgba(139, 92, 246, 0.04) 50%,
+    rgba(236, 72, 153, 0.03) 100%);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 
+    0 8px 32px rgba(59, 130, 246, 0.1),
+    0 4px 16px rgba(139, 92, 246, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  isolation: isolate;
+  transform: translateZ(0);
+  will-change: backdrop-filter;
+}
+
+/* Alternative glassmorphism for better blur effect */
+.glass-card-alt {
+  backdrop-filter: blur(60px) saturate(3.5) brightness(1.5);
+  -webkit-backdrop-filter: blur(60px) saturate(3.5) brightness(1.5);
+  background: rgba(255, 255, 255, 0.01);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 25px 50px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  isolation: isolate;
+  transform: translateZ(0);
+  will-change: backdrop-filter;
+  contain: layout style paint;
+  mix-blend-mode: normal;
+}
+
+/* Ultimate glassmorphism for dropdown */
+.glass-dropdown {
+  backdrop-filter: blur(80px) saturate(4.0) brightness(1.6);
+  -webkit-backdrop-filter: blur(80px) saturate(4.0) brightness(1.6);
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 
+    0 35px 70px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  isolation: isolate;
+  transform: translateZ(0);
+  will-change: backdrop-filter;
+  contain: layout style paint;
+  mix-blend-mode: multiply;
+  filter: contrast(1.1) brightness(1.05);
+}
+
+/* Top bar style glassmorphism for dropdown */
+.topbar-glass-dropdown {
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  background: rgba(28, 23, 25, 0.8);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.logo-partial-white {
+  filter: 
+    brightness(0) 
+    invert(1) 
+    sepia(1) 
+    saturate(10) 
+    hue-rotate(60deg) 
+    brightness(1.8) 
+    contrast(1.5);
 }

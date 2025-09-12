@@ -6,22 +6,49 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "vitest",
+    "test:watch": "vitest --watch"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
+    "@prisma/client": "^6.15.0",
+    "@types/crypto-js": "^4.2.2",
+    "@types/three": "^0.160.0",
+    "better-sqlite3": "^11.9.1",
+    "chart.js": "^4.4.8",
+    "clsx": "^2.1.1",
+    "crypto-js": "^4.2.0",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
+    "electron": "^35.1.4",
+    "fs-extra": "^11.3.0",
+    "jspdf": "^3.0.2",
+    "jspdf-autotable": "^5.0.2",
+    "lucide-react": "^0.487.0",
+    "next": "^15.5.2",
+    "next-api-middleware": "^3.0.0",
+    "prisma": "^6.15.0",
     "react": "^19.0.0",
+    "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.0.0",
-    "next": "15.2.5"
+    "react-hook-form": "^7.55.0",
+    "recharts": "^3.1.2",
+    "swr": "^2.3.6",
+    "three": "^0.160.1",
+    "zod": "^4.1.5",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "15.2.5",
-    "@eslint/eslintrc": "^3"
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^2.1.8"
   }
 }
