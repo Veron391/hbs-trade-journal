@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
@@ -8,12 +8,21 @@ import FormInput from '../../components/ui/FormInput';
 import Button from '../../components/ui/Button';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, user, loading: authLoading } = useAuth();
   const router = useRouter();
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace('/');
+    }
+  }, [authLoading, user, router]);
+
+  if (authLoading || user) {
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +30,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await login(email, password);
+      await login(identifier, password);
       router.push('/');
     } catch (err: any) {
       setError(err.message || 'Invalid email or password');
@@ -50,13 +59,13 @@ export default function LoginPage() {
       
       <form onSubmit={handleSubmit}>
         <FormInput
-          id="email"
-          label="Email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          id="identifier"
+          label="Email or Username"
+          type="text"
+          value={identifier}
+          onChange={(e) => setIdentifier(e.target.value)}
           required
-          placeholder="john@example.com"
+          placeholder="email or username"
         />
         
         <FormInput

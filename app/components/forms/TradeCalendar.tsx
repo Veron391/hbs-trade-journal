@@ -1,61 +1,14 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { useTrades } from '../../../lib/hooks/useTrades';
+import { useTrades } from '../../context/TradeContext';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getDay, isToday, isSameMonth, setYear, setMonth, setDate } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar, X, TrendingUp, TrendingDown, Minus, DollarSign, BarChart3, FileText, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, X, TrendingUp, DollarSign, BarChart3, FileText, AlertCircle, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import MonthSummary from '../dashboard/MonthSummary';
+import { getCalendarDayDetails, CalendarDayDetails } from '../../../lib/api/trades';
 
 export default function TradeCalendar() {
-  const { trades: dbTrades, isLoading, error } = useTrades();
-  
-  // Convert database trades to frontend format
-  const trades = useMemo(() => {
-    return dbTrades.map(dbTrade => {
-      const occurredAt = typeof dbTrade.occurredAt === 'string' 
-        ? new Date(dbTrade.occurredAt) 
-        : dbTrade.occurredAt;
-        
-      const entryDate = dbTrade.entryDate 
-        ? (typeof dbTrade.entryDate === 'string' 
-            ? new Date(dbTrade.entryDate) 
-            : dbTrade.entryDate)
-        : occurredAt; // Fallback to occurredAt if entryDate is not available
-        
-      const exitDate = dbTrade.exitDate 
-        ? (typeof dbTrade.exitDate === 'string' 
-            ? new Date(dbTrade.exitDate) 
-            : dbTrade.exitDate)
-        : occurredAt; // Fallback to occurredAt if exitDate is not available
-      
-      // Format dates as YYYY-MM-DD using local timezone to avoid timezone issues
-      const formatDate = (date: Date) => {
-        if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
-          return 'Invalid Date';
-        }
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      };
-      
-      return {
-        id: dbTrade.id,
-        type: dbTrade.assetType as 'stock' | 'crypto',
-        symbol: dbTrade.symbol,
-        direction: dbTrade.side === 'buy' ? 'long' : 'short',
-        entryDate: formatDate(entryDate),
-        exitDate: formatDate(exitDate),
-        entryPrice: dbTrade.entryPrice ? parseFloat(String(dbTrade.entryPrice)) : 0,
-        exitPrice: dbTrade.exitPrice ? parseFloat(String(dbTrade.exitPrice)) : parseFloat(String(dbTrade.price)),
-        quantity: dbTrade.qty,
-        setupNotes: dbTrade.setupNotes || '',
-        mistakesNotes: dbTrade.mistakesNotes || '',
-        tags: dbTrade.tags ? dbTrade.tags.split(', ').filter(tag => tag.trim()) : [],
-        link: dbTrade.link || undefined,
-      };
-    });
-  }, [dbTrades]);
+  const { trades } = useTrades();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -65,7 +18,15 @@ export default function TradeCalendar() {
   const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
   const [expandedTrades, setExpandedTrades] = useState<Set<string>>(new Set());
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+  const [backendDays, setBackendDays] = useState<Map<string, { totalPnL: number; trades: number }>>(new Map());
+  const [isBackendDataLoaded, setIsBackendDataLoaded] = useState(false);
+  const [calendarDayDetails, setCalendarDayDetails] = useState<CalendarDayDetails | null>(null);
+  const [isLoadingDayDetails, setIsLoadingDayDetails] = useState(false);
+  const [lastApiCall, setLastApiCall] = useState<number>(0);
   const datePickerRef = useRef<HTMLDivElement>(null);
+  
+  // Rate limiting: Only allow one API call per 500ms
+  const RATE_LIMIT_MS = 500;
 
   // Calculate calendar days
   const monthStart = startOfMonth(currentMonth);
@@ -104,45 +65,79 @@ export default function TradeCalendar() {
   };
 
   // Handle day click to show trade details
-  const handleDayClick = (dateKey: string, event: React.MouseEvent) => {
+  const handleDayClick = async (dateKey: string, event: React.MouseEvent) => {
+    console.log('Day clicked:', dateKey);
     const dayData = tradesByDate.get(dateKey);
-    if (dayData && dayData.trades.length > 0) {
-      const rect = event.currentTarget.getBoundingClientRect();
-      const scrollY = window.scrollY;
-      const viewportHeight = window.innerHeight;
-      const viewportWidth = window.innerWidth;
-      
-      // Calculate position considering scroll and viewport
-      let yPosition = rect.bottom + scrollY + 10;
-      let xPosition = rect.left + rect.width / 2;
-      
-      // Estimate dropdown height based on number of trades
-      const estimatedDropdownHeight = Math.min(500, 200 + (dayData.trades.length * 80));
-      
-      // If the dropdown would go off screen at bottom, position it above the day cell
-      if (yPosition + estimatedDropdownHeight > scrollY + viewportHeight) {
-        yPosition = rect.top + scrollY - estimatedDropdownHeight - 10;
-      }
-      
-      // Ensure dropdown stays within viewport horizontally
-      const dropdownWidth = 400; // Approximate dropdown width
-      if (xPosition - dropdownWidth/2 < 10) {
-        xPosition = dropdownWidth/2 + 10;
-      } else if (xPosition + dropdownWidth/2 > viewportWidth - 10) {
-        xPosition = viewportWidth - dropdownWidth/2 - 10;
-      }
-      
-      setDropdownPosition({
-        x: xPosition,
-        y: yPosition
-      });
-      setSelectedDateForDetails(dateKey);
-      setExpandedTrades(new Set()); // Reset expanded trades when opening new dropdown
-      setIsDropdownVisible(false); // Start with hidden state
-      
-      // Trigger animation
-      setTimeout(() => setIsDropdownVisible(true), 10);
+    const backendData = backendDays.get(dateKey);
+    
+    console.log('Day data:', dayData, 'Backend data:', backendData);
+    
+    // If clicking the same date that's already selected, toggle the dropdown
+    if (selectedDateForDetails === dateKey && isDropdownVisible) {
+      closeDropdown();
+      return;
     }
+    
+    // Check if there are any trades for this day before making API request
+    const hasLocalTrades = dayData && dayData.trades.length > 0;
+    const hasBackendTrades = backendData && backendData.trades > 0;
+    
+    if (!hasLocalTrades && !hasBackendTrades) {
+      console.log('No trades found for this day, skipping API request');
+      return;
+    }
+    
+    // Always show dropdown when clicked, regardless of existing data
+    const rect = event.currentTarget.getBoundingClientRect();
+    const scrollY = window.scrollY;
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    
+    // Calculate position considering scroll and viewport
+    let yPosition = rect.bottom + scrollY + 10;
+    let xPosition = rect.left + rect.width / 2;
+    
+    // Estimate dropdown height
+    const estimatedDropdownHeight = 400;
+    
+    // If the dropdown would go off screen at bottom, position it above the day cell
+    if (yPosition + estimatedDropdownHeight > scrollY + viewportHeight) {
+      yPosition = rect.top + scrollY - estimatedDropdownHeight - 10;
+    }
+    
+    // Ensure dropdown stays within viewport horizontally
+    const dropdownWidth = 384; // w-96 = 384px
+    if (xPosition - dropdownWidth/2 < 10) {
+      xPosition = dropdownWidth/2 + 10;
+    } else if (xPosition + dropdownWidth/2 > viewportWidth - 10) {
+      xPosition = viewportWidth - dropdownWidth/2 - 10;
+    }
+    
+    setDropdownPosition({
+      x: xPosition,
+      y: yPosition
+    });
+    setSelectedDateForDetails(dateKey);
+    setExpandedTrades(new Set()); // Reset expanded trades when opening new dropdown
+    
+    // Only load detailed data from API if there are trades for this day
+    if (hasLocalTrades || hasBackendTrades) {
+      setIsLoadingDayDetails(true);
+      try {
+        const details = await getCalendarDayDetails(dateKey);
+        setCalendarDayDetails(details);
+      } catch (error) {
+        console.error('Failed to load calendar day details:', error);
+        // Keep existing data if API fails
+        setCalendarDayDetails(null);
+      } finally {
+        setIsLoadingDayDetails(false);
+      }
+    }
+    
+    // Show dropdown immediately after data is loaded
+    console.log('Setting dropdown visible for date:', dateKey);
+    setIsDropdownVisible(true);
   };
 
   // Toggle trade expansion
@@ -163,6 +158,7 @@ export default function TradeCalendar() {
     setIsDropdownVisible(false);
     setTimeout(() => {
       setSelectedDateForDetails(null);
+      setCalendarDayDetails(null);
     }, 300); // Wait for animation to complete (increased by 50%)
   };
 
@@ -197,41 +193,51 @@ export default function TradeCalendar() {
   // Generate days array (1-31)
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
-  // Group trades by date
+  // Group trades by date via backend calendar API for accurate per-day totals
   const tradesByDate = useMemo(() => {
     const grouped = new Map();
-    
+    // Seed grouped map with current trades for details (local list)
     trades.forEach(trade => {
       const exitDate = format(new Date(trade.exitDate), 'yyyy-MM-dd');
-      
-      if (!grouped.has(exitDate)) {
-        grouped.set(exitDate, {
-          trades: [],
-          totalPnL: 0
-        });
-      }
-      
-      const group = grouped.get(exitDate);
-      const entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : parseFloat(String(trade.entryPrice)) || 0;
-      const exitPrice = typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice)) || 0;
-      const quantity = typeof trade.quantity === 'number' ? trade.quantity : parseFloat(String(trade.quantity)) || 0;
-      
-      const entryValue = entryPrice * quantity;
-      const exitValue = exitPrice * quantity;
-      
-      let pnl = 0;
-      if (trade.direction === 'long') {
-        pnl = exitValue - entryValue;
-      } else {
-        pnl = entryValue - exitValue;
-      }
-      
-      group.trades.push(trade);
-      group.totalPnL += pnl;
+      if (!grouped.has(exitDate)) grouped.set(exitDate, { trades: [], totalPnL: 0 });
+      grouped.get(exitDate).trades.push(trade);
     });
-    
     return grouped;
   }, [trades]);
+
+  // Load per-day PnL and counts from backend calendar API
+  // Note: This data may have calculation errors - day details API provides more accurate totals
+  useEffect(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth() + 1;
+    // Don't block display - show local data immediately
+    setIsBackendDataLoaded(true);
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/journal/trades/calendar?year=${year}&month=${month}&t=${Date.now()}`, { 
+          cache: 'no-store'
+        });
+        if (!res.ok) {
+          console.log('Calendar API not available, using local data');
+          return;
+        }
+        const data = await res.json();
+        console.log('Calendar list API response:', data);
+        if (Array.isArray(data.days)) {
+          const map = new Map<string, { totalPnL: number; trades: number }>();
+          data.days.forEach((d: any) => {
+            // Note: d.total_pnl may be incorrect - day details API provides accurate totals
+            console.log(`Calendar list data for ${d.date}:`, { total_pnl: d.total_pnl, trades: d.trades });
+            map.set(d.date, { totalPnL: Number(d.total_pnl) || 0, trades: Number(d.trades) || 0 });
+          });
+          setBackendDays(map);
+        }
+      } catch (error) {
+        console.log('Calendar API error, using local data:', error);
+      }
+    };
+    load();
+  }, [currentMonth]);
 
   return (
     <div>
@@ -240,6 +246,12 @@ export default function TradeCalendar() {
       
       {/* Calendar */}
       <div className="bg-[#1C1719] rounded-lg shadow p-6">
+        {!isBackendDataLoaded && (
+          <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+            <span className="ml-3 text-gray-400">Loading calendar data...</span>
+          </div>
+        )}
         {/* Calendar header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-white">
@@ -376,9 +388,13 @@ export default function TradeCalendar() {
           {calendarDays.map((day) => {
             const dateKey = format(day, 'yyyy-MM-dd');
             const dayData = tradesByDate.get(dateKey);
-            const hasTrades = dayData && dayData.trades.length > 0;
-            const isProfitable = hasTrades && dayData.totalPnL > 0;
-            const isBreakEven = hasTrades && dayData.totalPnL === 0;
+            const backend = backendDays.get(dateKey);
+            // Show backend data if available, otherwise fall back to local data
+            const numTrades = backend?.trades ?? (dayData ? dayData.trades.length : 0);
+            const totalPnLVal = backend?.totalPnL ?? (dayData ? dayData.totalPnL : 0);
+            const hasTrades = numTrades > 0;
+            const isProfitable = hasTrades && totalPnLVal > 0;
+            const isBreakEven = hasTrades && totalPnLVal === 0;
             const dayOfWeek = getDay(day);
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday = 0, Saturday = 6
             
@@ -386,12 +402,12 @@ export default function TradeCalendar() {
               <div
                 key={dateKey}
                 onClick={(e) => handleDayClick(dateKey, e)}
-                className={`p-1 rounded-md min-h-[100px] transition-all duration-200 hover:scale-105 hover:shadow-lg hover:border-blue-500/50 ${
-                  hasTrades ? 'cursor-pointer' : 'cursor-default'
+                className={`p-1 rounded-md min-h-[100px] transition-all duration-200 ${
+                  hasTrades 
+                    ? 'cursor-pointer hover:scale-105 hover:shadow-lg hover:border-blue-500/50' 
+                    : 'cursor-default opacity-60'
                 } ${
-                  isToday(day) 
-                    ? 'border border-blue-500' 
-                    : !isSameMonth(day, currentMonth) 
+                  !isSameMonth(day, currentMonth) 
                     ? 'opacity-50' 
                     : ''
                 } ${
@@ -407,9 +423,23 @@ export default function TradeCalendar() {
               >
                 <div className="text-left mb-1 px-1">
                   <div className={`inline-flex items-center justify-center w-6 h-6 rounded-full ${
-                    isWeekend ? 'bg-orange-400/20' : 'bg-[#342F31]'
+                    isToday(day) 
+                      ? 'bg-blue-500/20' 
+                      : hasTrades 
+                        ? (isProfitable 
+                          ? 'bg-green-500/20' 
+                          : isBreakEven 
+                            ? 'bg-yellow-500/20' 
+                            : 'bg-red-500/20')
+                        : isWeekend ? 'bg-orange-400/20' : 'bg-[#342F31]'
                   }`}>
-                    <span className={`text-sm font-medium ${isToday(day) ? 'text-blue-400' : 'text-gray-300'}`}>
+                    <span className={`text-sm font-medium ${
+                      isToday(day) 
+                        ? 'text-blue-400' 
+                        : hasTrades 
+                          ? (isProfitable ? 'text-green-400' : isBreakEven ? 'text-yellow-400' : 'text-red-400')
+                          : isWeekend ? 'text-orange-400' : 'text-gray-300'
+                    }`}>
                       {format(day, 'd')}
                     </span>
                   </div>
@@ -420,10 +450,10 @@ export default function TradeCalendar() {
                     <div className={`text-base font-bold ${
                       isProfitable ? 'text-success' : isBreakEven ? 'text-yellow-500' : 'text-danger'
                     }`}>
-                      {isProfitable ? '+' : dayData.totalPnL < 0 ? '-' : ''}${Math.abs(dayData.totalPnL).toFixed(2)}
+                      {isProfitable ? '+' : totalPnLVal < 0 ? '-' : ''}${Math.abs(totalPnLVal).toFixed(2)}
                     </div>
                     <div className="text-sm text-gray-400">
-                      {dayData.trades.length} {dayData.trades.length === 1 ? 'trade' : 'trades'}
+                      {numTrades} {numTrades === 1 ? 'trade' : 'trades'}
                     </div>
                   </div>
                 )}
@@ -449,7 +479,7 @@ export default function TradeCalendar() {
       {selectedDateForDetails && (
         <div
           data-dropdown="trade-details"
-          className={`absolute z-50 bg-[#1C1719] border border-white/20 rounded-lg shadow-2xl p-4 max-w-md max-h-[80vh] overflow-y-auto transition-all duration-300 ease-out ${
+          className={`fixed z-[9999] bg-[#1C1719] border border-white/20 rounded-lg shadow-2xl p-4 w-96 max-w-[90vw] max-h-[80vh] overflow-y-auto transition-all duration-300 ease-out ${
             isDropdownVisible 
               ? 'opacity-100 scale-100 backdrop-blur-sm' 
               : 'opacity-0 scale-95 backdrop-blur-none'
@@ -460,16 +490,93 @@ export default function TradeCalendar() {
             transform: 'translateX(-50%)'
           }}
         >
+          {console.log('Rendering dropdown for:', selectedDateForDetails, 'visible:', isDropdownVisible, 'position:', dropdownPosition)}
           {(() => {
+            if (isLoadingDayDetails) {
+              return (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-white">Loading...</h3>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        closeDropdown();
+                      }}
+                      className="text-gray-400 hover:text-white transition-colors"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+                  <div className="flex justify-center items-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+                  </div>
+                </div>
+              );
+            }
+
             const dayData = tradesByDate.get(selectedDateForDetails);
-            if (!dayData) return null;
+            const backendData = backendDays.get(selectedDateForDetails);
+            const apiData = calendarDayDetails;
+            
+            // Show loading state if no data is available yet
+            if (!dayData && !backendData && !apiData && !isLoadingDayDetails) {
+              return (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-white">No Data</h3>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        closeDropdown();
+                      }}
+                      className="text-gray-400 hover:text-white transition-colors"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+                  <div className="text-center text-gray-400 py-4">
+                    No trades found for this date
+                  </div>
+                </div>
+              );
+            }
 
             const selectedDate = new Date(selectedDateForDetails);
-            const isProfitable = dayData.totalPnL > 0;
-            const isBreakEven = dayData.totalPnL === 0;
             
-            // Get unique assets traded
-            const assets = [...new Set(dayData.trades.map(trade => trade.symbol))];
+            // Prioritize API day details data (most accurate) over calendar list data
+            const totalPnL = apiData?.summary?.total_pnl ?? apiData?.totalPnL ?? (dayData?.totalPnL ?? 0);
+            const tradesCount = apiData?.summary?.trade_count ?? apiData?.trades ?? (dayData?.trades.length ?? 0);
+            const assets = apiData?.summary?.assets_traded ?? apiData?.assets ?? (dayData ? [...new Set(dayData.trades.map((trade: any) => trade.symbol))] as string[] : []);
+            const tradeDetails = apiData?.trades ?? apiData?.tradeDetails ?? (dayData?.trades ?? []);
+            
+            // Note: We intentionally exclude backendData (calendar list) as it may have incorrect calculations
+            // The day details API provides the accurate per-day totals
+            
+            // Debug logging
+            console.log('API Data:', apiData);
+            console.log('Summary:', apiData?.summary);
+            console.log('Assets:', assets);
+            console.log('Trade Details:', tradeDetails);
+            
+            // Ensure assets is an array of strings - handle both string arrays and object arrays
+            let safeAssets: string[] = [];
+            if (Array.isArray(assets)) {
+              safeAssets = assets.map(asset => {
+                if (typeof asset === 'string') {
+                  return asset;
+                } else if (typeof asset === 'object' && asset !== null) {
+                  // If it's an object, try to extract the symbol or name
+                  return asset.symbol || asset.name || asset.id || String(asset);
+                }
+                return String(asset);
+              }).filter(asset => asset && asset.trim() !== '');
+            }
+            
+            // Ensure tradeDetails is an array
+            const safeTradeDetails = Array.isArray(tradeDetails) ? tradeDetails : [];
+            
+            const isProfitable = totalPnL > 0;
+            const isBreakEven = totalPnL === 0;
             
             return (
               <div className="space-y-4">
@@ -490,102 +597,144 @@ export default function TradeCalendar() {
                 </div>
 
                 {/* Summary Stats */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-[#231F21] rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-1">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-gradient-to-r from-[#231F21] to-[#2A2527] rounded-lg p-2.5 border border-white/10">
+                    <div className="flex items-center gap-1.5 mb-1">
                       <DollarSign size={16} className="text-gray-400" />
                       <span className="text-sm text-gray-400">Total P/L</span>
                     </div>
                     <div className={`text-lg font-bold ${
                       isProfitable ? 'text-green-500' : isBreakEven ? 'text-yellow-500' : 'text-red-500'
                     }`}>
-                      {isProfitable ? '+' : dayData.totalPnL < 0 ? '-' : ''}${Math.abs(dayData.totalPnL).toFixed(2)}
+                      {isProfitable ? '+' : totalPnL < 0 ? '-' : ''}${Math.abs(totalPnL).toFixed(2)}
                     </div>
                   </div>
                   
-                  <div className="bg-[#231F21] rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-1">
+                  <div className="bg-gradient-to-r from-[#231F21] to-[#2A2527] rounded-lg p-2.5 border border-white/10">
+                    <div className="flex items-center gap-1.5 mb-1">
                       <BarChart3 size={16} className="text-gray-400" />
                       <span className="text-sm text-gray-400">Trades</span>
                     </div>
                     <div className="text-lg font-bold text-white">
-                      {dayData.trades.length}
+                      {tradesCount}
                     </div>
                   </div>
                 </div>
 
                 {/* Assets Traded */}
-                <div className="bg-[#231F21] rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp size={16} className="text-gray-400" />
-                    <span className="text-sm text-gray-400">Assets Traded</span>
+                {safeAssets.length > 0 && (
+                  <div className="bg-gradient-to-r from-[#231F21] to-[#2A2527] rounded-lg p-3 border border-white/10">
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingUp size={16} className="text-gray-400" />
+                      <span className="text-sm text-gray-400">Assets Traded</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {safeAssets.map((asset) => (
+                        <span
+                          key={asset}
+                          className="px-2 py-1 bg-gradient-to-r from-orange-500/20 to-red-500/20 text-orange-400 rounded-md text-sm font-medium border border-orange-400/30"
+                        >
+                          {asset}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {assets.map(asset => (
-                      <span
-                        key={asset}
-                        className="px-2 py-1 bg-orange-500/20 text-orange-400 rounded-md text-sm"
-                      >
-                        {asset}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+                )}
 
                 {/* Trade Details */}
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium text-gray-300">Trade Details</h4>
-                  {dayData.trades.map((trade, index) => {
-                    const entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : parseFloat(String(trade.entryPrice)) || 0;
-                    const exitPrice = typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice)) || 0;
-                    const quantity = typeof trade.quantity === 'number' ? trade.quantity : parseFloat(String(trade.quantity)) || 0;
+                {safeTradeDetails.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-gray-300">Trade Details</h4>
+                    {safeTradeDetails.map((trade: any, index: number) => {
+                    // Ensure trade has required properties
+                    if (!trade || typeof trade !== 'object') {
+                      console.warn('Invalid trade object:', trade);
+                      return null;
+                    }
                     
-                    const entryValue = entryPrice * quantity;
-                    const exitValue = exitPrice * quantity;
-                    
+                    // Use API data structure if available, otherwise fall back to local calculation
                     let pnl = 0;
-                    if (trade.direction === 'long') {
-                      pnl = exitValue - entryValue;
+                    let entryPrice = 0;
+                    let exitPrice = 0;
+                    let quantity = 0;
+                    let symbol = trade.symbol || 'Unknown';
+                    let direction = trade.direction || 'long';
+                    let tradeId = trade.id || `trade-${index}`;
+                    
+                    if (apiData) {
+                      // API data already has calculated PnL - use profit_amount from API response
+                      pnl = typeof trade.profit_amount === 'number' ? trade.profit_amount : (trade.pnl || 0);
+                      entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : 0;
+                      exitPrice = typeof trade.exitPrice === 'number' ? trade.exitPrice : 0;
+                      quantity = typeof trade.quantity === 'number' ? trade.quantity : 0;
+                      
+                      // Debug: Log the trade data to verify calculations
+                      console.log('Trade data:', {
+                        id: trade.id,
+                        symbol: trade.symbol,
+                        profit_amount: trade.profit_amount,
+                        quantity: trade.quantity,
+                        entryPrice: trade.entryPrice,
+                        exitPrice: trade.exitPrice
+                      });
                     } else {
-                      pnl = entryValue - exitValue;
+                      // Local data calculation
+                      entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : parseFloat(String(trade.entryPrice)) || 0;
+                      exitPrice = typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice)) || 0;
+                      quantity = typeof trade.quantity === 'number' ? trade.quantity : parseFloat(String(trade.quantity)) || 0;
+                      
+                      const entryValue = entryPrice * quantity;
+                      const exitValue = exitPrice * quantity;
+                      
+                      if (direction === 'long') {
+                        pnl = exitValue - entryValue;
+                      } else {
+                        pnl = entryValue - exitValue;
+                      }
                     }
                     
                     const isTradeProfitable = pnl > 0;
                     const isTradeBreakEven = pnl === 0;
-                    const isExpanded = expandedTrades.has(trade.id);
-                    const hasNotes = trade.setupNotes || trade.mistakesNotes;
+                    const isExpanded = expandedTrades.has(tradeId);
+                    const hasNotes = trade.setupNotes || trade.mistakesLearnings || trade.link;
                     
                     return (
-                      <div key={trade.id} className="bg-[#231F21] rounded-lg border border-white/10">
+                      <div key={tradeId} className="bg-gradient-to-r from-[#231F21] to-[#2A2527] rounded-xl border border-white/10 shadow-lg">
                         {/* Trade Header - Always Visible */}
                         <div 
-                          className={`flex items-center justify-between p-3 ${hasNotes ? 'cursor-pointer' : 'cursor-default'}`}
+                          className={`flex items-center justify-between py-2.5 px-4 ${hasNotes ? 'cursor-pointer hover:bg-white/5' : 'cursor-default'} transition-all duration-200 rounded-xl`}
                           onClick={(e) => {
                             e.stopPropagation();
                             if (hasNotes) {
-                              toggleTradeExpansion(trade.id);
+                              toggleTradeExpansion(tradeId);
                             }
                           }}
                         >
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-white">{trade.symbol}</span>
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              trade.direction === 'long' 
-                                ? 'bg-green-500/20 text-green-400' 
-                                : 'bg-red-500/20 text-red-400'
-                            }`}>
-                              {trade.direction.toUpperCase()}
-                            </span>
+                          <div className="flex items-center gap-3">
+                            <div>
+                              <span className="font-semibold text-white text-sm">{symbol}</span>
+                              <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs font-medium ${
+                                direction === 'long' 
+                                  ? 'bg-gradient-to-r from-green-500/30 to-emerald-500/30 text-green-300 border border-green-400/30' 
+                                  : 'bg-gradient-to-r from-red-500/30 to-rose-500/30 text-red-300 border border-red-400/30'
+                              }`}>
+                                {direction.toUpperCase()}
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <div className={`font-bold ${
-                              isTradeProfitable ? 'text-green-500' : isTradeBreakEven ? 'text-yellow-500' : 'text-red-500'
+                          <div className="flex items-center gap-3">
+                            <div className={`font-bold text-sm px-2 py-1 rounded-lg ${
+                              isTradeProfitable 
+                                ? 'text-green-300 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-400/30' 
+                                : isTradeBreakEven 
+                                  ? 'text-yellow-300 bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border border-yellow-400/30' 
+                                  : 'text-red-300 bg-gradient-to-r from-red-500/20 to-rose-500/20 border border-red-400/30'
                             }`}>
                               {isTradeProfitable ? '+' : pnl < 0 ? '-' : ''}${Math.abs(pnl).toFixed(2)}
                             </div>
                             {hasNotes && (
-                              <div className="text-gray-400">
-                                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                              <div className="text-gray-400 hover:text-white transition-colors">
+                                {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                               </div>
                             )}
                           </div>
@@ -602,26 +751,50 @@ export default function TradeCalendar() {
                               {/* Setup Notes */}
                               {trade.setupNotes && (
                                 <div className="transform transition-all duration-300 ease-out">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <FileText size={14} className="text-blue-400" />
-                                    <span className="text-xs text-blue-400">Setup Notes</span>
+                                  <div className="flex items-center gap-2 mb-1.5">
+                                    <div className="p-1 rounded-lg bg-blue-500/20">
+                                      <FileText size={14} className="text-blue-400" />
+                                    </div>
+                                    <span className="text-xs font-medium text-blue-300">Setup Notes</span>
                                   </div>
-                                  <p className="text-sm text-gray-300 bg-[#1C1719] rounded p-2 transition-all duration-300 hover:bg-blue-600/20">
+                                  <p className="text-xs text-white bg-gradient-to-r from-blue-900/40 to-blue-800/30 rounded-lg py-3 px-2 transition-all duration-300 hover:from-blue-800/50 hover:to-blue-700/40 border border-blue-500/20">
                                     {trade.setupNotes}
                                   </p>
                                 </div>
                               )}
 
                               {/* Mistakes & Learnings */}
-                              {trade.mistakesNotes && (
+                              {trade.mistakesLearnings && (
                                 <div className="transform transition-all duration-300 ease-out">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <AlertCircle size={14} className="text-orange-400" />
-                                    <span className="text-xs text-orange-400">Mistakes & Learnings</span>
+                                  <div className="flex items-center gap-2 mb-1.5">
+                                    <div className="p-1 rounded-lg bg-orange-500/20">
+                                      <AlertCircle size={14} className="text-orange-400" />
+                                    </div>
+                                    <span className="text-xs font-medium text-orange-300">Mistakes & Learnings</span>
                                   </div>
-                                  <p className="text-sm text-gray-300 bg-[#1C1719] rounded p-2 transition-all duration-300 hover:bg-blue-600/20">
-                                    {trade.mistakesNotes}
+                                  <p className="text-xs text-white bg-gradient-to-r from-orange-900/40 to-red-800/30 rounded-lg py-3 px-2 transition-all duration-300 hover:from-orange-800/50 hover:to-red-700/40 border border-orange-500/20">
+                                    {trade.mistakesLearnings}
                                   </p>
+                                </div>
+                              )}
+
+                              {/* Trade Link */}
+                              {trade.link && (
+                                <div className="transform transition-all duration-300 ease-out">
+                                  <div className="flex items-center gap-2 mb-1.5">
+                                    <div className="p-1 rounded-lg" style={{ backgroundColor: '#F4E9D720' }}>
+                                      <ExternalLink size={14} style={{ color: '#F4E9D7' }} />
+                                    </div>
+                                    <span className="text-xs font-medium" style={{ color: '#F4E9D7' }}>Trade Link</span>
+                                  </div>
+                                  <a 
+                                    href={trade.link} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-white rounded-lg py-3 px-2 block transition-all duration-300 hover:from-[#F4E9D7]/30 hover:to-[#F4E9D7]/40 break-all border border-[#F4E9D7]/20 bg-gradient-to-r from-[#F4E9D7]/10 to-[#F4E9D7]/10"
+                                  >
+                                    {trade.link}
+                                  </a>
                                 </div>
                               )}
                             </div>
@@ -629,8 +802,9 @@ export default function TradeCalendar() {
                         )}
                       </div>
                     );
-                  })}
-                </div>
+                    })}
+                  </div>
+                )}
               </div>
             );
           })()}

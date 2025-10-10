@@ -53,9 +53,7 @@ export default function DatePicker({ value, onChange, placeholder, className, er
   // Update selected date when value changes
   useEffect(() => {
     if (value) {
-      // Parse date string as local date to avoid timezone issues
-      const [year, month, day] = value.split('-').map(Number);
-      const date = new Date(year, month - 1, day);
+      const date = new Date(value);
       setSelectedDate(date);
       setCurrentMonth(date.getMonth());
       setCurrentYear(date.getFullYear());
@@ -95,7 +93,7 @@ export default function DatePicker({ value, onChange, placeholder, className, er
     const date = new Date(currentYear, currentMonth, day);
     setSelectedDate(date);
     
-    // Format date as YYYY-MM-DD for input value using local timezone
+    // Format date as YYYY-MM-DD for input value (use local timezone)
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const dayStr = String(date.getDate()).padStart(2, '0');

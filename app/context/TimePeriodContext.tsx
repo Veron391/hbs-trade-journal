@@ -38,13 +38,11 @@ export function TimePeriodProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Don't render children until we've loaded the initial state
-  if (!isInitialized) {
-    return null;
-  }
+  // Don't block rendering - use default state if not initialized yet
+  const currentPeriod = isInitialized ? selectedPeriod : 'all-time';
 
   return (
-    <TimePeriodContext.Provider value={{ selectedPeriod, setSelectedPeriod }}>
+    <TimePeriodContext.Provider value={{ selectedPeriod: currentPeriod, setSelectedPeriod }}>
       {children}
     </TimePeriodContext.Provider>
   );

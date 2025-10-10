@@ -20,7 +20,7 @@ export default function StatsCard() {
         averageLoss: 0,
         largestWin: 0,
         largestLoss: 0,
-        profitFactor: 0,
+        riskRewardRatio: 0,
       };
     }
 
@@ -67,7 +67,8 @@ export default function StatsCard() {
     const winRate = (winningTrades / trades.length) * 100;
     const averageWin = winningTrades > 0 ? totalWinAmount / winningTrades : 0;
     const averageLoss = losingTrades > 0 ? totalLossAmount / losingTrades : 0;
-    const profitFactor = totalLossAmount > 0 ? totalWinAmount / totalLossAmount : 0;
+    // Calculate average risk/reward ratio
+    const riskRewardRatio = averageWin && averageLoss ? averageWin / averageLoss : 0;
 
     return {
       totalTrades: trades.length,
@@ -80,7 +81,7 @@ export default function StatsCard() {
       averageLoss,
       largestWin,
       largestLoss,
-      profitFactor,
+      riskRewardRatio,
     };
   }, [trades]);
 
@@ -174,10 +175,10 @@ export default function StatsCard() {
           <div className="text-2xl font-bold text-danger mt-2">{formatCurrency(-stats.largestLoss)}</div>
         </div>
 
-        {/* Profit Factor */}
+        {/* Risk/Reward Ratio */}
         <div className="bg-gray-700 rounded-lg p-4">
-          <div className="text-gray-400">Profit Factor</div>
-          <div className="text-2xl font-bold text-white mt-2">{stats.profitFactor.toFixed(2)}</div>
+          <div className="text-gray-400">Risk/Reward Ratio</div>
+          <div className="text-2xl font-bold text-white mt-2">{stats.riskRewardRatio.toFixed(2)}</div>
         </div>
       </div>
     </div>

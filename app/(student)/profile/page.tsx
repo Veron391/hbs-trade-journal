@@ -3,11 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
-import { useTrades, useTradeMutations } from '../../../lib/hooks/useTrades';
 import FormInput from '../../components/ui/FormInput';
 import Button from '../../components/ui/Button';
 import { COMMON_PAIRS } from '../../services/tradeApiService';
-import { Trade as DbTrade } from '@prisma/client';
 
 // Add these constants at the top of the file, after imports
 const POPULAR_PAIRS = [
@@ -20,44 +18,16 @@ const DeFi_PAIRS = ['UNIUSDT', 'AAVEUSDT', 'COMPUSDT', 'MKRUSDT', 'SUSHIUSDT'];
 const MEME_PAIRS = ['DOGEUSDT', 'SHIBUSDT', 'FLOKIUSDT', 'PEPEUSDT'];
 const LAYER1_PAIRS = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'SOLUSDT', 'AVAXUSDT'];
 
-// Convert database trade to frontend trade format
-function convertDbTradeToFrontend(dbTrade: DbTrade) {
-  // Handle both Date objects and string dates
-  const occurredAt = typeof dbTrade.occurredAt === 'string' 
-    ? new Date(dbTrade.occurredAt) 
-    : dbTrade.occurredAt;
-  
-  const dateString = occurredAt.toISOString().split('T')[0];
-  
-  return {
-    id: dbTrade.id,
-    type: dbTrade.assetType as 'stock' | 'crypto',
-    symbol: dbTrade.symbol,
-    direction: dbTrade.side === 'buy' ? 'long' : 'short',
-    entryDate: dateString,
-    exitDate: dateString,
-    entryPrice: dbTrade.price * 0.95,
-    exitPrice: dbTrade.price,
-    quantity: dbTrade.qty,
-    setupNotes: '',
-    mistakesNotes: '',
-    tags: [],
-    link: undefined,
-  };
-}
 
 export default function ProfilePage() {
   const { user, logout, updateUser, changePassword } = useAuth();
-  const { trades: dbTrades, isLoading, error: tradesError } = useTrades();
-  const { deleteTrade } = useTradeMutations();
   const router = useRouter();
   
-  // Convert database trades to frontend format
-  const trades = dbTrades.map(convertDbTradeToFrontend);
-  
   // All hooks must be called before any conditional returns
-  const [name, setName] = useState(user?.name || '');
+  const [fullName, setFullName] = useState(user?.full_name || user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
+  const [username, setUsername] = useState(user?.username || '');
+  const [phoneNumber, setPhoneNumber] = useState(user?.phone_number || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -84,8 +54,10 @@ export default function ProfilePage() {
   // Initialize state when user loads
   useEffect(() => {
     if (user) {
-      setName(user.name);
+      setFullName(user.full_name || user.name);
       setEmail(user.email);
+      setUsername(user.username || '');
+      setPhoneNumber(user.phone_number || '');
     }
   }, [user]);
 
@@ -126,8 +98,8 @@ export default function ProfilePage() {
     e.preventDefault();
     
     // Basic validation
-    if (!name.trim()) {
-      setError('Name is required');
+    if (!fullName.trim()) {
+      setError('Full name is required');
       setMessage('');
       return;
     }
@@ -146,7 +118,7 @@ export default function ProfilePage() {
     
     try {
       // Update the user using the AuthContext method
-      await updateUser({ name: name.trim(), email: email.trim() });
+      await updateUser({ full_name: fullName.trim(), email: email.trim(), username: username.trim(), phone_number: phoneNumber.trim() });
       setMessage('Profile updated successfully');
       setError('');
       
@@ -318,11 +290,28 @@ export default function ProfilePage() {
           
           <form onSubmit={handleProfileUpdate}>
             <FormInput
-              id="name"
-              label="Name"
+              id="fullName"
+              label="Full Name"
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+            />
+            <FormInput
+              id="username"
+              label="Username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+
+            <FormInput
+              id="phoneNumber"
+              label="Phone Number"
+              type="text"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
               required
             />
             
@@ -556,103 +545,6 @@ export default function ProfilePage() {
         </form>
       </div>
       
-      {/* Trade Journal */}
-      <div className="mt-8 bg-[#1C1719] rounded-lg p-6 border border-gray-700">
-        <h2 className="text-xl font-semibold text-white mb-4">Trade Journal</h2>
-        
-        {isLoading ? (
-          <p className="text-gray-400 mb-4">Loading trades...</p>
-        ) : trades.length === 0 ? (
-          <p className="text-gray-400 mb-4">No trades recorded yet. Start by adding your first trade!</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-600">
-                  <th className="text-left py-3 px-2 text-gray-300">Symbol</th>
-                  <th className="text-left py-3 px-2 text-gray-300">Type</th>
-                  <th className="text-left py-3 px-2 text-gray-300">Direction</th>
-                  <th className="text-left py-3 px-2 text-gray-300">Entry Date</th>
-                  <th className="text-left py-3 px-2 text-gray-300">Exit Date</th>
-                  <th className="text-left py-3 px-2 text-gray-300">Entry Price</th>
-                  <th className="text-left py-3 px-2 text-gray-300">Exit Price</th>
-                  <th className="text-left py-3 px-2 text-gray-300">Quantity</th>
-                  <th className="text-left py-3 px-2 text-gray-300">P&L</th>
-                  <th className="text-left py-3 px-2 text-gray-300">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {trades.map((trade) => {
-                  const pnl = (trade.exitPrice - trade.entryPrice) * trade.quantity;
-                  const pnlPercent = ((trade.exitPrice - trade.entryPrice) / trade.entryPrice) * 100;
-                  
-                  return (
-                    <tr key={trade.id} className="border-b border-gray-700 hover:bg-gray-800">
-                      <td className="py-3 px-2 text-white">{trade.symbol}</td>
-                      <td className="py-3 px-2">
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          trade.type === 'crypto' 
-                            ? 'bg-orange-500/20 text-orange-400' 
-                            : 'bg-blue-500/20 text-blue-400'
-                        }`}>
-                          {trade.type}
-                        </span>
-                      </td>
-                      <td className="py-3 px-2">
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          trade.direction === 'long' 
-                            ? 'bg-green-500/20 text-green-400' 
-                            : 'bg-red-500/20 text-red-400'
-                        }`}>
-                          {trade.direction}
-                        </span>
-                      </td>
-                      <td className="py-3 px-2 text-gray-300">{trade.entryDate}</td>
-                      <td className="py-3 px-2 text-gray-300">{trade.exitDate}</td>
-                      <td className="py-3 px-2 text-gray-300">${trade.entryPrice}</td>
-                      <td className="py-3 px-2 text-gray-300">${trade.exitPrice}</td>
-                      <td className="py-3 px-2 text-gray-300">{trade.quantity}</td>
-                      <td className="py-3 px-2">
-                        <span className={`font-medium ${
-                          pnl >= 0 ? 'text-green-400' : 'text-red-400'
-                        }`}>
-                          ${pnl.toFixed(2)} ({pnlPercent.toFixed(1)}%)
-                        </span>
-                      </td>
-                      <td className="py-3 px-2">
-                        <button
-                          onClick={async () => {
-                            if (window.confirm('Are you sure you want to delete this trade?')) {
-                              try {
-                                await deleteTrade(trade.id);
-                              } catch (err) {
-                                console.error('Error deleting trade:', err);
-                                setError('Failed to delete trade');
-                              }
-                            }
-                          }}
-                          className="text-red-400 hover:text-red-300 text-xs"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-        
-        <div className="mt-4">
-          <Button
-            variant="secondary"
-            onClick={() => router.push('/')}
-          >
-            Add New Trade
-          </Button>
-        </div>
-      </div>
       
       {/* Danger Zone */}
       <div className="mt-8 bg-[#1C1719] rounded-lg p-6 border border-red-500">

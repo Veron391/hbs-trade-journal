@@ -1,128 +1,95 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { z } from 'zod'
 
-const updateTradeSchema = z.object({
-  assetType: z.enum(['stock', 'crypto']).optional(),
-  symbol: z.string().min(1).optional(),
-  side: z.enum(['buy', 'sell']).optional(),
-  qty: z.number().positive().optional(),
-  price: z.number().positive().optional(),
-  entryPrice: z.number().positive().optional(),
-  pnl: z.number().optional().nullable(),
-  occurredAt: z.string().refine((val) => !isNaN(Date.parse(val)), {
-    message: "Invalid date format"
-  }).optional(),
-  entryDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
-    message: "Invalid entry date format"
-  }).optional(),
-  exitDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
-    message: "Invalid exit date format"
-  }).optional(),
-  setupNotes: z.string().optional(),
-  mistakesNotes: z.string().optional(),
-  tags: z.string().optional(),
-  link: z.string().optional(),
-})
+export const dynamic = 'force-dynamic'
 
-// PATCH /api/trades/[id] - Update trade
+// Shared in-memory storage with parent route
+// In production, you would use a database
+declare global {
+  var trades: any[] | undefined
+}
+
+if (!global.trades) {
+  global.trades = []
+}
+
+// Helper to get current user (mock implementation)
+async function getCurrentUser(request: NextRequest) {
+  // In a real app, this would come from JWT token or session
+  const url = new URL(request.url);
+  const userId = url.searchParams.get('userId') ||
+                  request.cookies.get('userId')?.value || 
+                  request.headers.get('x-user-id') || 
+                  'default-user'
+  
+  return { id: userId, email: `${userId}@example.com` }
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = request.headers.get('x-user-id') || '1'
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
+    const user = await getCurrentUser(request)
     const { id } = await params
     const body = await request.json()
-    const validatedData = updateTradeSchema.parse(body)
 
-    // Check if trade exists and belongs to user
-    const existingTrade = await prisma.trade.findFirst({
-      where: { id, userId },
-    })
-
-    if (!existingTrade) {
-      return NextResponse.json({ error: 'Trade not found' }, { status: 404 })
+    // Find the trade and verify ownership
+    const tradeIndex = global.trades!.findIndex(t => t.id === id && t.userId === user.id)
+    if (tradeIndex === -1) {
+      return NextResponse.json({ error: 'Trade not found or unauthorized' }, { status: 404 })
     }
 
-    const updateData: any = { 
-      assetType: validatedData.assetType,
-      symbol: validatedData.symbol,
-      side: validatedData.side,
-      qty: validatedData.qty,
-      price: validatedData.price,
-      entryPrice: validatedData.entryPrice,
-      pnl: validatedData.pnl,
-      setupNotes: validatedData.setupNotes,
-      mistakesNotes: validatedData.mistakesNotes,
-      tags: validatedData.tags,
-      link: validatedData.link,
-    };
-    if (validatedData.occurredAt) {
-      // Parse date string as local date to avoid timezone issues
-      const [year, month, day] = validatedData.occurredAt.split('-').map(Number);
-      updateData.occurredAt = new Date(year, month - 1, day);
-    }
-    if (validatedData.entryDate) {
-      const [year, month, day] = validatedData.entryDate.split('-').map(Number);
-      updateData.entryDate = new Date(year, month - 1, day);
-    }
-    if (validatedData.exitDate) {
-      const [year, month, day] = validatedData.exitDate.split('-').map(Number);
-      updateData.exitDate = new Date(year, month - 1, day);
-    }
-
-    const trade = await prisma.trade.update({
-      where: { id },
-      data: updateData,
-    })
-
-    return NextResponse.json(trade)
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Validation error', details: error.errors }, { status: 422 })
-    }
+    // Calculate P&L if both entry and exit prices are provided
+    let pnl = global.trades![tradeIndex].pnl
+    const updatedTrade = { ...global.trades![tradeIndex], ...body }
     
+    if (updatedTrade.exitPrice && updatedTrade.entryPrice && updatedTrade.qty) {
+      const multiplier = updatedTrade.direction === 'long' ? 1 : -1
+      pnl = (updatedTrade.exitPrice - updatedTrade.entryPrice) * updatedTrade.qty * multiplier
+    }
+
+    global.trades![tradeIndex] = {
+      ...updatedTrade,
+      pnl,
+      setupNotes: body.setupNotes !== undefined ? body.setupNotes : updatedTrade.setupNotes,
+      mistakesLearnings: body.mistakesLearnings !== undefined ? body.mistakesLearnings : updatedTrade.mistakesLearnings,
+      tags: body.tags !== undefined ? (Array.isArray(body.tags) ? body.tags.join(',') : body.tags) : updatedTrade.tags,
+      link: body.link !== undefined ? body.link : updatedTrade.link,
+      updatedAt: new Date().toISOString(),
+    }
+
+    return NextResponse.json(global.trades![tradeIndex])
+  } catch (error) {
     console.error('Error updating trade:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to update trade' },
+      { status: 500 }
+    )
   }
 }
 
-// DELETE /api/trades/[id] - Delete trade
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = request.headers.get('x-user-id') || '1'
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
+    const user = await getCurrentUser(request)
     const { id } = await params
 
-    // Check if trade exists and belongs to user
-    const existingTrade = await prisma.trade.findFirst({
-      where: { id, userId },
-    })
+    const initialLength = global.trades!.length
+    global.trades = global.trades!.filter(t => !(t.id === id && t.userId === user.id))
 
-    if (!existingTrade) {
-      return NextResponse.json({ error: 'Trade not found' }, { status: 404 })
+    if (global.trades!.length === initialLength) {
+      return NextResponse.json({ error: 'Trade not found or unauthorized' }, { status: 404 })
     }
 
-    await prisma.trade.delete({
-      where: { id },
-    })
-
-    return NextResponse.json({ message: 'Trade deleted successfully' })
+    // Return success: true as expected by the client
+    return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting trade:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to delete trade' },
+      { status: 500 }
+    )
   }
 }

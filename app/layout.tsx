@@ -4,7 +4,9 @@ import "./globals.css";
 import { AuthProvider } from "./context/AuthContext";
 import { TradeProvider } from "./context/TradeContext";
 import { TimePeriodProvider } from "./context/TimePeriodContext";
+import { UIProtectionProvider } from "./context/UIProtectionContext";
 import ConditionalFooter from "./components/ConditionalFooter";
+import { SWRConfig } from 'swr';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,18 +35,31 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         style={{ backgroundColor: '#110D0F' }}
       >
-        <AuthProvider>
-          <TimePeriodProvider>
-            <TradeProvider>
-              <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#110D0F' }}>
-                <main role="main" className="flex-1">
-                  {children}
-                </main>
-                <ConditionalFooter />
-              </div>
-            </TradeProvider>
-          </TimePeriodProvider>
-        </AuthProvider>
+        <SWRConfig
+          value={{
+            revalidateOnFocus: false,
+            revalidateOnReconnect: true,
+            dedupingInterval: 2000,
+            focusThrottleInterval: 5000,
+            errorRetryCount: 3,
+            errorRetryInterval: 1000,
+          }}
+        >
+          <UIProtectionProvider>
+            <AuthProvider>
+              <TimePeriodProvider>
+                <TradeProvider>
+                  <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#110D0F' }}>
+                    <main role="main" className="flex-1">
+                      {children}
+                    </main>
+                    <ConditionalFooter />
+                  </div>
+                </TradeProvider>
+              </TimePeriodProvider>
+            </AuthProvider>
+          </UIProtectionProvider>
+        </SWRConfig>
       </body>
     </html>
   );

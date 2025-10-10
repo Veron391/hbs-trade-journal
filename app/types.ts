@@ -12,9 +12,10 @@ export interface Trade {
   exitPrice: number;
   quantity: number;
   setupNotes: string;
-  mistakesNotes: string;
-  tags: string[];
+  mistakesLearnings: string;
   link?: string;
+  pnlAmount?: number | null;
+  pnlPercentage?: number | null;
 }
 
 export interface TradeStats {
@@ -33,7 +34,7 @@ export interface TradeStats {
   averageHoldTime: number;
   averageWinningHoldTime: number;
   averageLosingHoldTime: number;
-  profitFactor: number;
+  riskRewardRatio: number;
   winRate: number;
   sortino: number;
   averageRiskRewardRatio: number;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import FormInput from '../../components/ui/FormInput';
@@ -11,7 +11,17 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { forgotPassword } = useAuth();
+  const { forgotPassword, user, loading: authLoading } = useAuth();
+  useEffect(() => {
+    if (!authLoading && user) {
+      // Already authenticated; redirect to home
+      window.location.href = '/';
+    }
+  }, [authLoading, user]);
+
+  if (authLoading || user) {
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,8 +66,8 @@ export default function ForgotPasswordPage() {
         <div className="bg-green-900/50 border border-green-500 text-white px-4 py-3 rounded-md mb-4">
           <p>Password reset instructions have been sent to your email.</p>
           <p className="mt-4">
-            <Link href="/auth/login" className="text-blue-500 hover:underline">
-              Return to login
+            <Link href="/auth/reset-password/confirm" className="text-blue-500 hover:underline">
+              Enter OTP to reset password
             </Link>
           </p>
         </div>

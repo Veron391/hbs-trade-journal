@@ -3,13 +3,26 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 import { useLineSeries } from '../../../lib/dataService';
 import { currencyShort, dateLabel } from '../../../lib/format';
 
-const PLLine: React.FC = React.memo(() => {
-  const data = useLineSeries(); // [{date:'YYYY-MM-DD', pnl:number}]
+interface PLLineProps {
+  data?: Array<{date: string, value: number}>;
+}
+
+const PLLine: React.FC<PLLineProps> = React.memo(({ data: propData }) => {
+  const hookData = useLineSeries(); // [{date:'YYYY-MM-DD', pnl:number}]
+  
+  // Use prop data if provided, otherwise use hook data
+  const data = propData || hookData;
+  
+  // Convert data format if needed
+  const chartData = data.map(item => ({
+    date: item.date,
+    pnl: item.value || item.pnl || 0
+  }));
   
   return (
     <div className="w-full h-[320px]">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+        <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
           <CartesianGrid stroke="rgba(147, 148, 148, 0.1)" vertical={false} />
           <XAxis 
             dataKey="date" 

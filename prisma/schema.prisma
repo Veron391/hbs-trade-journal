@@ -3,6 +3,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
 }
 
 datasource db {
@@ -11,23 +12,23 @@ datasource db {
 }
 
 model Trade {
-  id            String   @id @default(cuid())
-  userId        String
-  assetType     String   // 'stock' | 'crypto'
-  symbol        String
-  side          String   // 'buy' | 'sell'
-  qty           Float
-  price         Float
-  entryPrice    Float?   // entry price
-  pnl           Float?   // optional, journal hisoblab turishi mumkin
-  occurredAt    DateTime // trade sanasi/vaqti (UTC)
-  entryDate     DateTime // entry sanasi
-  exitDate      DateTime // exit sanasi
-  setupNotes    String?  // trade setup notes
-  mistakesNotes String?  // mistakes and learnings
-  tags          String?  // comma-separated tags
-  link          String?  // trade link
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  @@index([userId, occurredAt])
+  id                String   @id @default(cuid())
+  userId            String
+  assetType         String   // 'stock' | 'crypto'
+  symbol            String
+  side              String   // 'buy' | 'sell'
+  qty               Float
+  price             Float
+  exitPrice         Float?   // exit price
+  pnl               Float?   // optional, journal hisoblab turishi mumkin
+  entryDate         DateTime // entry date
+  exitDate          DateTime // exit date
+  occurredAt        DateTime // trade sanasi/vaqti (UTC) - backward compatibility
+  setupNotes        String?  // trade setup notes
+  mistakesLearnings String?  // mistakes and learnings
+  tags              String?  // comma-separated tags
+  link              String?  // trade link
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  @@index([userId, entryDate])
 }

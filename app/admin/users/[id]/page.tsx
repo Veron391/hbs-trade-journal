@@ -522,7 +522,7 @@ export default function UserDetailPage() {
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-neutral-400">Profit Factor</span>
+              <span className="text-neutral-400">Risk/Reward Ratio</span>
               <span className="text-white font-semibold">
                 {(() => {
                   const wins = filteredTrades.filter(t => t.pnl > 0).reduce((sum, t) => sum + t.pnl, 0);

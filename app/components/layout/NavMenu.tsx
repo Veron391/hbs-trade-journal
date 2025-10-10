@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
 import { useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { User, Settings, LogOut } from "lucide-react";
+import { User, Settings, LogOut, House, CalendarDays, TrendingUp, Newspaper } from "lucide-react";
 
 export default function NavMenu() {
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
   const pathname = usePathname();
 
   // Check if a route is active
@@ -17,8 +17,8 @@ export default function NavMenu() {
   };
 
   // Active link style
-  const activeLinkClass = "text-green-300 font-medium";
-  const linkClass = "hover:text-green-400 transition-colors";
+  const activeLinkClass = "text-green-300 font-bold";
+  const linkClass = "hover:text-green-400 transition-colors font-semibold";
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -69,35 +69,52 @@ export default function NavMenu() {
     };
   }, [isMenuOpen]);
 
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <nav className="flex items-center justify-between w-full" role="navigation" aria-label="Main navigation">
+        <div className="flex-1"></div>
+        <div className="flex items-center space-x-8">
+          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-green-500"></div>
+        </div>
+        <div className="flex-1"></div>
+      </nav>
+    );
+  }
+
   return (
-    <nav className="flex items-center" role="navigation" aria-label="Main navigation">
+    <nav className="flex items-center justify-between w-full" role="navigation" aria-label="Main navigation">
       {user ? (
         // Authenticated user menu
         <>
-          <ul className="flex items-center space-x-2 mr-60" role="menubar">
+          <div className="flex-1"></div>
+          <ul className="flex items-center space-x-8" role="menubar">
             <li role="none">
               <Link
                 href="/"
-                className={`${isActive("/") ? "text-green-300 bg-[rgba(34,197,94,0.15)] px-4 py-2" : `${linkClass} px-3 py-1`} rounded-20`}
+                className={`${isActive("/") ? "text-green-300 bg-[rgba(34,197,94,0.15)] px-4 py-2" : `${linkClass} px-3 py-1`} rounded-20 flex items-center gap-2`}
                 role="menuitem"
                 aria-current={isActive("/") ? "page" : undefined}
               >
+                <House size={18} />
                 Journal
               </Link>
             </li>
             <li>
               <Link
                 href="/calendar"
-                className={`${isActive("/calendar") ? "text-green-300 bg-[rgba(34,197,94,0.15)] px-4 py-2" : `${linkClass} px-3 py-1`} rounded-20`}
+                className={`${isActive("/calendar") ? "text-green-300 bg-[rgba(34,197,94,0.15)] px-4 py-2" : `${linkClass} px-3 py-1`} rounded-20 flex items-center gap-2`}
               >
+                <CalendarDays size={18} />
                 Calendar
               </Link>
             </li>
             <li>
               <Link
                 href="/stats"
-                className={`${isActive("/stats") ? "text-green-300 bg-[rgba(34,197,94,0.15)] px-4 py-2" : `${linkClass} px-3 py-1`} rounded-20`}
+                className={`${isActive("/stats") ? "text-green-300 bg-[rgba(34,197,94,0.15)] px-4 py-2" : `${linkClass} px-3 py-1`} rounded-20 flex items-center gap-2`}
               >
+                <TrendingUp size={18} />
                 Stats
               </Link>
             </li>
@@ -106,8 +123,9 @@ export default function NavMenu() {
                 href="https://www.investing.com/economic-calendar/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`${linkClass} px-3 py-1 rounded-20 flex items-center gap-1`}
+                className={`${linkClass} px-3 py-1 rounded-20 flex items-center gap-2`}
               >
+                <Newspaper size={18} />
                 Macro News
                 <svg 
                   className="w-3 h-3" 
@@ -125,6 +143,7 @@ export default function NavMenu() {
               </a>
             </li>
           </ul>
+          <div className="flex-1"></div>
           
           <div
             className="relative flex items-center isolation-auto"
@@ -133,9 +152,10 @@ export default function NavMenu() {
           >
             <button
               onClick={handleToggleClick}
-              className="flex items-center space-x-1 text-gray-200 hover:text-white px-4 py-2 rounded-20 bg-[rgba(34,197,94,0.15)] hover:bg-[rgba(34,197,94,0.23)]"
+              className="flex items-center space-x-2 text-gray-200 hover:text-white px-4 py-2 rounded-20 bg-[rgba(34,197,94,0.15)] hover:bg-[rgba(34,197,94,0.23)]"
               ref={buttonRef}
             >
+              <User size={16} />
               <span className="whitespace-nowrap">{user.name}</span>
               <svg
                 xmlns="http://www.w3.org/2000/svg"

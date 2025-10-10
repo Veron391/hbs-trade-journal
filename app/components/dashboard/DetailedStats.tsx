@@ -40,7 +40,7 @@ export default function DetailedStats({ selectedPeriod, tradeType }: DetailedSta
         averageHoldTime: 0,
         averageWinningHoldTime: 0,
         averageLosingHoldTime: 0,
-        profitFactor: 0,
+        riskRewardRatio: 0,
         winRate: 0,
         sortino: 0,
         averageRiskRewardRatio: 0,
@@ -134,7 +134,7 @@ export default function DetailedStats({ selectedPeriod, tradeType }: DetailedSta
     const averageLosingHoldTime = losingTrades.length > 0 ? losingHoldTime / losingTrades.length : 0;
     
     // Calculate performance ratios
-    const profitFactor = totalLossAmount > 0 ? totalWinAmount / totalLossAmount : totalWinAmount;
+    const riskRewardRatio = totalLossAmount > 0 ? totalWinAmount / totalLossAmount : totalWinAmount;
     const winRate = processedTrades.length > 0 ? winningTrades.length / processedTrades.length : 0;
     
     // Sortino Ratio (simplified)
@@ -182,7 +182,7 @@ export default function DetailedStats({ selectedPeriod, tradeType }: DetailedSta
       averageHoldTime,
       averageWinningHoldTime,
       averageLosingHoldTime,
-      profitFactor,
+      riskRewardRatio: averageRiskRewardRatio,
       winRate,
       sortino,
       averageRiskRewardRatio,
@@ -263,8 +263,8 @@ export default function DetailedStats({ selectedPeriod, tradeType }: DetailedSta
               value={formatCurrency(filteredStats.largestLoss)} 
             />
             <StatItem 
-              label="Profit Factor" 
-              value={filteredStats.profitFactor.toFixed(2)} 
+              label="Risk/Reward Ratio" 
+              value={filteredStats.riskRewardRatio.toFixed(2)} 
             />
             <StatItem 
               label="Win Rate" 

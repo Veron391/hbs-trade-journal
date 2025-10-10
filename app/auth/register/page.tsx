@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
@@ -8,20 +8,38 @@ import FormInput from '../../components/ui/FormInput';
 import Button from '../../components/ui/Button';
 
 export default function RegisterPage() {
-  const [name, setName] = useState('');
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
+  const { register, user, loading: authLoading } = useAuth();
   const router = useRouter();
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace('/');
+    }
+  }, [authLoading, user, router]);
+
+  if (authLoading || user) {
+    return null;
+  }
 
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
     
-    if (!name.trim()) {
-      newErrors.name = 'Name is required';
+    if (!fullName.trim()) {
+      newErrors.fullName = 'Full name is required';
+    }
+    if (!username.trim()) {
+      newErrors.username = 'Username is required';
+    }
+
+    if (!phoneNumber.trim()) {
+      newErrors.phoneNumber = 'Phone number is required';
     }
     
     if (!email.trim()) {
@@ -56,7 +74,7 @@ export default function RegisterPage() {
     setLoading(true);
     
     try {
-      await register(name, email, password);
+      await register(fullName, email, username, phoneNumber, password, confirmPassword);
       router.push('/');
     } catch (err: any) {
       setErrors({
@@ -102,14 +120,35 @@ export default function RegisterPage() {
       
       <form onSubmit={handleSubmit}>
         <FormInput
-          id="name"
+          id="fullName"
           label="Full Name"
           type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
           required
           placeholder="John Doe"
-          error={errors.name}
+          error={errors.fullName}
+        />
+        <FormInput
+          id="username"
+          label="Username"
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+          placeholder="johndoe"
+          error={errors.username}
+        />
+
+        <FormInput
+          id="phone"
+          label="Phone Number"
+          type="text"
+          value={phoneNumber}
+          onChange={(e) => setPhoneNumber(e.target.value)}
+          required
+          placeholder="+1 555 555 5555"
+          error={errors.phoneNumber}
         />
         
         <FormInput

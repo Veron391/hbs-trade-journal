@@ -44,6 +44,11 @@ export default function FormInput({
             focus:outline-none focus:ring-1 focus:ring-blue-500 
             ${error ? 'border-danger' : 'border-[#534E50]'}
             ${isPassword ? 'pr-10' : ''}`}
+          style={{
+            WebkitBoxShadow: '0 0 0 1000px #342F31 inset',
+            WebkitTextFillColor: 'white',
+            transition: 'background-color 5000s ease-in-out 0s'
+          }}
         />
         {isPassword && (
           <button

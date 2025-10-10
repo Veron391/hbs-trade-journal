@@ -137,8 +137,7 @@ function matchTrades(trades: BinanceTradeResponse[]): Trade[] {
           exitPrice,
           quantity: matchQty,
           setupNotes: isMockData ? 'SIMULATED DATA - Not a real trade' : '',
-          mistakesNotes: isMockData ? 'This is example trade data only - not from your account' : '',
-          tags: isMockData ? ['SIMULATED_DATA'] : []
+          mistakesNotes: isMockData ? 'This is example trade data only - not from your account' : ''
         });
         
         // Update quantities or remove from queues
@@ -432,8 +431,7 @@ function getMockTradeData(): Trade[] {
       exitPrice: 44500,
       quantity: 0.15,
       setupNotes: 'MOCK DATA - API connection unsuccessful',
-      mistakesNotes: 'This is example data only. Check your API configuration.',
-      tags: ['MOCK_DATA', 'EXAMPLE']
+      mistakesNotes: 'This is example data only. Check your API configuration.'
     },
     {
       id: 'mock-2',
@@ -446,8 +444,7 @@ function getMockTradeData(): Trade[] {
       exitPrice: 2350,
       quantity: 1.5,
       setupNotes: 'MOCK DATA - API connection unsuccessful',
-      mistakesNotes: 'This is example data only. Check your API configuration.',
-      tags: ['MOCK_DATA', 'EXAMPLE']
+      mistakesNotes: 'This is example data only. Check your API configuration.'
     }
   ];
   

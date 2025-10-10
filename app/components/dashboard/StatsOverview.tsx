@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from 'react';
-import { useTrades } from '../../../lib/hooks/useTrades';
+import { useTrades } from '../../context/TradeContext';
 import { filterTradesByPeriod, TimePeriod } from '../dashboard/TimePeriodSelector';
 import { ArrowUpCircle, ArrowDownCircle, DollarSign, Calendar, BarChart3, Percent } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
@@ -13,34 +13,7 @@ interface StatsOverviewProps {
 }
 
 export default function StatsOverview({ selectedPeriod, tradeType }: StatsOverviewProps) {
-  const { trades: dbTrades, isLoading, error } = useTrades();
-  
-  // Convert database trades to frontend format
-  const trades = useMemo(() => {
-    return dbTrades.map(dbTrade => {
-      const occurredAt = typeof dbTrade.occurredAt === 'string' 
-        ? new Date(dbTrade.occurredAt) 
-        : dbTrade.occurredAt;
-      
-      const dateString = occurredAt.toISOString().split('T')[0];
-      
-      return {
-        id: dbTrade.id,
-        type: dbTrade.assetType as 'stock' | 'crypto',
-        symbol: dbTrade.symbol,
-        direction: dbTrade.side === 'buy' ? 'long' : 'short',
-        entryDate: dateString,
-        exitDate: dateString,
-        entryPrice: dbTrade.price * 0.95, // Mock entry price
-        exitPrice: dbTrade.price,
-        quantity: dbTrade.qty,
-        setupNotes: '',
-        mistakesNotes: '',
-        tags: [],
-        link: undefined,
-      };
-    });
-  }, [dbTrades]);
+  const { trades } = useTrades();
 
   // Filter trades based on selected period and calculate stats
   const filteredStats = useMemo(() => {
@@ -64,7 +37,7 @@ export default function StatsOverview({ selectedPeriod, tradeType }: StatsOvervi
         largestProfit: 0,
         largestLoss: 0,
         averageHoldTime: 0,
-        profitFactor: 0,
+        riskRewardRatio: 0,
         winRate: 0,
       };
     }
@@ -124,7 +97,8 @@ export default function StatsOverview({ selectedPeriod, tradeType }: StatsOvervi
     const averageHoldTime = totalHoldTime / processedTrades.length;
     
     // Calculate performance ratios
-    const profitFactor = totalLossAmount > 0 ? totalWinAmount / totalLossAmount : totalWinAmount;
+    // Use existing averageWinningTrade and averageLosingTrade for risk/reward ratio
+    const riskRewardRatio = averageWinningTrade && averageLosingTrade ? averageWinningTrade / averageLosingTrade : 0;
     const winRate = processedTrades.length > 0 ? winningTrades.length / processedTrades.length : 0;
     
     return {
@@ -139,7 +113,7 @@ export default function StatsOverview({ selectedPeriod, tradeType }: StatsOvervi
       largestProfit,
       largestLoss,
       averageHoldTime,
-      profitFactor,
+      riskRewardRatio,
       winRate,
     };
   }, [trades, selectedPeriod, tradeType]);
@@ -229,13 +203,13 @@ export default function StatsOverview({ selectedPeriod, tradeType }: StatsOvervi
           </div>
         </div>
 
-        {/* Profit Factor */}
+        {/* Risk/Reward Ratio */}
         <div className="bg-[#1C1719] rounded-lg shadow p-6 transform-gpu transition-transform duration-200 hover:scale-[1.05]">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400 mb-1">Profit Factor</p>
+              <p className="text-sm text-gray-400 mb-1">Risk/Reward Ratio</p>
               <p className="text-2xl font-bold text-primary">
-                {filteredStats.profitFactor.toFixed(2)}
+                {filteredStats.riskRewardRatio.toFixed(2)}
               </p>
             </div>
             <div

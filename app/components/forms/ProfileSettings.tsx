@@ -81,8 +81,7 @@ export default function ProfileSettings() {
               exitPrice: trade.exitPrice,
               quantity: trade.quantity,
               setupNotes: trade.setupNotes || '',
-              mistakesNotes: trade.mistakesNotes || '',
-              tags: trade.tags || ['IMPORTED']
+              mistakesNotes: trade.mistakesNotes || ''
             });
             importCount++;
           }

@@ -29,14 +29,31 @@ export default function SegmentedDonut({
 }: Props) {
   const [hover, setHover] = useState<{i: number; x: number; y: number} | null>(null);
 
-  const total = useMemo(() => data.reduce((a, b) => a + b.value, 0), [data]);
+  // Safety checks for data
+  const safeData = useMemo(() => {
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      return [];
+    }
+    return data.filter(item => item && typeof item.value === 'number' && item.value > 0);
+  }, [data]);
+
+  const total = useMemo(() => safeData.reduce((a, b) => a + b.value, 0), [safeData]);
   const radius = size / 2 - thickness / 2 - 8; // Add safety buffer for hover effects
   const cx = size / 2;
   const cy = size / 2;
 
+  // Early return if no valid data
+  if (safeData.length === 0 || total <= 0) {
+    return (
+      <div className="flex items-center justify-center w-full h-full">
+        <div className="text-neutral-400 text-sm">No data available</div>
+      </div>
+    );
+  }
+
   const segments = useMemo(() => {
     if (total <= 0) return [];
-    const entries = data.map((d, i) => ({
+    const entries = safeData.map((d, i) => ({
       ...d,
       color: d.color ?? palette[i % palette.length],
       share: d.value / total,

@@ -4,23 +4,32 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 // Define user type
 export interface User {
-  id: string;
+  id: number;
   email: string;
   name: string;
+  username?: string;
+  full_name?: string;
+  phone_number?: string | null;
 }
 
 // Define auth context type
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
-  updateUser: (userData: Partial<User>) => Promise<void>;
+  login: (identifier: string, password: string) => Promise<void>;
+  register: (
+    full_name: string,
+    email: string,
+    username: string,
+    phone_number: string,
+    password: string,
+    password_confirm: string
+  ) => Promise<void>;
+  logout: () => Promise<void>;
+  updateUser: (userData: { full_name?: string; email?: string; username?: string; phone_number?: string }) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
   forgotPassword: (email: string) => Promise<void>;
-  resetPassword: (token: string, newPassword: string) => Promise<void>;
-  getAllUsers: () => User[];
+  resetPasswordConfirm: (email: string, code: string, new_password: string) => Promise<void>;
 }
 
 // Create context with default values
@@ -29,12 +38,11 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   login: async () => {},
   register: async () => {},
-  logout: () => {},
+  logout: async () => {},
   updateUser: async () => {},
   changePassword: async () => false,
   forgotPassword: async () => {},
-  resetPassword: async () => {},
-  getAllUsers: () => [],
+  resetPasswordConfirm: async () => {},
 });
 
 // Custom hook to use the auth context
@@ -44,190 +52,182 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Check if user is logged in on initial load
+  // Check if user is logged in on initial load by calling profile endpoint
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch('/api/users/profile', {
+          credentials: 'include',
+          cache: 'no-store' // Don't cache to ensure fresh data
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const mapped: User = {
+            id: data.id,
+            email: data.email,
+            name: data.full_name || data.username || data.email,
+            username: data.username,
+            full_name: data.full_name,
+            phone_number: data.phone_number,
+          };
+          setUser(mapped);
+        } else {
+          setUser(null);
+        }
+      } catch {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
   }, []);
 
-  // Mock login function - replace with real API call
-  const login = async (email: string, password: string) => {
-    try {
-      // Check if user exists in localStorage
-      const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-      const existingUser = existingUsers.find((u: any) => u.email === email);
-      
-      if (!existingUser) {
-        throw new Error('Account does not exist. Please register first.');
-      }
-      
-      // Simulate password check (in real app, this would be hashed)
-      if (existingUser.password !== password) {
-        throw new Error('Invalid password');
-      }
-      
-      const mockUser: User = {
-        id: existingUser.id,
-        email: existingUser.email,
-        name: existingUser.name,
-      };
-      
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      setUser(mockUser);
-    } catch (error) {
-      throw error;
+  // Real login using backend API
+  const login = async (identifier: string, password: string) => {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ identifier, password }),
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(errText || 'Login failed');
     }
+    const profile = await fetch('/api/users/profile', { credentials: 'include' });
+    if (!profile.ok) {
+      throw new Error('Failed to load user profile');
+    }
+    const data = await profile.json();
+    const mapped: User = {
+      id: data.id,
+      email: data.email,
+      name: data.full_name || data.username || data.email,
+      username: data.username,
+      full_name: data.full_name,
+      phone_number: data.phone_number,
+    };
+    setUser(mapped);
   };
 
-  // Mock register function - replace with real API call
-  const register = async (name: string, email: string, password: string) => {
-    try {
-      // Check if user already exists
-      const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-      const existingUser = existingUsers.find((u: any) => u.email === email);
-      
-      if (existingUser) {
-        throw new Error('User with this email already exists');
-      }
-      
-      // Create new user
-      const newUser = {
-        id: Date.now().toString(),
-        email,
-        name,
-        password, // In real app, this would be hashed
+  // Real register using backend API
+  const register = async (
+    full_name: string,
+    email: string,
+    username: string,
+    phone_number: string,
+    password: string,
+    password_confirm: string
+  ) => {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ full_name, email, username, phone_number, password, password_confirm }),
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(errText || 'Registration failed');
+    }
+    // Try to load profile after registration (if backend establishes session)
+    const profile = await fetch('/api/users/profile', { credentials: 'include' });
+    if (profile.ok) {
+      const data = await profile.json();
+      const mapped: User = {
+        id: data.id,
+        email: data.email,
+        name: data.full_name || data.username || data.email,
+        username: data.username,
+        full_name: data.full_name,
+        phone_number: data.phone_number,
       };
-      
-      // Save to registered users list
-      existingUsers.push(newUser);
-      localStorage.setItem('registeredUsers', JSON.stringify(existingUsers));
-      
-      // Clear any existing trades for new user (clean slate)
-      localStorage.removeItem('trades');
-      localStorage.removeItem('hasAddedSamples');
-      
-      // Create user object for session
-      const mockUser: User = {
-        id: newUser.id,
-        email: newUser.email,
-        name: newUser.name,
-      };
-      
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      setUser(mockUser);
-    } catch (error) {
-      throw error;
+      setUser(mapped);
     }
   };
 
   // Logout function
-  const logout = () => {
-    localStorage.removeItem('user');
-    setUser(null);
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { 
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+      setLoading(false);
+      // Force a page reload to clear any cached data
+      window.location.href = '/';
+    }
   };
 
-  // Update user function
-  const updateUser = async (userData: Partial<User>) => {
+  // Update user function -> backend profile update
+  const updateUser = async (userData: { full_name?: string; email?: string; username?: string; phone_number?: string }) => {
     if (!user) {
       throw new Error('User not authenticated');
     }
-
-    try {
-      // Get registered users from localStorage
-      const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-      const currentUserIndex = existingUsers.findIndex((u: any) => u.id === user.id);
-      
-      if (currentUserIndex === -1) {
-        throw new Error('User not found in database');
-      }
-
-      // Check if email is being changed and if it already exists
-      if (userData.email && userData.email !== user.email) {
-        const emailExists = existingUsers.some((u: any) => u.email === userData.email && u.id !== user.id);
-        if (emailExists) {
-          throw new Error('Email already exists. Please choose a different email.');
-        }
-      }
-
-      // Update user in registered users list
-      existingUsers[currentUserIndex] = {
-        ...existingUsers[currentUserIndex],
-        ...userData
-      };
-      localStorage.setItem('registeredUsers', JSON.stringify(existingUsers));
-
-      // Update current user session
-      const updatedUser = { ...user, ...userData };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      setUser(updatedUser);
-    } catch (error) {
-      throw error;
+    const res = await fetch('/api/users/profile/update', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(userData),
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(errText || 'Failed to update profile');
     }
+    const profile = await fetch('/api/users/profile', { credentials: 'include' });
+    if (!profile.ok) {
+      throw new Error('Failed to reload profile');
+    }
+    const data = await profile.json();
+    const mapped: User = {
+      id: data.id,
+      email: data.email,
+      name: data.full_name || data.username || data.email,
+      username: data.username,
+      full_name: data.full_name,
+      phone_number: data.phone_number,
+    };
+    setUser(mapped);
   };
 
-  // Change password function
-  const changePassword = async (currentPassword: string, newPassword: string) => {
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-
-    try {
-      // Get registered users from localStorage
-      const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-      const currentUserIndex = existingUsers.findIndex((u: any) => u.id === user.id);
-      
-      if (currentUserIndex === -1) {
-        throw new Error('User not found in database');
-      }
-
-      // Verify current password
-      if (existingUsers[currentUserIndex].password !== currentPassword) {
-        throw new Error('Current password is incorrect');
-      }
-
-      // Update password
-      existingUsers[currentUserIndex].password = newPassword;
-      localStorage.setItem('registeredUsers', JSON.stringify(existingUsers));
-
-      return true;
-    } catch (error) {
-      throw error;
-    }
+  // Change password function (not specified in provided backend endpoints)
+  const changePassword = async () => {
+    return false;
   };
 
-  // Mock forgot password function - replace with real API call
+  // Forgot password using backend endpoint
   const forgotPassword = async (email: string) => {
-    // Simulate API call to send password reset email
-    console.log(`Password reset email sent to ${email}`);
-  };
-
-  // Mock reset password function - replace with real API call
-  const resetPassword = async (token: string, newPassword: string) => {
-    // Simulate API call to reset password
-    console.log(`Password reset for token ${token}`);
-  };
-
-  // Get all registered users
-  const getAllUsers = (): User[] => {
-    try {
-      const registeredUsers = localStorage.getItem('registeredUsers');
-      if (registeredUsers) {
-        const users = JSON.parse(registeredUsers);
-        return users.map((user: any) => ({
-          id: user.id,
-          email: user.email,
-          name: user.name
-        }));
-      }
-      return [];
-    } catch (error) {
-      console.error('Error getting all users:', error);
-      return [];
+    const res = await fetch('/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email }),
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(errText || 'Failed to request password reset');
     }
   };
+
+  // Confirm password reset (OTP)
+  const resetPasswordConfirm = async (email: string, code: string, new_password: string) => {
+    const res = await fetch('/api/auth/forgot-password/confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, code, new_password }),
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(errText || 'Failed to confirm password reset');
+    }
+  };
+
+  // getAllUsers removed (not required)
 
   return (
     <AuthContext.Provider 
@@ -240,8 +240,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updateUser,
         changePassword,
         forgotPassword, 
-        resetPassword,
-        getAllUsers
+        resetPasswordConfirm
       }}
     >
       {children}

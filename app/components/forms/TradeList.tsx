@@ -1,80 +1,42 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useTrades, useTradeMutations } from '../../../lib/hooks/useTrades';
+import { useTrades } from '../../context/TradeContext';
 import { Trade } from '../../types';
 import { format } from 'date-fns';
-import { Pencil, Trash2, ArrowUp, ArrowDown, Download, FileDown, AlertTriangle, Terminal, ExternalLink } from 'lucide-react';
+import { Pencil, Trash2, ArrowUp, ArrowDown, Download, FileDown, AlertTriangle, ExternalLink, FileText, AlertCircle } from 'lucide-react';
 import TradeForm from './TradeForm';
-import { Trade as DbTrade } from '@prisma/client';
-
-// Convert database trade to frontend trade format
-function convertDbTradeToFrontend(dbTrade: DbTrade): Trade {
-  // Handle both Date objects and string dates
-  const occurredAt = typeof dbTrade.occurredAt === 'string' 
-    ? new Date(dbTrade.occurredAt) 
-    : dbTrade.occurredAt;
-  
-  const entryDate = dbTrade.entryDate 
-    ? (typeof dbTrade.entryDate === 'string' 
-        ? new Date(dbTrade.entryDate) 
-        : dbTrade.entryDate)
-    : occurredAt; // Fallback to occurredAt if entryDate is not available
-    
-  const exitDate = dbTrade.exitDate 
-    ? (typeof dbTrade.exitDate === 'string' 
-        ? new Date(dbTrade.exitDate) 
-        : dbTrade.exitDate)
-    : occurredAt; // Fallback to occurredAt if exitDate is not available
-  
-  // Format dates as YYYY-MM-DD using local timezone to avoid timezone issues
-  const formatDate = (date: Date) => {
-    if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
-      return 'Invalid Date';
-    }
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-  
-  return {
-    id: dbTrade.id,
-    type: dbTrade.assetType as 'stock' | 'crypto',
-    symbol: dbTrade.symbol,
-    direction: dbTrade.side === 'buy' ? 'long' : 'short',
-    entryDate: formatDate(entryDate),
-    exitDate: formatDate(exitDate),
-    entryPrice: dbTrade.entryPrice ? parseFloat(String(dbTrade.entryPrice)) : 0,
-    exitPrice: dbTrade.exitPrice ? parseFloat(String(dbTrade.exitPrice)) : parseFloat(String(dbTrade.price)),
-    quantity: dbTrade.qty,
-    setupNotes: dbTrade.setupNotes || '',
-    mistakesNotes: dbTrade.mistakesNotes || '',
-    tags: dbTrade.tags ? dbTrade.tags.split(', ').filter(tag => tag.trim()) : [],
-    link: dbTrade.link || undefined,
-  };
-}
 
 export default function TradeList() {
-  const { trades: dbTrades, isLoading, error } = useTrades();
-  const { deleteTrade, clearAllTrades } = useTradeMutations();
-  
-  // Convert database trades to frontend format
-  const trades = dbTrades.map(convertDbTradeToFrontend);
+  const { trades, deleteTrade, importTradesFromApi, isImporting, importError, clearAllTrades } = useTrades();
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
   const [isAddingTrade, setIsAddingTrade] = useState(false);
-  const [sortBy, setSortBy] = useState<keyof Trade>('exitDate');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [sortBy, setSortBy] = useState<keyof Trade>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('tradeList_sortBy');
+      return (saved as keyof Trade) || 'exitDate';
+    }
+    return 'exitDate';
+  });
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('tradeList_sortDirection');
+      return (saved as 'asc' | 'desc') || 'desc';
+    }
+    return 'desc';
+  });
   const [apiMessage, setApiMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [showScriptModal, setShowScriptModal] = useState(false);
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [selectedTradeDetails, setSelectedTradeDetails] = useState<Trade | null>(null);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const tradesPerPage = 20;
 
-  // Update API message when error changes
+  // Update API message when import error changes
   useEffect(() => {
-    if (error) {
-      setApiMessage({ type: 'error', text: error.message || 'An error occurred' });
+    if (importError) {
+      setApiMessage({ type: 'error', text: importError });
       
       // Clear error message after 5 seconds
       const timer = setTimeout(() => {
@@ -83,18 +45,7 @@ export default function TradeList() {
       
       return () => clearTimeout(timer);
     }
-  }, [error]);
-
-  // Clear success messages after 3 seconds
-  useEffect(() => {
-    if (apiMessage && apiMessage.type === 'success') {
-      const timer = setTimeout(() => {
-        setApiMessage(null);
-      }, 3000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [apiMessage]);
+  }, [importError]);
 
   // Show script instructions instead of fetching API data
   const handleImportTrades = () => {
@@ -102,11 +53,54 @@ export default function TradeList() {
   };
 
   const handleSort = (column: keyof Trade) => {
+    let newSortDirection: 'asc' | 'desc';
+    
     if (sortBy === column) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      newSortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      setSortDirection(newSortDirection);
     } else {
       setSortBy(column);
-      setSortDirection('desc');
+      newSortDirection = 'desc';
+      setSortDirection(newSortDirection);
+    }
+    
+    // Save sorting options to localStorage
+    localStorage.setItem('tradeList_sortBy', column);
+    localStorage.setItem('tradeList_sortDirection', newSortDirection);
+  };
+
+  // Fetch a single trade detail from backend and map to internal structure
+  const loadTradeDetail = async (id: string, fallback: Trade) => {
+    try {
+      setIsDetailLoading(true);
+      const res = await fetch(`/api/journal/trades/${id}`, { cache: 'no-store' });
+      if (!res.ok) {
+        setSelectedTradeDetails(fallback);
+        return;
+      }
+      const b = await res.json();
+      const mapped: Trade = {
+        id: String(b.id),
+        symbol: b.symbol,
+        type: b.trade_type === 2 ? 'stock' : 'crypto',
+        direction: b.direction,
+        entryDate: b.entry_date,
+        exitDate: b.exit_date,
+        entryPrice: Number(b.buy_price),
+        exitPrice: b.sell_price != null ? Number(b.sell_price) : 0,
+        quantity: Number(b.quantity),
+        setupNotes: b.trade_setup_notes || '',
+        mistakesLearnings: b.ml_notes || '',
+        tags: Array.isArray(b.tags) ? b.tags : [],
+        link: b.trade_link || '',
+        pnlAmount: b.pnl_amount ?? null,
+        pnlPercentage: b.pnl_percentage ?? null,
+      };
+      setSelectedTradeDetails(mapped);
+    } catch {
+      setSelectedTradeDetails(fallback);
+    } finally {
+      setIsDetailLoading(false);
     }
   };
 
@@ -147,47 +141,27 @@ export default function TradeList() {
   }, [currentPage, totalPages]);
 
   const calculatePnL = (trade: Trade) => {
-    // Parse prices as numbers with proper validation
-    const entryPrice = typeof trade.entryPrice === 'number' 
-      ? trade.entryPrice 
-      : parseFloat(String(trade.entryPrice || '0'));
-    const exitPrice = typeof trade.exitPrice === 'number' 
-      ? trade.exitPrice 
-      : parseFloat(String(trade.exitPrice || '0'));
-    const quantity = typeof trade.quantity === 'number' 
-      ? trade.quantity 
-      : parseFloat(String(trade.quantity || '1')); // Default quantity = 1
+    const entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : 0;
+    const exitPrice = typeof trade.exitPrice === 'number' ? trade.exitPrice : 0;
+    const quantity = typeof trade.quantity === 'number' ? trade.quantity : 0;
     
-    // Validate parsed values
-    if (isNaN(entryPrice) || isNaN(exitPrice) || isNaN(quantity)) {
-      return 0;
-    }
+    const entryValue = entryPrice * quantity;
+    const exitValue = exitPrice * quantity;
     
     if (trade.direction === 'long') {
-      // Long: profit = (exit - entry) * quantity
-      return (exitPrice - entryPrice) * quantity;
+      return exitValue - entryValue;
     } else {
-      // Short: profit = (entry - exit) * quantity
-      return (entryPrice - exitPrice) * quantity;
+      return entryValue - exitValue;
     }
   };
 
   const calculatePnLPercentage = (trade: Trade) => {
-    // Parse prices as numbers with proper validation
-    const entryPrice = typeof trade.entryPrice === 'number' 
-      ? trade.entryPrice 
-      : parseFloat(String(trade.entryPrice || '0'));
-    const quantity = typeof trade.quantity === 'number' 
-      ? trade.quantity 
-      : parseFloat(String(trade.quantity || '1')); // Default quantity = 1
-    
-    // Validate parsed values
-    if (isNaN(entryPrice) || isNaN(quantity) || entryPrice === 0) {
-      return 0;
-    }
-    
+    const entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : 0;
+    const quantity = typeof trade.quantity === 'number' ? trade.quantity : 0;
+    const entryValue = entryPrice * quantity;
     const pnl = calculatePnL(trade);
-    return (pnl / (entryPrice * quantity)) * 100;
+    
+    return entryValue === 0 ? 0 : (pnl / entryValue) * 100;
   };
 
   if (editingTrade) {
@@ -217,33 +191,17 @@ export default function TradeList() {
         <h2 className="text-xl font-semibold text-white">Your Trades</h2>
         <div className="flex space-x-3">
           <button
-            onClick={handleImportTrades}
-            className="flex items-center px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
-          >
-            <Terminal size={14} className="mr-1.5" />
-            GET DATA
-          </button>
-          <button
             onClick={() => setIsAddingTrade(true)}
-            className="px-3 py-1.5 border border-blue-500 text-blue-500 rounded-md hover:bg-blue-500 hover:text-white transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:ring-opacity-40 text-sm"
+            className="px-2.5 py-1.5 border border-blue-500 text-blue-500 rounded-md hover:bg-blue-500 hover:text-white transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:ring-opacity-40 text-sm"
           >
             Add New Trade
           </button>
           {trades.length > 0 && (
             <button
-              onClick={async () => {
-                if (window.confirm('Are you sure you want to delete ALL trades? This action cannot be undone.')) {
-                  try {
-                    await clearAllTrades();
-                    setApiMessage({ type: 'success', text: 'All trades have been deleted successfully' });
-                  } catch (error) {
-                    setApiMessage({ type: 'error', text: 'Failed to delete trades. Please try again.' });
-                  }
-                }
-              }}
-              className="flex items-center px-3 py-1.5 bg-red-700 text-white rounded-md hover:bg-red-800 text-sm"
+              onClick={() => setShowDeleteAllModal(true)}
+              className="flex items-center px-2.5 py-1.5 bg-red-700 text-white rounded-md hover:bg-red-800 text-sm"
             >
-              <AlertTriangle size={14} className="mr-1.5" />
+              <AlertTriangle size={13} className="mr-1.5" />
               DELETE ALL
             </button>
           )}
@@ -316,6 +274,67 @@ export default function TradeList() {
         </div>
       )}
 
+      {/* Delete All Confirmation Modal */}
+      {showDeleteAllModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-[#1C1719] rounded-lg p-6 max-w-md w-full mx-4 border border-red-500">
+            <div className="flex items-center mb-4">
+              <AlertTriangle className="h-6 w-6 text-red-500 mr-3" />
+              <h3 className="text-lg font-semibold text-white">Delete All Trades</h3>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-300 mb-2">
+                Are you sure you want to delete <strong className="text-red-400">{trades.length}</strong> trade{trades.length !== 1 ? 's' : ''}?
+              </p>
+              <p className="text-red-400 text-sm">
+                ⚠️ This action cannot be undone!
+              </p>
+            </div>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={async () => {
+                  try {
+                    await clearAllTrades();
+                    setApiMessage({ 
+                      type: 'success', 
+                      text: `Successfully deleted all ${trades.length} trade${trades.length !== 1 ? 's' : ''}!` 
+                    });
+                    
+                    // Clear message after 5 seconds
+                    setTimeout(() => {
+                      setApiMessage(null);
+                    }, 5000);
+                    
+                    setShowDeleteAllModal(false);
+                  } catch (error) {
+                    setApiMessage({ 
+                      type: 'error', 
+                      text: 'Failed to delete all trades. Please try again.' 
+                    });
+                    
+                    // Clear error message after 5 seconds
+                    setTimeout(() => {
+                      setApiMessage(null);
+                    }, 5000);
+                  }
+                }}
+                className="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+              >
+                Yes, Delete All
+              </button>
+              <button
+                onClick={() => setShowDeleteAllModal(false)}
+                className="flex-1 bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {apiMessage && (
         <div className={`${
           apiMessage.type === 'success' ? 'bg-green-900/50 border-green-500' : 'bg-red-900/50 border-red-500'
@@ -324,11 +343,7 @@ export default function TradeList() {
         </div>
       )}
 
-      {isLoading ? (
-        <div className="text-center py-12 bg-[#1C1719] rounded-lg">
-          <p className="text-gray-300">Loading trades...</p>
-        </div>
-      ) : trades.length === 0 ? (
+      {trades.length === 0 ? (
         <div className="text-center py-12 bg-[#1C1719] rounded-lg">
           <p className="text-gray-300">No trades recorded yet. Add your first trade or import from your trading platform.</p>
         </div>
@@ -447,15 +462,15 @@ export default function TradeList() {
               </thead>
               <tbody className="divide-y divide-[#2b2b2b]">
                 {paginatedTrades.map((trade) => {
-                  const pnl = calculatePnL(trade);
-                  const pnlPercent = calculatePnLPercentage(trade);
+                  const pnl = trade.pnlAmount != null ? Number(trade.pnlAmount) : calculatePnL(trade);
+                  const pnlPercent = trade.pnlPercentage != null ? Number(trade.pnlPercentage) : calculatePnLPercentage(trade);
                   const isProfitable = pnl > 0;
                   
                   return (
-                    <tr 
+                  <tr 
                       key={trade.id} 
                       className="hover:bg-blue-500/10 hover:border-blue-500/20 transition-none cursor-pointer border border-transparent"
-                      onClick={() => setSelectedTradeDetails(trade)}
+                      onClick={() => loadTradeDetail(trade.id, trade)}
                     >
                       <td className="px-4 py-3 text-sm font-medium text-gray-100 text-center whitespace-nowrap">
                         {trade.symbol.replace(/USDT$/, '')}
@@ -489,26 +504,20 @@ export default function TradeList() {
                         {format(new Date(trade.exitDate), 'MMM dd, yyyy')}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-300 text-center whitespace-nowrap">
-                        {(() => {
-                          const price = typeof trade.entryPrice === 'number' ? trade.entryPrice : parseFloat(String(trade.entryPrice) || '0');
-                          return price % 1 === 0 ? price.toString() : price.toFixed(2).replace(/\.?0+$/, '');
-                        })()}
+                        {typeof trade.entryPrice === 'number' ? trade.entryPrice.toFixed(2) : trade.entryPrice}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-300 text-center whitespace-nowrap">
-                        {(() => {
-                          const price = typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice) || '0');
-                          return price % 1 === 0 ? price.toString() : price.toFixed(2).replace(/\.?0+$/, '');
-                        })()}
+                        {typeof trade.exitPrice === 'number' ? trade.exitPrice.toFixed(2) : trade.exitPrice}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-300 text-center whitespace-nowrap">
                         {trade.quantity}
                       </td>
                       <td className="px-4 py-3 text-center whitespace-nowrap">
-                        <div className={`text-sm font-medium ${pnl > 0 ? 'text-green-600' : pnl < 0 ? 'text-red-500' : 'text-gray-400'}`}>
-                          {pnl > 0 ? '+' : pnl < 0 ? '–' : ''}${Math.abs(pnl).toFixed(2)}
+                        <div className={`text-sm font-medium ${isProfitable ? 'text-green-600' : pnl < 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                          {isProfitable ? '+' : pnl < 0 ? '-' : ''}${Math.abs(pnl).toFixed(2)}
                         </div>
-                        <div className={`text-xs ${pnl > 0 ? 'text-green-400' : pnl < 0 ? 'text-red-400' : 'text-gray-500'}`}>
-                          {pnl > 0 ? '+' : pnl < 0 ? '–' : ''}{Math.abs(pnlPercent).toFixed(2)}%
+                        <div className={`text-xs ${isProfitable ? 'text-green-400' : pnl < 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                          {isProfitable ? '+' : pnl < 0 ? '-' : ''}{Math.abs(pnlPercent).toFixed(2)}%
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center text-sm font-medium whitespace-nowrap">
@@ -518,11 +527,11 @@ export default function TradeList() {
                               href={trade.link}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-blue-500 hover:text-blue-700 transition-colors"
+                              className="hover:bg-gray-700/30 rounded p-1 transition-colors"
                               title="Open trade link"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <ExternalLink size={18} />
+                              <ExternalLink size={18} style={{ color: '#F4E9D7' }} />
                             </a>
                           ) : (
                             <span className="text-gray-500">-</span>
@@ -545,9 +554,25 @@ export default function TradeList() {
                             if (window.confirm('Are you sure you want to delete this trade?')) {
                               try {
                                 await deleteTrade(trade.id);
-                              } catch (err) {
-                                console.error('Error deleting trade:', err);
-                                setApiMessage({ type: 'error', text: 'Failed to delete trade' });
+                                setApiMessage({ 
+                                  type: 'success', 
+                                  text: `Trade ${trade.symbol} deleted successfully!` 
+                                });
+                                
+                                // Clear message after 3 seconds
+                                setTimeout(() => {
+                                  setApiMessage(null);
+                                }, 3000);
+                              } catch (error) {
+                                setApiMessage({ 
+                                  type: 'error', 
+                                  text: `Failed to delete trade ${trade.symbol}. Please try again.` 
+                                });
+                                
+                                // Clear error message after 5 seconds
+                                setTimeout(() => {
+                                  setApiMessage(null);
+                                }, 5000);
                               }
                             }
                           }}
@@ -688,13 +713,13 @@ export default function TradeList() {
           onClick={() => setSelectedTradeDetails(null)}
         >
           <div 
-            className="bg-[#1C1719] border border-white/20 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            className="bg-gradient-to-br from-[#141015] to-[#0f0b0d] border border-[#2e2a2c] rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
               {/* Header */}
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-semibold text-white">
+                <h3 className="text-2xl font-semibold text-white">
                   {selectedTradeDetails.symbol.replace(/USDT$/, '')} Trade Details
                 </h3>
                 <button
@@ -706,7 +731,7 @@ export default function TradeList() {
               </div>
 
               {/* Trade Info Grid */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-2 gap-6 mb-6">
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">Symbol</label>
@@ -718,7 +743,7 @@ export default function TradeList() {
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">Type</label>
                     <span
-                      className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-md"
+                      className="px-2.5 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full"
                       style={{
                         backgroundColor: selectedTradeDetails.type === 'stock' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 165, 0, 0.2)',
                         color: selectedTradeDetails.type === 'stock' ? '#3B82F6' : '#FFA500'
@@ -785,26 +810,26 @@ export default function TradeList() {
               </div>
 
               {/* P/L Section */}
-              <div className="bg-[#231F21] rounded-lg p-4 mb-6">
-                <h4 className="text-white font-medium mb-3">Profit & Loss</h4>
-                <div className="grid grid-cols-2 gap-4">
+              <div className="rounded-xl p-5 mb-6 border border-[#2f2a2c] bg-gradient-to-br from-[#171317] to-[#181419]">
+                <h4 className="text-white font-medium mb-4">Profit & Loss</h4>
+                <div className="grid grid-cols-2 gap-6">
                   {(() => {
-                    const pnl = calculatePnL(selectedTradeDetails);
-                    const pnlPercent = calculatePnLPercentage(selectedTradeDetails);
+                    const pnl = selectedTradeDetails.pnlAmount != null ? Number(selectedTradeDetails.pnlAmount) : calculatePnL(selectedTradeDetails);
+                    const pnlPercent = selectedTradeDetails.pnlPercentage != null ? Number(selectedTradeDetails.pnlPercentage) : calculatePnLPercentage(selectedTradeDetails);
                     const isProfitable = pnl > 0;
                     
                     return (
                       <>
                         <div>
                           <label className="block text-sm text-gray-400 mb-1">Amount</label>
-                          <div className={`text-lg font-bold ${pnl > 0 ? 'text-green-500' : pnl < 0 ? 'text-red-500' : 'text-gray-400'}`}>
-                            {pnl > 0 ? '+' : pnl < 0 ? '–' : ''}${Math.abs(pnl).toFixed(2)}
+                          <div className={`text-xl font-semibold ${isProfitable ? 'text-green-400' : pnl < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                            {isProfitable ? '+' : pnl < 0 ? '-' : ''}${Math.abs(pnl).toFixed(2)}
                           </div>
                         </div>
                         <div>
                           <label className="block text-sm text-gray-400 mb-1">Percentage</label>
-                          <div className={`text-lg font-bold ${pnl > 0 ? 'text-green-500' : pnl < 0 ? 'text-red-500' : 'text-gray-400'}`}>
-                            {pnl > 0 ? '+' : pnl < 0 ? '–' : ''}{Math.abs(pnlPercent).toFixed(2)}%
+                          <div className={`text-xl font-semibold ${isProfitable ? 'text-green-400' : pnl < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                            {isProfitable ? '+' : pnl < 0 ? '-' : ''}{Math.abs(pnlPercent).toFixed(2)}%
                           </div>
                         </div>
                       </>
@@ -813,59 +838,72 @@ export default function TradeList() {
                 </div>
               </div>
 
-              {/* Tags */}
-              {selectedTradeDetails.tags && selectedTradeDetails.tags.length > 0 && (
-                <div className="mb-6">
-                  <h4 className="text-white font-medium mb-3">Tags</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedTradeDetails.tags.map((tag, index) => (
-                      <span
-                        key={index}
-                        className="px-2 py-1 bg-blue-600/20 text-blue-400 text-xs rounded-full"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* Notes */}
-              {(selectedTradeDetails.setupNotes || selectedTradeDetails.mistakesNotes) && (
-                <div className="space-y-4">
-                  {selectedTradeDetails.setupNotes && (
-                    <div>
-                      <h4 className="text-white font-medium mb-2">Trade Setup Notes</h4>
-                      <div className="bg-[#231F21] rounded-lg p-3 text-gray-300 text-sm">
-                        {selectedTradeDetails.setupNotes}
-                      </div>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className="p-1 rounded-lg bg-blue-500/20">
+                      <FileText size={14} className="text-blue-400" />
                     </div>
-                  )}
-
-                  {selectedTradeDetails.mistakesNotes && (
-                    <div>
-                      <h4 className="text-white font-medium mb-2">Mistakes & Learnings</h4>
-                      <div className="bg-[#231F21] rounded-lg p-3 text-gray-300 text-sm">
-                        {selectedTradeDetails.mistakesNotes}
-                      </div>
-                    </div>
-                  )}
+                    <h4 className="text-sm font-medium text-blue-300">Trade Setup Notes</h4>
+                  </div>
+                  <div className="text-sm text-white bg-gradient-to-r from-blue-900/30 to-blue-800/20 rounded-lg py-3 px-2 border border-blue-500/20 transition-all duration-300 hover:from-blue-800/40 hover:to-blue-700/30 hover:shadow-lg hover:shadow-blue-500/20 hover:border-blue-400/40">
+                    {selectedTradeDetails.setupNotes && selectedTradeDetails.setupNotes.trim() !== ''
+                      ? selectedTradeDetails.setupNotes
+                      : 'No setup notes provided'}
+                  </div>
                 </div>
-              )}
+
+                <div>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className="p-1 rounded-lg bg-orange-500/20">
+                      <AlertCircle size={14} className="text-orange-400" />
+                    </div>
+                    <h4 className="text-sm font-medium text-orange-300">Mistakes & Learnings</h4>
+                  </div>
+                  <div className="text-sm text-white bg-gradient-to-r from-orange-900/30 to-red-800/20 rounded-lg py-3 px-2 border border-orange-500/20 transition-all duration-300 hover:from-orange-800/40 hover:to-red-700/30 hover:shadow-lg hover:shadow-orange-500/20 hover:border-orange-400/40">
+                    {selectedTradeDetails.mistakesLearnings && selectedTradeDetails.mistakesLearnings.trim() !== ''
+                      ? selectedTradeDetails.mistakesLearnings
+                      : 'No mistakes/learnings added'}
+                  </div>
+                </div>
+              </div>
 
               {/* Link */}
-              {selectedTradeDetails.link && (
-                <div className="mt-6 pt-4 border-t border-white/10">
-                  <a
-                    href={selectedTradeDetails.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors"
-                  >
-                    <ExternalLink size={16} />
-                    Open Trade Link
-                  </a>
-                </div>
+              <div className="mt-4">
+                {selectedTradeDetails.link ? (
+                  <div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="p-1 rounded-lg" style={{ backgroundColor: '#F4E9D720' }}>
+                        <ExternalLink size={14} style={{ color: '#F4E9D7' }} />
+                      </div>
+                      <h4 className="text-sm font-medium" style={{ color: '#F4E9D7' }}>Trade Link</h4>
+                    </div>
+                    <a
+                      href={selectedTradeDetails.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-white rounded-lg py-3 px-2 block transition-all duration-300 hover:shadow-lg hover:shadow-[#F4E9D7]/30 break-all border border-[#F4E9D7]/20 bg-gradient-to-r from-[#F4E9D7]/10 to-[#F4E9D7]/10"
+                    >
+                      {selectedTradeDetails.link}
+                    </a>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="p-1 rounded-lg" style={{ backgroundColor: '#F4E9D720' }}>
+                        <ExternalLink size={14} style={{ color: '#F4E9D7' }} />
+                      </div>
+                      <h4 className="text-sm font-medium" style={{ color: '#F4E9D7' }}>Trade Link</h4>
+                    </div>
+                    <span className="text-sm text-gray-500">No link provided</span>
+                  </div>
+                )}
+              </div>
+
+              {isDetailLoading && (
+                <div className="mt-4 text-sm text-gray-400">Loading details…</div>
               )}
             </div>
           </div>

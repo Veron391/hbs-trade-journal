@@ -1,31 +1,31 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../context/AuthContext';
 import FormInput from '../../../components/ui/FormInput';
 import Button from '../../../components/ui/Button';
 
-export default function ResetPasswordPage({ params }: { params: { token: string } }) {
+export default function ResetPasswordPage() {
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [tokenValid, setTokenValid] = useState(true);
-  const { resetPassword } = useAuth();
+  const { resetPasswordConfirm, user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const { token } = params;
-
-  // Check if token is valid
   useEffect(() => {
-    // In a real app, you would validate the token with your backend
-    // This is a mock implementation
-    if (!token || token.length < 10) {
-      setTokenValid(false);
+    if (!authLoading && user) {
+      router.replace('/');
     }
-  }, [token]);
+  }, [authLoading, user, router]);
+
+  if (authLoading || user) {
+    return null;
+  }
 
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
@@ -54,7 +54,7 @@ export default function ResetPasswordPage({ params }: { params: { token: string 
     setLoading(true);
     
     try {
-      await resetPassword(token, password);
+      await resetPasswordConfirm(email, code, password);
       setSuccess(true);
       
       // Redirect to login after 3 seconds
@@ -70,37 +70,18 @@ export default function ResetPasswordPage({ params }: { params: { token: string 
     }
   };
 
-  if (!tokenValid) {
-    return (
-      <div className="max-w-md mx-auto p-6 bg-[#1C1719] rounded-lg shadow-lg">
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#110D0F] px-4">
+      <div className="w-full max-w-md">
+        <div className="p-6 bg-[#1C1719] rounded-lg shadow-lg">
         <div className="flex items-center justify-center mb-6">
                       <img 
-              src="https://online.hbsakademiya.uz/images/svg/logo.svg" 
-              alt="HBS Academy" 
-              className="h-8 w-auto logo-partial-white"
-            />
+                src="https://online.hbsakademiya.uz/images/svg/logo.svg" 
+                alt="HBS Academy" 
+                className="h-8 w-auto logo-partial-white"
+              />
         </div>
-        <h1 className="text-2xl font-bold text-white mb-6 text-center">Invalid Reset Link</h1>
-        <p className="text-gray-400 mb-6">
-          This password reset link is invalid or has expired.
-        </p>
-        <Link href="/auth/forgot-password">
-          <Button fullWidth>Request New Reset Link</Button>
-        </Link>
-      </div>
-    );
-  }
-
-  return (
-    <div className="max-w-md mx-auto p-6 bg-[#1C1719] rounded-lg shadow-lg">
-      <div className="flex items-center justify-center mb-6">
-                    <img 
-              src="https://online.hbsakademiya.uz/images/svg/logo.svg" 
-              alt="HBS Academy" 
-              className="h-8 w-auto logo-partial-white"
-            />
-      </div>
-      <h1 className="text-2xl font-bold text-white mb-6 text-center">Reset Your Password</h1>
+        <h1 className="text-2xl font-bold text-white mb-6 text-center">Reset Your Password</h1>
       
       {errors.form && (
         <div className="bg-red-900/50 border border-red-500 text-white px-4 py-3 rounded-md mb-4">
@@ -115,6 +96,25 @@ export default function ResetPasswordPage({ params }: { params: { token: string 
         </div>
       ) : (
         <form onSubmit={handleSubmit}>
+          <FormInput
+            id="email"
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            error={errors.email}
+          />
+
+          <FormInput
+            id="code"
+            label="OTP Code"
+            type="text"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            required
+            error={errors.code}
+          />
           <FormInput
             id="password"
             label="New Password"
@@ -147,10 +147,12 @@ export default function ResetPasswordPage({ params }: { params: { token: string 
         </form>
       )}
       
-      <div className="mt-6 text-center text-gray-400">
-        <Link href="/auth/login" className="text-blue-500 hover:underline">
-          Back to login
-        </Link>
+        <div className="mt-6 text-center text-gray-400">
+          <Link href="/auth/login" className="text-blue-500 hover:underline">
+            Back to login
+          </Link>
+        </div>
+        </div>
       </div>
     </div>
   );

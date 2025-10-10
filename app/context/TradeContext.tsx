@@ -1,10 +1,10 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
+import { createContext, useContext, ReactNode, useCallback, useMemo, useState, useEffect } from 'react';
 import { Trade, TradeStats } from '../types';
 import { differenceInDays } from 'date-fns';
-import { fetchTradesFromApi } from '../services/tradeApiService';
-import { useAuth } from './AuthContext';
+import { useTrades as useTradesHook } from '@/lib/hooks/useTrades';
+import { Trade as ApiTrade } from '@/lib/api/trades';
 
 interface TradeContextType {
   trades: Trade[];
@@ -16,262 +16,137 @@ interface TradeContextType {
   isImporting: boolean;
   importError: string | null;
   stats: TradeStats;
+  isLoading: boolean;
+  error: any;
 }
 
 const TradeContext = createContext<TradeContextType | undefined>(undefined);
 
+// Helper function to convert API trade to internal trade format
+function convertApiTradeToInternal(apiTrade: ApiTrade): Trade {
+  // Use exitPrice from API if available, otherwise calculate from PnL
+  let exitPrice = apiTrade.exitPrice;
+  if (!exitPrice && apiTrade.pnl !== null && apiTrade.pnl !== undefined) {
+    const pnlPerShare = apiTrade.pnl / apiTrade.qty;
+    exitPrice = apiTrade.direction === 'long' 
+      ? apiTrade.entryPrice + pnlPerShare 
+      : apiTrade.entryPrice - pnlPerShare;
+  }
+
+  // Convert UTC date to local date string (YYYY-MM-DD format)
+  // Use entryDate and exitDate if available, otherwise fall back to occurredAt
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
+  
+  const entryDateString = apiTrade.entryDate ? formatDate(apiTrade.entryDate) : formatDate(apiTrade.occurredAt);
+  const exitDateString = apiTrade.exitDate ? formatDate(apiTrade.exitDate) : formatDate(apiTrade.occurredAt);
+
+  return {
+    id: apiTrade.id,
+    symbol: apiTrade.symbol,
+    type: apiTrade.assetType, // 'stock' or 'crypto'
+    direction: apiTrade.direction,
+    entryDate: entryDateString,
+    exitDate: exitDateString,
+    entryPrice: apiTrade.entryPrice,
+    exitPrice: exitPrice || apiTrade.entryPrice,
+    quantity: apiTrade.qty,
+    setupNotes: apiTrade.setupNotes || '',
+    mistakesLearnings: apiTrade.mistakesLearnings || '',
+    link: apiTrade.link || '',
+  };
+}
+
+// Helper function to convert internal trade to API format
+function convertInternalTradeToApi(trade: Omit<Trade, 'id'>): any {
+  // Calculate PnL
+  const entryTotal = trade.entryPrice * trade.quantity;
+  const exitTotal = trade.exitPrice * trade.quantity;
+  const pnl = trade.direction === 'long' 
+    ? exitTotal - entryTotal 
+    : entryTotal - exitTotal;
+
+  return {
+    assetType: trade.type === 'stock' ? 'stock' : 'crypto', // Convert type to assetType
+    symbol: trade.symbol,
+    direction: trade.direction, // Use direction directly
+    qty: Number(trade.quantity), // Ensure it's a number
+    entryPrice: Number(trade.entryPrice), // Use entryPrice field
+    exitPrice: Number(trade.exitPrice), // Include exitPrice
+    entryDate: new Date(trade.entryDate).toISOString(), // Entry date
+    exitDate: new Date(trade.exitDate).toISOString(), // Exit date
+    occurredAt: new Date(trade.entryDate).toISOString(), // Keep for backward compatibility
+    // Pass through descriptive fields so backend mapper can forward them
+    setupNotes: trade.setupNotes || '',
+    mistakesLearnings: trade.mistakesLearnings || '',
+    link: trade.link || '',
+  };
+}
+
 export function TradeProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [storageAvailable, setStorageAvailable] = useState(true);
+  const tradesHookResult = useTradesHook();
+  
+  // Add safety check for undefined result
+  if (!tradesHookResult) {
+    console.error('useTradesHook returned undefined');
+    return (
+      <TradeContext.Provider
+        value={{
+          trades: [],
+          addTrade: async () => {},
+          updateTrade: async () => {},
+          deleteTrade: async () => {},
+          clearAllTrades: async () => {},
+          importTradesFromApi: async () => {},
+          isImporting: false,
+          importError: null,
+          stats: {
+            totalProfitLoss: 0,
+            averageProfitLoss: 0,
+            averageWinningTrade: 0,
+            averageLosingTrade: 0,
+            totalTrades: 0,
+            winningTrades: 0,
+            losingTrades: 0,
+            breakEvenTrades: 0,
+            maxConsecutiveWins: 0,
+            maxConsecutiveLosses: 0,
+            largestProfit: 0,
+            largestLoss: 0,
+            averageHoldTime: 0,
+            averageWinningHoldTime: 0,
+            averageLosingHoldTime: 0,
+            riskRewardRatio: 0,
+            winRate: 0,
+            sortino: 0,
+            averageRiskRewardRatio: 0,
+          },
+          isLoading: true,
+          error: new Error('Failed to initialize trades'),
+        }}
+      >
+        {children}
+      </TradeContext.Provider>
+    );
+  }
+
+  const { trades: apiTrades, addTrade: apiAddTrade, editTrade: apiEditTrade, removeTrade: apiRemoveTrade, isLoading, error } = tradesHookResult;
+  
+  console.log('TradeProvider - apiTrades:', apiTrades);
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
-  const [stats, setStats] = useState<TradeStats>({
-    totalProfitLoss: 0,
-    averageProfitLoss: 0,
-    averageWinningTrade: 0,
-    averageLosingTrade: 0,
-    totalTrades: 0,
-    winningTrades: 0,
-    losingTrades: 0,
-    breakEvenTrades: 0,
-    maxConsecutiveWins: 0,
-    maxConsecutiveLosses: 0,
-    largestProfit: 0,
-    largestLoss: 0,
-    averageHoldTime: 0,
-    averageWinningHoldTime: 0,
-    averageLosingHoldTime: 0,
-    profitFactor: 0,
-    winRate: 0,
-    sortino: 0,
-    averageRiskRewardRatio: 0,
-  });
 
-  // Check if localStorage is available
-  useEffect(() => {
-    try {
-      localStorage.setItem('test', 'test');
-      localStorage.removeItem('test');
-      setStorageAvailable(true);
-    } catch (e) {
-      console.error('localStorage is not available:', e);
-      setStorageAvailable(false);
-    }
-  }, []);
+  // Removed localStorage persistence for trades
 
-  // Load trades from localStorage on initial load
-  useEffect(() => {
-    if (!storageAvailable || !user) {
-      setTrades([]);
-      return;
-    }
+  // Convert API trades to internal format
+  const trades = Array.isArray(apiTrades) ? apiTrades.map(convertApiTradeToInternal) : [];
 
-    try {
-      const tradesKey = `trades_${user.id}`;
-      const savedTrades = localStorage.getItem(tradesKey);
-
-      if (savedTrades) {
-        const parsedTrades = JSON.parse(savedTrades);
-        if (Array.isArray(parsedTrades) && parsedTrades.length > 0) {
-          setTrades(parsedTrades);
-        } else {
-          setTrades([]);
-        }
-      } else {
-        setTrades([]);
-      }
-    } catch (error) {
-      console.error('Error loading trades from localStorage:', error);
-      setTrades([]);
-    }
-  }, [storageAvailable, user]);
-
-  // Save trades to localStorage whenever they change
-  useEffect(() => {
-    if (!storageAvailable || !user) {
-      calculateStats();
-      return;
-    }
-    
-    try {
-      const tradesKey = `trades_${user.id}`;
-      if (trades.length > 0) {
-        console.log('Saving trades to localStorage:', trades.length, 'trades for user', user.id);
-        localStorage.setItem(tradesKey, JSON.stringify(trades));
-      } else {
-        // Clear localStorage if no trades
-        localStorage.removeItem(tradesKey);
-      }
-    } catch (error) {
-      console.error('Error saving trades to localStorage:', error);
-    }
-    
-    calculateStats();
-  }, [trades, storageAvailable, user]);
-
-  // Function to import trades from the API
-  const importTradesFromApi = useCallback(async () => {
-    setIsImporting(true);
-    setImportError(null);
-    
-    try {
-      const apiTrades = await fetchTradesFromApi();
-      
-      // Merge new trades with existing ones, avoiding duplicates by checking symbol and dates
-      setTrades(prevTrades => {
-        const newTrades = [...prevTrades];
-        
-        // Simple duplicate check based on symbol, entry date, and exit date
-        apiTrades.forEach(apiTrade => {
-          const isDuplicate = prevTrades.some(
-            existingTrade => 
-              existingTrade.symbol === apiTrade.symbol && 
-              existingTrade.entryDate === apiTrade.entryDate &&
-              existingTrade.exitDate === apiTrade.exitDate &&
-              existingTrade.entryPrice === apiTrade.entryPrice &&
-              existingTrade.exitPrice === apiTrade.exitPrice
-          );
-          
-          if (!isDuplicate) {
-            newTrades.push(apiTrade);
-          }
-        });
-        
-        return newTrades;
-      });
-      
-      console.log('Imported trades from API');
-    } catch (error) {
-      console.error('Error importing trades from API:', error);
-      if (error instanceof Error) {
-        setImportError(error.message);
-      } else {
-        setImportError('An unknown error occurred while importing trades');
-      }
-    } finally {
-      setIsImporting(false);
-    }
-  }, []);
-
-  const addTrade = useCallback((trade: Omit<Trade, 'id'>) => {
-    if (!user) {
-      console.error('Cannot add trade: user not authenticated');
-      return;
-    }
-
-    // Ensure numerical values are properly typed
-    const sanitizedTrade = {
-      ...trade,
-      userId: user.id, // Add user ID to trade
-      entryPrice: typeof trade.entryPrice === 'number' ? trade.entryPrice : parseFloat(String(trade.entryPrice)) || 0,
-      exitPrice: typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice)) || 0,
-      quantity: typeof trade.quantity === 'number' ? trade.quantity : parseFloat(String(trade.quantity)) || 0,
-      id: Math.random().toString(36).substr(2, 9),
-    };
-
-    setTrades(prevTrades => {
-      const newTrades = [...prevTrades, sanitizedTrade];
-
-      // Force save to localStorage immediately
-      if (storageAvailable) {
-        try {
-          const tradesKey = `trades_${user.id}`;
-          localStorage.setItem(tradesKey, JSON.stringify(newTrades));
-        } catch (error) {
-          console.error('Error saving trades:', error);
-        }
-      }
-      return newTrades;
-    });
-  }, [storageAvailable, user]);
-
-  const updateTrade = useCallback((id: string, tradeData: Omit<Trade, 'id'>) => {
-    if (!user) {
-      console.error('Cannot update trade: user not authenticated');
-      return;
-    }
-
-    // Ensure numerical values are properly typed
-    const sanitizedTrade = {
-      ...tradeData,
-      userId: user.id, // Ensure user ID is set
-      entryPrice: typeof tradeData.entryPrice === 'number' ? tradeData.entryPrice : parseFloat(String(tradeData.entryPrice)) || 0,
-      exitPrice: typeof tradeData.exitPrice === 'number' ? tradeData.exitPrice : parseFloat(String(tradeData.exitPrice)) || 0,
-      quantity: typeof tradeData.quantity === 'number' ? tradeData.quantity : parseFloat(String(tradeData.quantity)) || 0,
-    };
-    
-    console.log('Updating trade:', id, sanitizedTrade);
-    setTrades(prevTrades => {
-      const updatedTrades = prevTrades.map((trade) => 
-        (trade.id === id ? { ...sanitizedTrade, id } : trade)
-      );
-      
-      // Force save to localStorage immediately
-      if (storageAvailable) {
-        try {
-          const tradesKey = `trades_${user.id}`;
-          localStorage.setItem(tradesKey, JSON.stringify(updatedTrades));
-          console.log('Saved trades after update:', updatedTrades);
-        } catch (error) {
-          console.error('Error saving trades after update:', error);
-        }
-      }
-      
-      return updatedTrades;
-    });
-  }, [storageAvailable, user]);
-
-  const deleteTrade = useCallback((id: string) => {
-    if (!user) {
-      console.error('Cannot delete trade: user not authenticated');
-      return;
-    }
-
-    console.log('Deleting trade:', id);
-    setTrades(prevTrades => {
-      const filteredTrades = prevTrades.filter((trade) => trade.id !== id);
-      
-      // Force save to localStorage immediately
-      if (storageAvailable) {
-        try {
-          const tradesKey = `trades_${user.id}`;
-          localStorage.setItem(tradesKey, JSON.stringify(filteredTrades));
-          console.log('Saved trades after delete, remaining:', filteredTrades);
-        } catch (error) {
-          console.error('Error saving trades after delete:', error);
-        }
-      }
-      
-      return filteredTrades;
-    });
-  }, [storageAvailable, user]);
-
-  const clearAllTrades = useCallback(() => {
-    if (!user) {
-      console.error('Cannot clear trades: user not authenticated');
-      return;
-    }
-
-    console.log('Clearing all trades');
-    setTrades(() => {
-      if (storageAvailable) {
-        try {
-          const tradesKey = `trades_${user.id}`;
-          localStorage.removeItem(tradesKey);
-          localStorage.removeItem(`hasAddedSamples_${user.id}`);
-          console.log('Removed all trades from localStorage for user', user.id);
-        } catch (error) {
-          console.error('Error clearing trades from localStorage:', error);
-        }
-      }
-      return [] as Trade[];
-    });
-  }, [storageAvailable, user]);
-
-  const calculateStats = useCallback(() => {
+  // Calculate stats from trades
+  const stats = useMemo(() => {
     if (trades.length === 0) {
-      setStats({
+      return {
         totalProfitLoss: 0,
         averageProfitLoss: 0,
         averageWinningTrade: 0,
@@ -287,12 +162,11 @@ export function TradeProvider({ children }: { children: ReactNode }) {
         averageHoldTime: 0,
         averageWinningHoldTime: 0,
         averageLosingHoldTime: 0,
-        profitFactor: 0,
+        riskRewardRatio: 0,
         winRate: 0,
         sortino: 0,
         averageRiskRewardRatio: 0,
-      });
-      return;
+      };
     }
 
     // Process each trade and categorize them
@@ -383,7 +257,7 @@ export function TradeProvider({ children }: { children: ReactNode }) {
     const averageLosingHoldTime = losingTrades.length > 0 ? losingHoldTime / losingTrades.length : 0;
     
     // Calculate performance ratios
-    const profitFactor = totalLossAmount > 0 ? totalWinAmount / totalLossAmount : totalWinAmount;
+    const riskRewardRatio = totalLossAmount > 0 ? totalWinAmount / totalLossAmount : totalWinAmount;
     const winRate = processedTrades.length > 0 ? winningTrades.length / processedTrades.length : 0;
     
     // Sortino Ratio (simplified) - using standard deviation of only losing trades
@@ -397,7 +271,7 @@ export function TradeProvider({ children }: { children: ReactNode }) {
       ? Math.abs(averageWinningTrade / averageLosingTrade) 
       : 0;
     
-    setStats({
+    return {
       totalProfitLoss,
       averageProfitLoss,
       averageWinningTrade,
@@ -413,12 +287,74 @@ export function TradeProvider({ children }: { children: ReactNode }) {
       averageHoldTime,
       averageWinningHoldTime,
       averageLosingHoldTime,
-      profitFactor,
+      riskRewardRatio: averageRiskRewardRatio,
       winRate,
       sortino,
       averageRiskRewardRatio,
-    });
+    };
   }, [trades]);
+
+  // Function to import trades from the API (placeholder for now)
+  const importTradesFromApi = useCallback(async () => {
+    setIsImporting(true);
+    setImportError(null);
+    
+    try {
+      // This would be implemented to import from external APIs
+      console.log('Import trades from API - not implemented yet');
+    } catch (error) {
+      console.error('Error importing trades from API:', error);
+      if (error instanceof Error) {
+        setImportError(error.message);
+      } else {
+        setImportError('An unknown error occurred while importing trades');
+      }
+    } finally {
+      setIsImporting(false);
+    }
+  }, []);
+
+  const addTrade = useCallback(async (trade: Omit<Trade, 'id'>) => {
+    try {
+      const apiTrade = convertInternalTradeToApi(trade);
+      await apiAddTrade(apiTrade);
+    } catch (error) {
+      console.error('Error adding trade:', error);
+      throw error;
+    }
+  }, [apiAddTrade]);
+
+  const updateTrade = useCallback(async (id: string, tradeData: Omit<Trade, 'id'>) => {
+    try {
+      const apiTrade = convertInternalTradeToApi(tradeData);
+      await apiEditTrade(id, apiTrade);
+    } catch (error) {
+      console.error('Error updating trade:', error);
+      throw error;
+    }
+  }, [apiEditTrade]);
+
+  const deleteTrade = useCallback(async (id: string) => {
+    try {
+      await apiRemoveTrade(id);
+    } catch (error) {
+      console.error('Error deleting trade:', error);
+      throw error;
+    }
+  }, [apiRemoveTrade]);
+
+  const clearAllTrades = useCallback(async () => {
+    try {
+      // Delete all trades one by one
+      for (const trade of trades) {
+        await apiRemoveTrade(trade.id);
+      }
+    } catch (error) {
+      console.error('Error clearing trades:', error);
+      throw error;
+    }
+  }, [trades, apiRemoveTrade]);
+
 
   return (
     <TradeContext.Provider
@@ -432,6 +368,8 @@ export function TradeProvider({ children }: { children: ReactNode }) {
         isImporting,
         importError,
         stats,
+        isLoading,
+        error,
       }}
     >
       {children}

@@ -99,7 +99,8 @@ class MockDataService {
 
   // Generate random number between min and max
   private random(min: number, max: number): number {
-    return min + (this.seed * 9301 + 49297) % 233280 / 233280 * (max - min);
+    const randomValue = this.seededRandom();
+    return min + randomValue * (max - min);
   }
 
   // Generate trend data
@@ -740,10 +741,11 @@ class MockDataService {
       console.error('Error getting registered users:', error);
     }
 
-    // If no real users, return empty array
-    if (realUsers.length === 0) {
-      return [];
-    }
+    // Always generate mock users for admin panel (30 users with 5 inactive)
+    console.log('Generating mock users for admin panel...');
+    const mockUsers = this.generateMockUsers(30);
+    console.log(`Generated ${mockUsers.length} mock users:`, mockUsers.slice(0, 3));
+    return mockUsers;
 
     const groups = ["Alpha", "Beta", "Delta"];
 
@@ -795,6 +797,75 @@ class MockDataService {
             : new Date(Date.now() - this.random(15, 90) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       };
     });
+  }
+
+  // Generate 30 mock users with 5 inactive
+  generateMockUsers(count: number = 30) {
+    const firstNames = [
+      'Alex', 'Sarah', 'Mike', 'Emma', 'David', 'Lisa', 'James', 'Maria', 'John', 'Anna',
+      'Chris', 'Amy', 'Tom', 'Kate', 'Robert', 'Jennifer', 'Michael', 'Jessica', 'William', 'Ashley',
+      'Daniel', 'Emily', 'Matthew', 'Samantha', 'Christopher', 'Amanda', 'Anthony', 'Stephanie', 'Mark', 'Nicole'
+    ];
+    
+    const lastNames = [
+      'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez',
+      'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin',
+      'Lee', 'Perez', 'Thompson', 'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson'
+    ];
+
+    const groups = ["Alpha", "Beta", "Delta"];
+    const domains = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "example.com"];
+    
+    const users = [];
+    
+    for (let i = 1; i <= count; i++) {
+      const firstName = firstNames[(i - 1) % firstNames.length];
+      const lastName = lastNames[(i - 1) % lastNames.length];
+      const domain = domains[Math.floor(Math.random() * domains.length)];
+      
+      // First 5 users are inactive, rest are active
+      const isInactive = i <= 5;
+      const status = isInactive ? 'inactive' : 'active';
+      
+      // Generate realistic data based on status
+      let totalTrades, pnl, winRate, lastActive;
+      
+      if (isInactive) {
+        totalTrades = 0;
+        pnl = 0;
+        winRate = 0;
+        // Inactive users - last active 30-90 days ago
+        const daysAgo = Math.floor(Math.random() * (90 - 30 + 1)) + 30;
+        lastActive = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      } else {
+        // Active users - have trades and recent activity
+        totalTrades = Math.floor(Math.random() * (50 - 5 + 1)) + 5;
+        pnl = Math.floor(Math.random() * (15000 - (-5000) + 1)) + (-5000);
+        winRate = Math.floor(Math.random() * (85 - 45 + 1)) + 45;
+        // Last active within last 14 days
+        const daysAgo = Math.floor(Math.random() * 14) + 1;
+        lastActive = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      }
+      
+      // Join date - random within last year
+      const joinDaysAgo = Math.floor(Math.random() * 365) + 1;
+      const joinedDate = new Date(Date.now() - joinDaysAgo * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
+      users.push({
+        id: i,
+        name: `${firstName} ${lastName}`,
+        email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${domain}`,
+        joinedDate: joinedDate,
+        totalTrades: totalTrades,
+        pnl: pnl,
+        winRate: winRate,
+        status: status,
+        group: groups[Math.floor(Math.random() * groups.length)],
+        lastActive: lastActive
+      });
+    }
+    
+    return users;
   }
 
   // Generate trades log data
@@ -1008,11 +1079,15 @@ export const formatCurrency = (value: number): string => {
 };
 
 export const formatPercent = (value: number): string => {
+  // If value is already between 0-1, use it directly
+  // If value is between 0-100, divide by 100
+  const normalizedValue = value <= 1 ? value : value / 100;
+  
   return new Intl.NumberFormat('en-US', {
     style: 'percent',
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
-  }).format(value / 100);
+  }).format(normalizedValue);
 };
 
 export const formatCompactNumber = (value: number): string => {
