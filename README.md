@@ -344,4 +344,4 @@ For support and questions:
 
 ---
 
-**Happy Trading! 📈**
+**Happy Trading! 📈**# hbs-treyder-journal
