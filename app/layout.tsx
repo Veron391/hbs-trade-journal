@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "./context/AuthContext";
 import { TradeProvider } from "./context/TradeContext";
 import { TimePeriodProvider } from "./context/TimePeriodContext";
+import { I18nProvider } from "./context/I18nContext";
 import { UIProtectionProvider } from "./context/UIProtectionContext";
 import ConditionalFooter from "./components/ConditionalFooter";
 import { SWRConfig } from 'swr';
@@ -47,6 +48,7 @@ export default function RootLayout({
         >
           <UIProtectionProvider>
             <AuthProvider>
+              <I18nProvider>
               <TimePeriodProvider>
                 <TradeProvider>
                   <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#110D0F' }}>
@@ -57,6 +59,7 @@ export default function RootLayout({
                   </div>
                 </TradeProvider>
               </TimePeriodProvider>
+              </I18nProvider>
             </AuthProvider>
           </UIProtectionProvider>
         </SWRConfig>

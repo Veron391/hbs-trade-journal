@@ -3,12 +3,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTrades } from '../../context/TradeContext';
 import { format } from 'date-fns';
+import { useI18n } from '../../context/I18nContext';
 
 interface MonthSummaryProps {
   currentMonth: Date;
 }
 
 export default function MonthSummary({ currentMonth }: MonthSummaryProps) {
+  const { t } = useI18n();
   const [monthStats, setMonthStats] = useState({
     totalTrades: 0,
     totalPnL: 0,
@@ -74,7 +76,7 @@ export default function MonthSummary({ currentMonth }: MonthSummaryProps) {
   return (
     <div className="bg-[#1C1719] rounded-lg shadow p-6 mb-4">
       <h2 className="text-xl font-semibold text-white mb-4">
-        {format(currentMonth, 'MMMM yyyy')} Summary
+        {format(currentMonth, 'MMMM yyyy')} {t('tradingStatistics')}
       </h2>
       
       {isLoading ? (
@@ -85,33 +87,33 @@ export default function MonthSummary({ currentMonth }: MonthSummaryProps) {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-[#1C1719] p-4 rounded-lg">
-          <div className="text-gray-400 text-sm">Total Trades</div>
+          <div className="text-gray-400 text-sm">{t('totalTrades')}</div>
           <div className="text-white text-xl font-bold">{monthStats.totalTrades}</div>
         </div>
         
         <div className="bg-[#1C1719] p-4 rounded-lg">
-          <div className="text-gray-400 text-sm">Total P/L</div>
+          <div className="text-gray-400 text-sm">{t('totalPL')}</div>
           <div className={`text-xl font-bold ${monthStats.totalPnL > 0 ? 'text-success' : monthStats.totalPnL < 0 ? 'text-danger' : 'text-gray-300'}`}>
             {formatCurrency(monthStats.totalPnL)}
           </div>
         </div>
         
         <div className="bg-[#1C1719] p-4 rounded-lg">
-          <div className="text-gray-400 text-sm">Win Rate</div>
+          <div className="text-gray-400 text-sm">{t('winRate')}</div>
           <div className="text-white text-xl font-bold">
             {monthStats.winRate.toFixed(1)}%
           </div>
         </div>
         
         <div className="bg-[#1C1719] p-4 rounded-lg">
-          <div className="text-gray-400 text-sm">Winning Trades</div>
+          <div className="text-gray-400 text-sm">{t('winningTrades') ?? 'Winning Trades'}</div>
           <div className="text-success text-xl font-bold">
             {monthStats.winCount}
           </div>
         </div>
         
         <div className="bg-[#1C1719] p-4 rounded-lg">
-          <div className="text-gray-400 text-sm">Losing Trades</div>
+          <div className="text-gray-400 text-sm">{t('losingTrades') ?? 'Losing Trades'}</div>
           <div className="text-danger text-xl font-bold">
             {monthStats.lossCount}
           </div>

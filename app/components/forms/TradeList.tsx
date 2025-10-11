@@ -6,8 +6,10 @@ import { Trade } from '../../types';
 import { format } from 'date-fns';
 import { Pencil, Trash2, ArrowUp, ArrowDown, Download, FileDown, AlertTriangle, ExternalLink, FileText, AlertCircle } from 'lucide-react';
 import TradeForm from './TradeForm';
+import { useI18n } from '../../context/I18nContext';
 
 export default function TradeList() {
+  const { t } = useI18n();
   const { trades, deleteTrade, importTradesFromApi, isImporting, importError, clearAllTrades } = useTrades();
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
   const [isAddingTrade, setIsAddingTrade] = useState(false);
@@ -167,7 +169,7 @@ export default function TradeList() {
   if (editingTrade) {
     return (
       <div>
-        <h2 className="text-xl font-semibold mb-6 text-white">Edit Trade</h2>
+        <h2 className="text-xl font-semibold mb-6 text-white">{t('addNewTrade')}</h2>
         <TradeForm 
           existingTrade={editingTrade} 
           onComplete={() => setEditingTrade(null)} 
@@ -179,7 +181,7 @@ export default function TradeList() {
   if (isAddingTrade) {
     return (
       <div>
-        <h2 className="text-xl font-semibold mb-6 text-white">Add New Trade</h2>
+        <h2 className="text-xl font-semibold mb-6 text-white">{t('addNewTrade')}</h2>
         <TradeForm onComplete={() => setIsAddingTrade(false)} />
       </div>
     );
@@ -188,13 +190,13 @@ export default function TradeList() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-white">Your Trades</h2>
+        <h2 className="text-xl font-semibold text-white">{t('yourTrades')}</h2>
         <div className="flex space-x-3">
           <button
             onClick={() => setIsAddingTrade(true)}
             className="px-2.5 py-1.5 border border-blue-500 text-blue-500 rounded-md hover:bg-blue-500 hover:text-white transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:ring-opacity-40 text-sm"
           >
-            Add New Trade
+            {t('addNewTrade')}
           </button>
           {trades.length > 0 && (
             <button
@@ -345,7 +347,7 @@ export default function TradeList() {
 
       {trades.length === 0 ? (
         <div className="text-center py-12 bg-[#1C1719] rounded-lg">
-          <p className="text-gray-300">No trades recorded yet. Add your first trade or import from your trading platform.</p>
+          <p className="text-gray-300">{t('emptyTradesHint')}</p>
         </div>
       ) : (
         <div className="relative w-full">
@@ -383,7 +385,7 @@ export default function TradeList() {
                     onClick={() => handleSort('direction')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
-                      Direction
+                      {t('direction')}
                       {sortBy === 'direction' && (
                         sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-green-400" /> : <ArrowDown size={12} className="ml-0.5 text-red-400" />
                       )}
@@ -395,7 +397,7 @@ export default function TradeList() {
                     onClick={() => handleSort('entryDate')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
-                      Entry Date
+                      {t('entryDate')}
                       {sortBy === 'entryDate' && (
                         sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-green-400" /> : <ArrowDown size={12} className="ml-0.5 text-red-400" />
                       )}
@@ -407,7 +409,7 @@ export default function TradeList() {
                     onClick={() => handleSort('exitDate')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
-                      Exit Date
+                      {t('exitDate')}
                       {sortBy === 'exitDate' && (
                         sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-green-400" /> : <ArrowDown size={12} className="ml-0.5 text-red-400" />
                       )}
@@ -419,7 +421,7 @@ export default function TradeList() {
                     onClick={() => handleSort('entryPrice')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
-                      Entry Price
+                      {t('entryPrice')}
                       {sortBy === 'entryPrice' && (
                         sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-green-400" /> : <ArrowDown size={12} className="ml-0.5 text-red-400" />
                       )}
@@ -431,7 +433,7 @@ export default function TradeList() {
                     onClick={() => handleSort('exitPrice')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
-                      Exit Price
+                      {t('exitPrice')}
                       {sortBy === 'exitPrice' && (
                         sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-green-400" /> : <ArrowDown size={12} className="ml-0.5 text-red-400" />
                       )}
@@ -443,7 +445,7 @@ export default function TradeList() {
                     onClick={() => handleSort('quantity')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
-                      Quantity
+                      {t('quantity')}
                       {sortBy === 'quantity' && (
                         sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-green-400" /> : <ArrowDown size={12} className="ml-0.5 text-red-400" />
                       )}

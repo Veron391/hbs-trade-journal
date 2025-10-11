@@ -6,10 +6,13 @@ import { useAuth } from "../../context/AuthContext";
 import { useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { User, Settings, LogOut, House, CalendarDays, TrendingUp, Newspaper } from "lucide-react";
+import { useI18n } from "../../context/I18nContext";
+import LanguageSelector from "./LanguageSelector";
 
 export default function NavMenu() {
   const { user, logout, loading } = useAuth();
   const pathname = usePathname();
+  const { t } = useI18n();
 
   // Check if a route is active
   const isActive = (path: string) => {
@@ -97,7 +100,7 @@ export default function NavMenu() {
                 aria-current={isActive("/") ? "page" : undefined}
               >
                 <House size={18} />
-                Journal
+                {t('journal')}
               </Link>
             </li>
             <li>
@@ -106,7 +109,7 @@ export default function NavMenu() {
                 className={`${isActive("/calendar") ? "text-green-300 bg-[rgba(34,197,94,0.15)] px-4 py-2" : `${linkClass} px-3 py-1`} rounded-20 flex items-center gap-2`}
               >
                 <CalendarDays size={18} />
-                Calendar
+                {t('calendar')}
               </Link>
             </li>
             <li>
@@ -115,7 +118,7 @@ export default function NavMenu() {
                 className={`${isActive("/stats") ? "text-green-300 bg-[rgba(34,197,94,0.15)] px-4 py-2" : `${linkClass} px-3 py-1`} rounded-20 flex items-center gap-2`}
               >
                 <TrendingUp size={18} />
-                Stats
+                {t('stats')}
               </Link>
             </li>
             <li>
@@ -126,7 +129,7 @@ export default function NavMenu() {
                 className={`${linkClass} px-3 py-1 rounded-20 flex items-center gap-2`}
               >
                 <Newspaper size={18} />
-                Macro News
+                {t('macroNews')}
                 <svg 
                   className="w-3 h-3" 
                   fill="none" 
@@ -145,6 +148,7 @@ export default function NavMenu() {
           </ul>
           <div className="flex-1"></div>
           
+          <LanguageSelector />
           <div
             className="relative flex items-center isolation-auto"
             onMouseEnter={handleOpen}

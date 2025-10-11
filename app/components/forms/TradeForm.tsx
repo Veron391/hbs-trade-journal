@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { Trade, TradeType, Direction } from '../../types';
+import { useI18n } from '../../context/I18nContext';
 import { useTrades } from '../../context/TradeContext';
 import { X, CheckCircle } from 'lucide-react';
 import clsx from 'clsx';
@@ -14,6 +15,7 @@ interface TradeFormProps {
 }
 
 export default function TradeForm({ existingTrade, onComplete }: TradeFormProps) {
+  const { t } = useI18n();
   const { addTrade, updateTrade } = useTrades();
   const [showSuccess, setShowSuccess] = useState(false);
   const [tradeTypes, setTradeTypes] = useState<Array<{ id: number; name: string; slug: string }>>([]);
@@ -98,7 +100,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium mb-1 text-gray-200">Trade Type</label>
+        <label className="block text-sm font-medium mb-1 text-gray-200">{t('tradeType')}</label>
           <select
             {...register('type', { required: 'Trade type is required' })}
             className={clsx(
@@ -106,7 +108,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
               errors.type ? "border-danger" : "border-white/15"
             )}
           >
-            <option value="" disabled hidden>Select Type</option>
+            <option value="" disabled hidden>{t('selectType')}</option>
             {(tradeTypes.length > 0 ? tradeTypes : [
               { id: 2, name: 'STOCK', slug: 'stock' },
               { id: 1, name: 'CRYPTO', slug: 'crypto' },
@@ -126,7 +128,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
             {...register('symbol', { required: 'Symbol is required' })}
             placeholder="AAPL, BTC, etc."
             className={clsx(
-              "w-full rounded-md border px-3 py-2 bg-[#342f31] text-white placeholder-gray-400/40",
+              "w-full rounded-md border px-3 py-2 bg-[#342f31] text-white placeholder-gray-400/30",
               errors.symbol ? "border-danger" : "border-white/15"
             )}
             style={{
@@ -141,7 +143,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1 text-gray-200">Direction</label>
+        <label className="block text-sm font-medium mb-1 text-gray-200">{t('direction')}</label>
           <select
             {...register('direction', { required: 'Direction is required' })}
             className={clsx(
@@ -183,7 +185,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1 text-gray-200">Entry Date</label>
+        <label className="block text-sm font-medium mb-1 text-gray-200">{t('entryDate')}</label>
           <Controller
             name="entryDate"
             control={control}
@@ -192,7 +194,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
               <DatePicker
                 value={field.value}
                 onChange={field.onChange}
-                placeholder="Select entry date"
+                placeholder={t('selectEntryDate')}
                 error={!!errors.entryDate}
               />
             )}
@@ -203,7 +205,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1 text-gray-200">Exit Date</label>
+        <label className="block text-sm font-medium mb-1 text-gray-200">{t('exitDate')}</label>
           <Controller
             name="exitDate"
             control={control}
@@ -220,7 +222,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
               <DatePicker
                 value={field.value}
                 onChange={field.onChange}
-                placeholder="Select exit date"
+                placeholder={t('selectExitDate')}
                 error={!!errors.exitDate}
               />
             )}
@@ -231,7 +233,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1 text-gray-200">Entry Price</label>
+        <label className="block text-sm font-medium mb-1 text-gray-200">{t('entryPrice')}</label>
           <input
             type="number"
             {...register('entryPrice', { 
@@ -256,7 +258,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1 text-gray-200">Exit Price</label>
+        <label className="block text-sm font-medium mb-1 text-gray-200">{t('exitPrice')}</label>
           <input
             type="number"
             {...register('exitPrice', { 
@@ -283,7 +285,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
 
       {/* Link field - full width */}
       <div>
-        <label className="block text-sm font-medium mb-1 text-gray-200">Trade Link</label>
+        <label className="block text-sm font-medium mb-1 text-gray-200">{t('tradeLink')}</label>
         <input
           type="url"
           {...register('link', {
@@ -294,7 +296,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
           })}
           placeholder="https://example.com/trade-screenshot"
           className={clsx(
-            "w-full rounded-md border px-3 py-2 bg-[#342f31] text-white placeholder-gray-400/40",
+            "w-full rounded-md border px-3 py-2 bg-[#342f31] text-white placeholder-gray-400/30",
             errors.link ? "border-danger" : "border-white/15"
           )}
           style={{
@@ -311,22 +313,22 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
 
 
       <div>
-        <label className="block text-sm font-medium mb-1 text-gray-200">Trade Setup Notes</label>
+        <label className="block text-sm font-medium mb-1 text-gray-200">{t('setupNotes')}</label>
         <textarea
           {...register('setupNotes')}
           rows={4}
           placeholder="Describe your trade setup and strategy..."
-          className="w-full rounded-md border border-white/15 px-3 py-2 bg-[#342f31] text-white placeholder-gray-400/40"
+          className="w-full rounded-md border border-white/15 px-3 py-2 bg-[#342f31] text-white placeholder-gray-400/30"
         ></textarea>
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1 text-gray-200">Mistakes & Learnings</label>
+        <label className="block text-sm font-medium mb-1 text-gray-200">{t('mistakesLearnings')}</label>
         <textarea
           {...register('mistakesLearnings')}
           rows={4}
           placeholder="What mistakes did you make? What did you learn?"
-          className="w-full rounded-md border border-white/15 px-3 py-2 bg-[#342f31] text-white placeholder-gray-400/40"
+          className="w-full rounded-md border border-white/15 px-3 py-2 bg-[#342f31] text-white placeholder-gray-400/30"
         ></textarea>
       </div>
 

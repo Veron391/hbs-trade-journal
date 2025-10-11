@@ -38,10 +38,18 @@ const json = async (res: Response) => {
 // API functions (named exports)
 export async function listTrades(): Promise<Trade[]> {
   try {
-    const res = await json(await fetch(`/api/journal/trades?t=${Date.now()}`, { 
+    const res = await fetch(`/api/journal/trades?t=${Date.now()}`, { 
       cache: 'no-store' // Disable caching
-    }))
-    const results = Array.isArray(res.results) ? res.results : []
+    })
+    
+    // Handle authentication errors gracefully
+    if (res.status === 403 || res.status === 401) {
+      console.log('User not authenticated, returning empty trades list')
+      return []
+    }
+    
+    const data = await json(res)
+    const results = Array.isArray(data.results) ? data.results : []
     return results.map(mapBackendToTrade)
   } catch (error) {
     console.error('Error fetching trades:', error)
@@ -109,11 +117,24 @@ export type CalendarDayDetails = {
 export async function getCalendarDayDetails(date: string): Promise<CalendarDayDetails> {
   try {
     const formattedDate = date.slice(0, 10) // Ensure YYYY-MM-DD format
-    const res = await json(await fetch(`/api/calendar/day/${formattedDate}?t=${Date.now()}`, {
+    const res = await fetch(`/api/calendar/day/${formattedDate}?t=${Date.now()}`, {
       credentials: 'include', // Include cookies for authentication
       cache: 'no-store' // Disable caching
-    }))
-    return res
+    })
+    
+    // Handle authentication errors gracefully
+    if (res.status === 403 || res.status === 401) {
+      console.log('User not authenticated, returning empty calendar details')
+      return {
+        totalPnL: 0,
+        trades: 0,
+        assets: [],
+        tradeDetails: []
+      }
+    }
+    
+    const data = await json(res)
+    return data
   } catch (error) {
     console.error('Error fetching calendar day details:', error)
     return {
@@ -157,8 +178,8 @@ function createPayloadToBackend(p: CreateTradeData) {
     quantity: Number(p.qty),
     entry_date: p.entryDate.slice(0,10),
     exit_date: p.exitDate.slice(0,10),
-    buy_price: String(p.entryPrice),
-    sell_price: String(p.exitPrice ?? ''),
+    buy_price: String(Number(p.entryPrice).toFixed(2)),
+    sell_price: String(Number(p.exitPrice ?? 0).toFixed(2)),
     trade_link: p.link ?? '',
     trade_setup_notes: p.setupNotes ?? '',
     ml_notes: p.mistakesLearnings ?? '',
@@ -173,8 +194,8 @@ function updatePayloadToBackend(p: UpdateTradeData) {
   if (p.qty != null) obj.quantity = Number(p.qty)
   if (p.entryDate) obj.entry_date = p.entryDate.slice(0,10)
   if (p.exitDate) obj.exit_date = p.exitDate.slice(0,10)
-  if (p.entryPrice != null) obj.buy_price = String(p.entryPrice)
-  if (p.exitPrice != null) obj.sell_price = String(p.exitPrice)
+  if (p.entryPrice != null) obj.buy_price = String(Number(p.entryPrice).toFixed(2))
+  if (p.exitPrice != null) obj.sell_price = String(Number(p.exitPrice).toFixed(2))
   if (p.link != null) obj.trade_link = p.link
   if (p.setupNotes != null) obj.trade_setup_notes = p.setupNotes
   if (p.mistakesLearnings != null) obj.ml_notes = p.mistakesLearnings

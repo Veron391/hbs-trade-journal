@@ -1,13 +1,20 @@
 import useSWR from 'swr'
 import { listTrades, createTrade, updateTrade, deleteTrade, Trade, CreateTradeData, UpdateTradeData } from '@/lib/api/trades'
+import { useAuth } from '@/app/context/AuthContext'
 
 export function useTrades() {
-  const { data, error, isLoading, mutate } = useSWR<Trade[]>('/api/journal/trades', async () => listTrades(), {
-    revalidateOnFocus: true,
-    revalidateOnReconnect: true,
-    refreshInterval: 0, // Disable automatic refresh
-    dedupingInterval: 0 // Disable deduplication
-  })
+  const { user, loading } = useAuth()
+  
+  const { data, error, isLoading, mutate } = useSWR<Trade[]>(
+    user ? '/api/journal/trades' : null, // Only fetch when user is authenticated
+    async () => listTrades(), 
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      refreshInterval: 0, // Disable automatic refresh
+      dedupingInterval: 0 // Disable deduplication
+    }
+  )
 
   const addTrade = async (tradeData: CreateTradeData) => {
     const created = await createTrade(tradeData)
@@ -31,7 +38,7 @@ export function useTrades() {
 
   return {
     trades: data || [],
-    isLoading,
+    isLoading: loading || isLoading, // Show loading while auth is loading or data is loading
     error,
     addTrade,
     editTrade,

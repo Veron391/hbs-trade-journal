@@ -98,7 +98,8 @@ export default function StatsOverview({ selectedPeriod, tradeType }: StatsOvervi
     
     // Calculate performance ratios
     // Use existing averageWinningTrade and averageLosingTrade for risk/reward ratio
-    const riskRewardRatio = averageWinningTrade && averageLosingTrade ? averageWinningTrade / averageLosingTrade : 0;
+    // Make sure to use absolute value for averageLosingTrade to avoid negative ratios
+    const riskRewardRatio = averageWinningTrade && averageLosingTrade ? averageWinningTrade / Math.abs(averageLosingTrade) : 0;
     const winRate = processedTrades.length > 0 ? winningTrades.length / processedTrades.length : 0;
     
     return {

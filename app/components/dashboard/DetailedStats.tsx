@@ -133,8 +133,10 @@ export default function DetailedStats({ selectedPeriod, tradeType }: DetailedSta
     const averageWinningHoldTime = winningTrades.length > 0 ? winningHoldTime / winningTrades.length : 0;
     const averageLosingHoldTime = losingTrades.length > 0 ? losingHoldTime / losingTrades.length : 0;
     
-    // Calculate performance ratios
-    const riskRewardRatio = totalLossAmount > 0 ? totalWinAmount / totalLossAmount : totalWinAmount;
+    // Calculate performance ratios - use average risk/reward ratio
+    const riskRewardRatio = averageWinningTrade && averageLosingTrade 
+      ? averageWinningTrade / Math.abs(averageLosingTrade) 
+      : 0;
     const winRate = processedTrades.length > 0 ? winningTrades.length / processedTrades.length : 0;
     
     // Sortino Ratio (simplified)
@@ -231,11 +233,10 @@ export default function DetailedStats({ selectedPeriod, tradeType }: DetailedSta
   }
 
   return (
-    <div className="bg-[#1C1719] shadow rounded-lg p-6 mt-8">
-      <h2 className="text-xl font-semibold mb-6 text-[#F0E4D3]">Detailed Statistics</h2>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div>
+    <div className="mt-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Profitability Card */}
+        <div className="bg-[#1C1719] shadow rounded-lg p-6">
           <h3 className="text-lg font-medium mb-4 text-[#F0E4D3]">Profitability</h3>
           <div className="space-y-1">
             <StatItem 
@@ -278,14 +279,11 @@ export default function DetailedStats({ selectedPeriod, tradeType }: DetailedSta
               label="Sharpe Ratio" 
               value={filteredStats.sharpeRatio.toFixed(2)} 
             />
-            <StatItem 
-              label="Average Risk/Reward Ratio" 
-              value={filteredStats.averageRiskRewardRatio.toFixed(2)} 
-            />
           </div>
         </div>
         
-        <div>
+        {/* Trade Analysis Card */}
+        <div className="bg-[#1C1719] shadow rounded-lg p-6">
           <h3 className="text-lg font-medium mb-4 text-[#F0E4D3]">Trade Analysis</h3>
           <div className="space-y-1">
             <StatItem 

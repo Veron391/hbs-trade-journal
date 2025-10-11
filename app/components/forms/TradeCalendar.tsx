@@ -5,9 +5,11 @@ import { useTrades } from '../../context/TradeContext';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getDay, isToday, isSameMonth, setYear, setMonth, setDate } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar, X, TrendingUp, DollarSign, BarChart3, FileText, AlertCircle, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import MonthSummary from '../dashboard/MonthSummary';
+import { useI18n } from '../../context/I18nContext';
 import { getCalendarDayDetails, CalendarDayDetails } from '../../../lib/api/trades';
 
 export default function TradeCalendar() {
+  const { t } = useI18n();
   const { trades } = useTrades();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -24,6 +26,7 @@ export default function TradeCalendar() {
   const [isLoadingDayDetails, setIsLoadingDayDetails] = useState(false);
   const [lastApiCall, setLastApiCall] = useState<number>(0);
   const datePickerRef = useRef<HTMLDivElement>(null);
+  const anchorElRef = useRef<HTMLElement | null>(null);
   
   // Rate limiting: Only allow one API call per 500ms
   const RATE_LIMIT_MS = 500;
@@ -66,6 +69,8 @@ export default function TradeCalendar() {
 
   // Handle day click to show trade details
   const handleDayClick = async (dateKey: string, event: React.MouseEvent) => {
+    // Keep reference to the clicked day so we can re-position while scrolling/resizing
+    anchorElRef.current = event.currentTarget as HTMLElement;
     console.log('Day clicked:', dateKey);
     const dayData = tradesByDate.get(dateKey);
     const backendData = backendDays.get(dateKey);
@@ -89,29 +94,42 @@ export default function TradeCalendar() {
     
     // Always show dropdown when clicked, regardless of existing data
     const rect = event.currentTarget.getBoundingClientRect();
-    const scrollY = window.scrollY;
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
     
     // Calculate position considering scroll and viewport
-    let yPosition = rect.bottom + scrollY + 10;
+    let yPosition = rect.bottom + 10; // fixed -> viewport coords
     let xPosition = rect.left + rect.width / 2;
     
-    // Estimate dropdown height
-    const estimatedDropdownHeight = 400;
+    // Estimate dropdown height more accurately based on viewport
+    const maxDropdownHeight = Math.min(500, viewportHeight * 0.7); // Max 70% of viewport height
+    const minDropdownHeight = 200; // Minimum height for basic content
+    const estimatedDropdownHeight = maxDropdownHeight;
     
-    // If the dropdown would go off screen at bottom, position it above the day cell
-    if (yPosition + estimatedDropdownHeight > scrollY + viewportHeight) {
-      yPosition = rect.top + scrollY - estimatedDropdownHeight - 10;
+    // Check available space above and below
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    
+    // If not enough space below, position above the day cell
+    if (spaceBelow < estimatedDropdownHeight && spaceAbove > minDropdownHeight) {
+      yPosition = rect.top - minDropdownHeight - 10;
+    } else if (spaceBelow < minDropdownHeight) {
+      // If very little space below, position above with available space
+      yPosition = Math.max(20, rect.top - Math.min(estimatedDropdownHeight, spaceAbove - 20));
     }
     
     // Ensure dropdown stays within viewport horizontally
     const dropdownWidth = 384; // w-96 = 384px
-    if (xPosition - dropdownWidth/2 < 10) {
-      xPosition = dropdownWidth/2 + 10;
-    } else if (xPosition + dropdownWidth/2 > viewportWidth - 10) {
-      xPosition = viewportWidth - dropdownWidth/2 - 10;
+    const margin = 20; // Increased margin for better spacing
+    
+    if (xPosition - dropdownWidth/2 < margin) {
+      xPosition = dropdownWidth/2 + margin;
+    } else if (xPosition + dropdownWidth/2 > viewportWidth - margin) {
+      xPosition = viewportWidth - dropdownWidth/2 - margin;
     }
+    
+    // Ensure vertical position is within viewport bounds
+    yPosition = Math.max(margin, Math.min(yPosition, viewportHeight - minDropdownHeight - margin));
     
     setDropdownPosition({
       x: xPosition,
@@ -140,15 +158,63 @@ export default function TradeCalendar() {
     setIsDropdownVisible(true);
   };
 
+  // Keep dropdown anchored to the selected day while scrolling/resizing
+  useEffect(() => {
+    const updatePosition = () => {
+      if (!isDropdownVisible || !anchorElRef.current) return;
+      const rect = anchorElRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+
+      let yPosition = rect.bottom + 10;
+      let xPosition = rect.left + rect.width / 2;
+
+      const maxDropdownHeight = Math.min(500, viewportHeight * 0.7);
+      const minDropdownHeight = 200;
+      const estimatedDropdownHeight = maxDropdownHeight;
+
+      const spaceBelow = viewportHeight - rect.bottom;
+      const spaceAbove = rect.top;
+
+      if (spaceBelow < estimatedDropdownHeight && spaceAbove > minDropdownHeight) {
+        yPosition = rect.top - minDropdownHeight - 10;
+      } else if (spaceBelow < minDropdownHeight) {
+        yPosition = Math.max(20, rect.top - Math.min(estimatedDropdownHeight, spaceAbove - 20));
+      }
+
+      const dropdownWidth = 384; // w-96
+      const margin = 20;
+      if (xPosition - dropdownWidth / 2 < margin) {
+        xPosition = dropdownWidth / 2 + margin;
+      } else if (xPosition + dropdownWidth / 2 > viewportWidth - margin) {
+        xPosition = viewportWidth - dropdownWidth / 2 - margin;
+      }
+
+      yPosition = Math.max(margin, Math.min(yPosition, viewportHeight - minDropdownHeight - margin));
+      setDropdownPosition({ x: xPosition, y: yPosition });
+    };
+
+    window.addEventListener('scroll', updatePosition, { passive: true });
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      window.removeEventListener('scroll', updatePosition);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [isDropdownVisible]);
+
   // Toggle trade expansion
   const toggleTradeExpansion = (tradeId: string) => {
+    console.log('Toggling trade expansion for:', tradeId);
     setExpandedTrades(prev => {
       const newSet = new Set(prev);
       if (newSet.has(tradeId)) {
         newSet.delete(tradeId);
+        console.log('Collapsing trade:', tradeId);
       } else {
         newSet.add(tradeId);
+        console.log('Expanding trade:', tradeId);
       }
+      console.log('New expanded trades set:', Array.from(newSet));
       return newSet;
     });
   };
@@ -266,7 +332,7 @@ export default function TradeCalendar() {
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#231F21'}
             >
               <Calendar size={16} />
-              <span className="text-sm">Custom Date</span>
+                <span className="text-sm">{t('customDate')}</span>
             </button>
             <button
               onClick={prevMonth}
@@ -306,7 +372,7 @@ export default function TradeCalendar() {
                 </button>
               </div>
               
-              <div className="space-y-4">
+              <div className="space-y-4 pb-6">
                 {/* Year Selector */}
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Year</label>
@@ -479,7 +545,7 @@ export default function TradeCalendar() {
       {selectedDateForDetails && (
         <div
           data-dropdown="trade-details"
-          className={`fixed z-[9999] bg-[#1C1719] border border-white/20 rounded-lg shadow-2xl p-4 w-96 max-w-[90vw] max-h-[80vh] overflow-y-auto transition-all duration-300 ease-out ${
+          className={`fixed z-[9999] bg-[#1C1719] border border-white/20 rounded-lg shadow-2xl p-4 pb-8 w-96 max-w-[90vw] max-h-[calc(100vh-40px)] overflow-y-auto overscroll-contain transition-all duration-300 ease-out ${
             isDropdownVisible 
               ? 'opacity-100 scale-100 backdrop-blur-sm' 
               : 'opacity-0 scale-95 backdrop-blur-none'
@@ -487,7 +553,12 @@ export default function TradeCalendar() {
           style={{
             left: `${dropdownPosition.x}px`,
             top: `${dropdownPosition.y}px`,
-            transform: 'translateX(-50%)'
+            transform: 'translateX(-50%)',
+            WebkitOverflowScrolling: 'touch',
+            overscrollBehavior: 'contain',
+            touchAction: 'pan-y',
+            maxHeight: 'calc(100vh - 40px)',
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)'
           }}
         >
           {console.log('Rendering dropdown for:', selectedDateForDetails, 'visible:', isDropdownVisible, 'position:', dropdownPosition)}
@@ -547,7 +618,8 @@ export default function TradeCalendar() {
             const totalPnL = apiData?.summary?.total_pnl ?? apiData?.totalPnL ?? (dayData?.totalPnL ?? 0);
             const tradesCount = apiData?.summary?.trade_count ?? apiData?.trades ?? (dayData?.trades.length ?? 0);
             const assets = apiData?.summary?.assets_traded ?? apiData?.assets ?? (dayData ? [...new Set(dayData.trades.map((trade: any) => trade.symbol))] as string[] : []);
-            const tradeDetails = apiData?.trades ?? apiData?.tradeDetails ?? (dayData?.trades ?? []);
+            // Use local trade data for detailed information (includes notes) but API data for summary
+            const tradeDetails = dayData?.trades ?? (apiData?.trades ?? apiData?.tradeDetails ?? []);
             
             // Note: We intentionally exclude backendData (calendar list) as it may have incorrect calculations
             // The day details API provides the accurate per-day totals
@@ -557,6 +629,8 @@ export default function TradeCalendar() {
             console.log('Summary:', apiData?.summary);
             console.log('Assets:', assets);
             console.log('Trade Details:', tradeDetails);
+            console.log('Day Data (local):', dayData);
+            console.log('Local trades sample:', dayData?.trades?.[0]);
             
             // Ensure assets is an array of strings - handle both string arrays and object arrays
             let safeAssets: string[] = [];
@@ -601,7 +675,7 @@ export default function TradeCalendar() {
                   <div className="bg-gradient-to-r from-[#231F21] to-[#2A2527] rounded-lg p-2.5 border border-white/10">
                     <div className="flex items-center gap-1.5 mb-1">
                       <DollarSign size={16} className="text-gray-400" />
-                      <span className="text-sm text-gray-400">Total P/L</span>
+                      <span className="text-sm text-gray-400">{t('totalPL')}</span>
                     </div>
                     <div className={`text-lg font-bold ${
                       isProfitable ? 'text-green-500' : isBreakEven ? 'text-yellow-500' : 'text-red-500'
@@ -613,7 +687,7 @@ export default function TradeCalendar() {
                   <div className="bg-gradient-to-r from-[#231F21] to-[#2A2527] rounded-lg p-2.5 border border-white/10">
                     <div className="flex items-center gap-1.5 mb-1">
                       <BarChart3 size={16} className="text-gray-400" />
-                      <span className="text-sm text-gray-400">Trades</span>
+                      <span className="text-sm text-gray-400">{t('trades')}</span>
                     </div>
                     <div className="text-lg font-bold text-white">
                       {tradesCount}
@@ -626,7 +700,7 @@ export default function TradeCalendar() {
                   <div className="bg-gradient-to-r from-[#231F21] to-[#2A2527] rounded-lg p-3 border border-white/10">
                     <div className="flex items-center gap-2 mb-2">
                       <TrendingUp size={16} className="text-gray-400" />
-                      <span className="text-sm text-gray-400">Assets Traded</span>
+                      <span className="text-sm text-gray-400">{t('assetsTraded')}</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {safeAssets.map((asset) => (
@@ -643,8 +717,8 @@ export default function TradeCalendar() {
 
                 {/* Trade Details */}
                 {safeTradeDetails.length > 0 && (
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium text-gray-300">Trade Details</h4>
+                <div className="space-y-3 pb-2">
+                    <h4 className="text-sm font-medium text-gray-300">{t('tradeDetails')}</h4>
                     {safeTradeDetails.map((trade: any, index: number) => {
                     // Ensure trade has required properties
                     if (!trade || typeof trade !== 'object') {
@@ -661,42 +735,48 @@ export default function TradeCalendar() {
                     let direction = trade.direction || 'long';
                     let tradeId = trade.id || `trade-${index}`;
                     
-                    if (apiData) {
-                      // API data already has calculated PnL - use profit_amount from API response
-                      pnl = typeof trade.profit_amount === 'number' ? trade.profit_amount : (trade.pnl || 0);
-                      entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : 0;
-                      exitPrice = typeof trade.exitPrice === 'number' ? trade.exitPrice : 0;
-                      quantity = typeof trade.quantity === 'number' ? trade.quantity : 0;
-                      
-                      // Debug: Log the trade data to verify calculations
-                      console.log('Trade data:', {
-                        id: trade.id,
-                        symbol: trade.symbol,
-                        profit_amount: trade.profit_amount,
-                        quantity: trade.quantity,
-                        entryPrice: trade.entryPrice,
-                        exitPrice: trade.exitPrice
-                      });
+                    // Always use local calculation for accurate PnL
+                    entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : parseFloat(String(trade.entryPrice)) || 0;
+                    exitPrice = typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice)) || 0;
+                    quantity = typeof trade.quantity === 'number' ? trade.quantity : parseFloat(String(trade.quantity)) || 0;
+                    
+                    const entryValue = entryPrice * quantity;
+                    const exitValue = exitPrice * quantity;
+                    
+                    if (direction === 'long') {
+                      pnl = exitValue - entryValue;
                     } else {
-                      // Local data calculation
-                      entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : parseFloat(String(trade.entryPrice)) || 0;
-                      exitPrice = typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice)) || 0;
-                      quantity = typeof trade.quantity === 'number' ? trade.quantity : parseFloat(String(trade.quantity)) || 0;
-                      
-                      const entryValue = entryPrice * quantity;
-                      const exitValue = exitPrice * quantity;
-                      
-                      if (direction === 'long') {
-                        pnl = exitValue - entryValue;
-                      } else {
-                        pnl = entryValue - exitValue;
-                      }
+                      pnl = entryValue - exitValue;
                     }
+                    
+                    // Debug: Log the trade data to verify calculations
+                    console.log('Trade PnL calculation:', {
+                      id: trade.id,
+                      symbol: trade.symbol,
+                      entryPrice,
+                      exitPrice,
+                      quantity,
+                      direction,
+                      entryValue,
+                      exitValue,
+                      calculatedPnL: pnl
+                    });
                     
                     const isTradeProfitable = pnl > 0;
                     const isTradeBreakEven = pnl === 0;
                     const isExpanded = expandedTrades.has(tradeId);
-                    const hasNotes = trade.setupNotes || trade.mistakesLearnings || trade.link;
+                    const hasNotes = Boolean(trade.setupNotes || trade.mistakesLearnings || trade.link);
+                    
+                    // Debug: Log trade data to see what's available
+                    console.log('Trade details for expansion:', {
+                      tradeId,
+                      symbol: trade.symbol,
+                      setupNotes: trade.setupNotes,
+                      mistakesLearnings: trade.mistakesLearnings,
+                      link: trade.link,
+                      hasNotes,
+                      isExpanded
+                    });
                     
                     return (
                       <div key={tradeId} className="bg-gradient-to-r from-[#231F21] to-[#2A2527] rounded-xl border border-white/10 shadow-lg">
@@ -705,8 +785,11 @@ export default function TradeCalendar() {
                           className={`flex items-center justify-between py-2.5 px-4 ${hasNotes ? 'cursor-pointer hover:bg-white/5' : 'cursor-default'} transition-all duration-200 rounded-xl`}
                           onClick={(e) => {
                             e.stopPropagation();
+                            console.log('Trade header clicked:', { tradeId, hasNotes });
                             if (hasNotes) {
                               toggleTradeExpansion(tradeId);
+                            } else {
+                              console.log('No notes available for trade:', tradeId);
                             }
                           }}
                         >
@@ -744,8 +827,9 @@ export default function TradeCalendar() {
                         {hasNotes && (
                           <div 
                             className={`overflow-hidden transition-all duration-450 ease-in-out ${
-                              isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                              isExpanded ? 'max-h-[1200px] opacity-100' : 'max-h-0 opacity-0'
                             }`}
+                            style={{ willChange: 'max-height' }}
                           >
                             <div className="px-3 pb-3 space-y-3 border-t border-white/10 pt-3">
                               {/* Setup Notes */}
@@ -755,7 +839,7 @@ export default function TradeCalendar() {
                                     <div className="p-1 rounded-lg bg-blue-500/20">
                                       <FileText size={14} className="text-blue-400" />
                                     </div>
-                                    <span className="text-xs font-medium text-blue-300">Setup Notes</span>
+                                    <span className="text-xs font-medium text-blue-300">{t('setupNotes')}</span>
                                   </div>
                                   <p className="text-xs text-white bg-gradient-to-r from-blue-900/40 to-blue-800/30 rounded-lg py-3 px-2 transition-all duration-300 hover:from-blue-800/50 hover:to-blue-700/40 border border-blue-500/20">
                                     {trade.setupNotes}
@@ -770,7 +854,7 @@ export default function TradeCalendar() {
                                     <div className="p-1 rounded-lg bg-orange-500/20">
                                       <AlertCircle size={14} className="text-orange-400" />
                                     </div>
-                                    <span className="text-xs font-medium text-orange-300">Mistakes & Learnings</span>
+                                    <span className="text-xs font-medium text-orange-300">{t('mistakesLearnings')}</span>
                                   </div>
                                   <p className="text-xs text-white bg-gradient-to-r from-orange-900/40 to-red-800/30 rounded-lg py-3 px-2 transition-all duration-300 hover:from-orange-800/50 hover:to-red-700/40 border border-orange-500/20">
                                     {trade.mistakesLearnings}
@@ -785,7 +869,7 @@ export default function TradeCalendar() {
                                     <div className="p-1 rounded-lg" style={{ backgroundColor: '#F4E9D720' }}>
                                       <ExternalLink size={14} style={{ color: '#F4E9D7' }} />
                                     </div>
-                                    <span className="text-xs font-medium" style={{ color: '#F4E9D7' }}>Trade Link</span>
+                                    <span className="text-xs font-medium" style={{ color: '#F4E9D7' }}>{t('tradeLink')}</span>
                                   </div>
                                   <a 
                                     href={trade.link} 
