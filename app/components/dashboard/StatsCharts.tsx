@@ -18,6 +18,7 @@ import type { TooltipItem } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { differenceInDays } from 'date-fns';
 import { useState, useMemo } from 'react';
+import { useI18n } from '../../context/I18nContext';
 import CumulativePLChartNew from '../charts/CumulativePLChart.New';
 import { filterTradesByPeriod, TimePeriod } from './TimePeriodSelector';
 import { TradeType } from '../../types';
@@ -43,6 +44,7 @@ interface StatsChartsProps {
 }
 
 export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsProps) {
+  const { t } = useI18n();
   const { trades } = useTrades();
   const [hiddenSegments, setHiddenSegments] = useState<Set<number>>(new Set());
   const [hiddenTradeTypeSegments, setHiddenTradeTypeSegments] = useState<Set<number>>(new Set());
@@ -281,10 +283,10 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
       ctx.fillStyle = '#ffffff';
       ctx.fillText(text, x, y - 8);
       
-      // Subtitle: Win Rate
+      // Subtitle: Win Rate (translated)
       ctx.font = '500 13px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
       ctx.fillStyle = 'rgba(229, 231, 235, 0.85)'; // text-gray-200-ish
-      ctx.fillText('Win Rate', x, y + 16);
+      ctx.fillText(t('winRate'), x, y + 16);
       ctx.restore();
     },
   };
@@ -309,10 +311,10 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
       ctx.fillStyle = '#ffffff';
       ctx.fillText(totalTrades.toString(), x, y - 8);
       
-      // Subtitle: Total Trades
+      // Subtitle: Total Trades (translated)
       ctx.font = '500 13px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
       ctx.fillStyle = 'rgba(229, 231, 235, 0.85)'; // text-gray-200-ish
-      ctx.fillText('Total Trades', x, y + 16);
+      ctx.fillText(t('totalTrades'), x, y + 16);
       ctx.restore();
     },
   };
@@ -616,12 +618,12 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
 
   return (
     <div className="mt-8 space-y-8">
-      <h2 className="text-xl font-semibold text-white">Performance Charts</h2>
+      <h2 className="text-xl font-semibold text-white">{t('performanceCharts')}</h2>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Win/Loss Ratio */}
         <div className="bg-[#1C1719] p-6 rounded-lg shadow">
-          <h3 className="text-lg font-medium mb-4 text-gray-100">Win/Loss Ratio</h3>
+          <h3 className="text-lg font-medium mb-4 text-gray-100">{t('winLossRatio')}</h3>
           <div className="h-80 flex items-center gap-8">
             {/* Custom legend (always white text) */}
             <div className="hidden md:flex flex-col text-white text-base space-y-6">
@@ -632,7 +634,7 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
                 onClick={() => toggleSegment(0)}
               >
                 <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: '#399ed4', border: 'none' }} />
-                <span className={hiddenSegments.has(0) ? 'line-through' : ''}>Winning Trades</span>
+                <span className={hiddenSegments.has(0) ? 'line-through' : ''}>{t('winningTrades')}</span>
               </div>
               <div 
                 className={`flex items-center gap-4 cursor-pointer transition-all duration-200 ${
@@ -641,7 +643,7 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
                 onClick={() => toggleSegment(1)}
               >
                 <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: '#D00000', border: 'none' }} />
-                <span className={hiddenSegments.has(1) ? 'line-through' : ''}>Losing Trades</span>
+                <span className={hiddenSegments.has(1) ? 'line-through' : ''}>{t('losingTrades')}</span>
               </div>
               <div 
                 className={`flex items-center gap-4 cursor-pointer transition-all duration-200 ${
@@ -650,7 +652,7 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
                 onClick={() => toggleSegment(2)}
               >
                 <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: '#d6d5c9', border: 'none' }} />
-                <span className={hiddenSegments.has(2) ? 'line-through' : ''}>Break Even</span>
+                <span className={hiddenSegments.has(2) ? 'line-through' : ''}>{t('breakEven')}</span>
               </div>
             </div>
             <div 
@@ -693,7 +695,7 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
 
         {/* Trade Type Distribution */}
         <div className="bg-[#1C1719] p-6 rounded-lg shadow">
-          <h3 className="text-lg font-medium mb-4 text-gray-100">Trade Type Distribution</h3>
+          <h3 className="text-lg font-medium mb-4 text-gray-100">{t('tradeTypeDistribution')}</h3>
           <div className="h-80 flex">
             <div className="flex flex-col justify-center gap-6 pr-8">
               <div 
@@ -703,7 +705,7 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
                 onClick={() => toggleTradeTypeSegment(0)}
               >
                 <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: '#EBD9D1', border: 'none' }} />
-                <span className={hiddenTradeTypeSegments.has(0) ? 'line-through' : ''}>Stock</span>
+                <span className={hiddenTradeTypeSegments.has(0) ? 'line-through' : ''}>{t('stock')}</span>
               </div>
               <div 
                 className={`flex items-center gap-4 cursor-pointer transition-all duration-200 ${
@@ -712,7 +714,7 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
                 onClick={() => toggleTradeTypeSegment(1)}
               >
                 <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: '#F59E0B', border: 'none' }} />
-                <span className={hiddenTradeTypeSegments.has(1) ? 'line-through' : ''}>Crypto</span>
+                <span className={hiddenTradeTypeSegments.has(1) ? 'line-through' : ''}>{t('crypto')}</span>
               </div>
             </div>
             <div 
@@ -754,7 +756,7 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
 
         {/* P&L per Trade (Last 10) */}
         <div className="bg-[#1C1719] p-6 rounded-lg shadow">
-          <h3 className="text-lg font-medium mb-4 text-gray-100">P&L per Trade (Last 10)</h3>
+          <h3 className="text-lg font-medium mb-4 text-gray-100">{t('pnlPerTrade')}</h3>
           <div className="h-80">
             <Bar 
               data={pnlPerTradeData} 
@@ -814,12 +816,12 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
                   y: {
                     beginAtZero: true,
                     grid: {
-                      color: 'rgba(255, 255, 255, 0.1)'
+                      color: 'rgba(255, 255, 255, 0.05)'
                     }
                   },
                   x: {
                     grid: {
-                      color: 'rgba(255, 255, 255, 0.1)'
+                      color: 'rgba(255, 255, 255, 0.05)'
                     }
                   }
                 },

@@ -52,7 +52,6 @@ export async function PATCH(
       ...updatedTrade,
       pnl,
       setupNotes: body.setupNotes !== undefined ? body.setupNotes : updatedTrade.setupNotes,
-      mistakesLearnings: body.mistakesLearnings !== undefined ? body.mistakesLearnings : updatedTrade.mistakesLearnings,
       tags: body.tags !== undefined ? (Array.isArray(body.tags) ? body.tags.join(',') : body.tags) : updatedTrade.tags,
       link: body.link !== undefined ? body.link : updatedTrade.link,
       updatedAt: new Date().toISOString(),

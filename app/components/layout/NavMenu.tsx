@@ -7,16 +7,36 @@ import { useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { User, Settings, LogOut, House, CalendarDays, TrendingUp, Newspaper } from "lucide-react";
 import { useI18n } from "../../context/I18nContext";
+import { useFormContext } from "../../context/FormContext";
 import LanguageSelector from "./LanguageSelector";
 
 export default function NavMenu() {
   const { user, logout, loading } = useAuth();
   const pathname = usePathname();
   const { t } = useI18n();
+  const { isTradeFormOpen } = useFormContext();
+
+  // Locale-aware pathname normalization so active styles work with /uz /ru /en prefixes
+  const normalizePath = (p: string) => {
+    if (!p) return '/';
+    const parts = p.split('/').filter(Boolean);
+    if (parts.length === 0) return '/';
+    const first = parts[0];
+    if (first === 'uz' || first === 'ru' || first === 'en') {
+      const rest = '/' + parts.slice(1).join('/');
+      return rest === '/' ? '/' : rest;
+    }
+    return p;
+  };
+  const current = normalizePath(pathname || '/');
 
   // Check if a route is active
   const isActive = (path: string) => {
-    return pathname === path || pathname.startsWith(`${path}/`);
+    const target = path;
+    if (target === '/') {
+      return current === '/';
+    }
+    return current === target || current.startsWith(`${target}/`);
   };
 
   // Active link style
@@ -93,33 +113,63 @@ export default function NavMenu() {
           <div className="flex-1"></div>
           <ul className="flex items-center space-x-8" role="menubar">
             <li role="none">
-              <Link
-                href="/"
-                className={`${isActive("/") ? "text-green-300 bg-[rgba(34,197,94,0.15)] px-4 py-2" : `${linkClass} px-3 py-1`} rounded-20 flex items-center gap-2`}
-                role="menuitem"
-                aria-current={isActive("/") ? "page" : undefined}
-              >
-                <House size={18} />
-                {t('journal')}
-              </Link>
+              {isTradeFormOpen ? (
+                <span
+                  className={`${linkClass} px-3 py-1 rounded-20 flex items-center gap-2 opacity-50 cursor-not-allowed`}
+                  title="Complete or cancel the trade form first"
+                >
+                  <House size={18} />
+                  {t('journal')}
+                </span>
+              ) : (
+                <Link
+                  href="/"
+                  className={`${isActive("/") ? "text-green-300 bg-[rgba(34,197,94,0.15)] px-4 py-2" : `${linkClass} px-3 py-1`} rounded-20 flex items-center gap-2`}
+                  role="menuitem"
+                  aria-current={isActive("/") ? "page" : undefined}
+                >
+                  <House size={18} />
+                  {t('journal')}
+                </Link>
+              )}
             </li>
             <li>
-              <Link
-                href="/calendar"
-                className={`${isActive("/calendar") ? "text-green-300 bg-[rgba(34,197,94,0.15)] px-4 py-2" : `${linkClass} px-3 py-1`} rounded-20 flex items-center gap-2`}
-              >
-                <CalendarDays size={18} />
-                {t('calendar')}
-              </Link>
+              {isTradeFormOpen ? (
+                <span
+                  className={`${linkClass} px-3 py-1 rounded-20 flex items-center gap-2 opacity-50 cursor-not-allowed`}
+                  title="Complete or cancel the trade form first"
+                >
+                  <CalendarDays size={18} />
+                  {t('calendar')}
+                </span>
+              ) : (
+                <Link
+                  href="/calendar"
+                  className={`${isActive("/calendar") ? "text-green-300 bg-[rgba(34,197,94,0.15)] px-4 py-2" : `${linkClass} px-3 py-1`} rounded-20 flex items-center gap-2`}
+                >
+                  <CalendarDays size={18} />
+                  {t('calendar')}
+                </Link>
+              )}
             </li>
             <li>
-              <Link
-                href="/stats"
-                className={`${isActive("/stats") ? "text-green-300 bg-[rgba(34,197,94,0.15)] px-4 py-2" : `${linkClass} px-3 py-1`} rounded-20 flex items-center gap-2`}
-              >
-                <TrendingUp size={18} />
-                {t('stats')}
-              </Link>
+              {isTradeFormOpen ? (
+                <span
+                  className={`${linkClass} px-3 py-1 rounded-20 flex items-center gap-2 opacity-50 cursor-not-allowed`}
+                  title="Complete or cancel the trade form first"
+                >
+                  <TrendingUp size={18} />
+                  {t('stats')}
+                </span>
+              ) : (
+                <Link
+                  href="/stats"
+                  className={`${isActive("/stats") ? "text-green-300 bg-[rgba(34,197,94,0.15)] px-4 py-2" : `${linkClass} px-3 py-1`} rounded-20 flex items-center gap-2`}
+                >
+                  <TrendingUp size={18} />
+                  {t('stats')}
+                </Link>
+              )}
             </li>
             <li>
               <a

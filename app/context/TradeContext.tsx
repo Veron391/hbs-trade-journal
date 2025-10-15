@@ -54,7 +54,6 @@ function convertApiTradeToInternal(apiTrade: ApiTrade): Trade {
     exitPrice: exitPrice || apiTrade.entryPrice,
     quantity: apiTrade.qty,
     setupNotes: apiTrade.setupNotes || '',
-    mistakesLearnings: apiTrade.mistakesLearnings || '',
     link: apiTrade.link || '',
   };
 }
@@ -80,7 +79,6 @@ function convertInternalTradeToApi(trade: Omit<Trade, 'id'>): any {
     occurredAt: new Date(trade.entryDate).toISOString(), // Keep for backward compatibility
     // Pass through descriptive fields so backend mapper can forward them
     setupNotes: trade.setupNotes || '',
-    mistakesLearnings: trade.mistakesLearnings || '',
     link: trade.link || '',
   };
 }

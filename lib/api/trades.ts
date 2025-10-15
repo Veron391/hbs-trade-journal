@@ -8,6 +8,7 @@ export type Trade = {
   qty: number
   entryPrice: number
   exitPrice?: number | null
+  riskPercent?: number | null
   pnl?: number | null
   pnlAmount?: number | null
   pnlPercentage?: number | null
@@ -15,7 +16,6 @@ export type Trade = {
   exitDate: string
   occurredAt?: string
   setupNotes?: string | null
-  mistakesLearnings?: string | null
   link?: string | null
   createdAt?: string
   updatedAt?: string
@@ -109,7 +109,6 @@ export type CalendarDayDetails = {
     exitPrice?: number
     quantity?: number
     setupNotes?: string
-    mistakesLearnings?: string
     link?: string
   }>
 }
@@ -156,13 +155,13 @@ function mapBackendToTrade(b: any): Trade {
     qty: Number(b.quantity),
     entryPrice: Number(b.buy_price),
     exitPrice: b.sell_price != null ? Number(b.sell_price) : null,
+    riskPercent: b.risk_percent != null ? Number(b.risk_percent) : null,
     pnl: null,
     pnlAmount: b.pnl_amount ?? null,
     pnlPercentage: b.pnl_percentage ?? null,
     entryDate: b.entry_date,
     exitDate: b.exit_date,
     setupNotes: b.trade_setup_notes ?? '',
-    mistakesLearnings: b.ml_notes ?? '',
     link: b.trade_link ?? '',
     createdAt: b.created_at,
     updatedAt: b.updated_at,
@@ -180,9 +179,9 @@ function createPayloadToBackend(p: CreateTradeData) {
     exit_date: p.exitDate.slice(0,10),
     buy_price: String(Number(p.entryPrice).toFixed(2)),
     sell_price: String(Number(p.exitPrice ?? 0).toFixed(2)),
+    risk_percent: p.riskPercent ?? null,
     trade_link: p.link ?? '',
     trade_setup_notes: p.setupNotes ?? '',
-    ml_notes: p.mistakesLearnings ?? '',
   }
 }
 
@@ -196,8 +195,8 @@ function updatePayloadToBackend(p: UpdateTradeData) {
   if (p.exitDate) obj.exit_date = p.exitDate.slice(0,10)
   if (p.entryPrice != null) obj.buy_price = String(Number(p.entryPrice).toFixed(2))
   if (p.exitPrice != null) obj.sell_price = String(Number(p.exitPrice).toFixed(2))
+  if (p.riskPercent != null) obj.risk_percent = p.riskPercent
   if (p.link != null) obj.trade_link = p.link
   if (p.setupNotes != null) obj.trade_setup_notes = p.setupNotes
-  if (p.mistakesLearnings != null) obj.ml_notes = p.mistakesLearnings
   return obj
 }

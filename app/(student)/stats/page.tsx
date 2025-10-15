@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import StatsOverview from '../../components/dashboard/StatsOverview';
 import DetailedStats from '../../components/dashboard/DetailedStats';
 import StatsCharts from '../../components/dashboard/StatsCharts';
@@ -8,16 +8,30 @@ import TimePeriodSelector from '../../components/dashboard/TimePeriodSelector';
 import { useTimePeriod } from '../../context/TimePeriodContext';
 import ProtectedRoute from '../../components/layout/ProtectedRoute';
 import { TradeType } from '../../types';
+import { useI18n } from '../../context/I18nContext';
 
 export default function StatsPage() {
+  const { t } = useI18n();
   const { selectedPeriod, setSelectedPeriod } = useTimePeriod();
-  const [activeTab, setActiveTab] = useState<TradeType>('total');
+  const [activeTab, setActiveTab] = useState<TradeType>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('statsTradeType') as TradeType | null;
+      if (saved === 'total' || saved === 'stock' || saved === 'crypto') return saved;
+    }
+    return 'total';
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('statsTradeType', activeTab);
+    }
+  }, [activeTab]);
 
   return (
     <ProtectedRoute>
       <div className="py-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <h1 className="text-xl font-bold text-white">Trading Statistics</h1>
+          <h1 className="text-xl font-bold text-white">{t('tradingStatistics')}</h1>
           <TimePeriodSelector
             selectedPeriod={selectedPeriod}
             onPeriodChange={setSelectedPeriod}
@@ -35,7 +49,7 @@ export default function StatsPage() {
                   : 'text-gray-300 hover:text-white hover:bg-white/10'
               }`}
             >
-              Total
+              {t('total')}
             </button>
             <button
               onClick={() => setActiveTab('stock')}
@@ -45,7 +59,7 @@ export default function StatsPage() {
                   : 'text-gray-300 hover:text-white hover:bg-white/10'
               }`}
             >
-              Stock
+              {t('stock')}
             </button>
             <button
               onClick={() => setActiveTab('crypto')}
@@ -55,7 +69,7 @@ export default function StatsPage() {
                   : 'text-gray-300 hover:text-white hover:bg-white/10'
               }`}
             >
-              Crypto
+              {t('crypto')}
             </button>
           </div>
         </div>

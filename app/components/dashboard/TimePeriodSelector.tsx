@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { startOfMonth, startOfYear, subDays, isAfter, isEqual, startOfDay, endOfMonth, subMonths } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
+import { useI18n } from '../../context/I18nContext';
 
 export type TimePeriod = 'all-time' | 'last-7-days' | 'this-month' | 'last-month' | 'last-90-days' | 'year-to-date';
 
@@ -14,14 +15,14 @@ interface TimePeriodSelectorProps {
 
 const TIMEZONE = 'Asia/Tashkent'; // UTC+5
 
-const periodLabels: Record<TimePeriod, string> = {
-  'all-time': 'All Time',
-  'last-7-days': '1 Week',
-  'this-month': 'This Month',
-  'last-month': 'Last Month',
-  'last-90-days': 'Last 90 Days',
-  'year-to-date': 'Year to Date'
-};
+const getPeriodLabels = (t: (key: string) => string): Record<TimePeriod, string> => ({
+  'all-time': t('allTime'),
+  'last-7-days': t('last7Days'),
+  'this-month': t('thisMonth'),
+  'last-month': t('lastMonth'),
+  'last-90-days': t('last90Days'),
+  'year-to-date': t('yearToDate')
+});
 
 export function getDateRangeForPeriod(period: TimePeriod): { startDate: Date; endDate: Date } {
   const now = toZonedTime(new Date(), TIMEZONE);
@@ -78,8 +79,10 @@ export function filterTradesByPeriod<T extends { exitDate: string }>(trades: T[]
 }
 
 export default function TimePeriodSelector({ selectedPeriod, onPeriodChange }: TimePeriodSelectorProps) {
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const periodLabels = getPeriodLabels(t);
 
   // Close dropdown when clicking outside
   useEffect(() => {

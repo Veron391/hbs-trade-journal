@@ -21,14 +21,13 @@ export function middleware(req: NextRequest) {
     return res;
   }
 
-  // If no locale segment, but we have a lang cookie, redirect to show prefixed URL on first hit to root
-  if (pathname === '/') {
-    const cookieLang = req.cookies.get('lang')?.value || 'en';
-    if (LOCALES.has(cookieLang)) {
-      const url = req.nextUrl.clone();
-      url.pathname = `/${cookieLang}`;
-      return NextResponse.redirect(url);
-    }
+  // If no locale segment, use the last chosen language from cookie when redirecting.
+  if (!first || !LOCALES.has(first)) {
+    const cookieLang = req.cookies.get('lang')?.value;
+    const lang = cookieLang && LOCALES.has(cookieLang) ? cookieLang : 'en';
+    const url = req.nextUrl.clone();
+    url.pathname = `/${lang}${pathname === '/' ? '' : pathname}`;
+    return NextResponse.redirect(url);
   }
 
   return NextResponse.next();

@@ -25,7 +25,6 @@ model Trade {
   exitDate          DateTime // exit date
   occurredAt        DateTime // trade sanasi/vaqti (UTC) - backward compatibility
   setupNotes        String?  // trade setup notes
-  mistakesLearnings String?  // mistakes and learnings
   tags              String?  // comma-separated tags
   link              String?  // trade link
   createdAt         DateTime @default(now())

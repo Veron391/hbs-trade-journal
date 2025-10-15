@@ -11,8 +11,8 @@ export interface Trade {
   entryPrice: number;
   exitPrice: number;
   quantity: number;
+  riskPercent?: number | null;
   setupNotes: string;
-  mistakesLearnings: string;
   link?: string;
   pnlAmount?: number | null;
   pnlPercentage?: number | null;

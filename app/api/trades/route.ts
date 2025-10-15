@@ -68,7 +68,6 @@ export async function POST(request: NextRequest) {
       exitDate: body.exitDate || body.occurredAt || new Date().toISOString(),
       occurredAt: body.occurredAt || new Date().toISOString(), // Keep for backward compatibility
       setupNotes: body.setupNotes || null,
-      mistakesLearnings: body.mistakesLearnings || null,
       tags: body.tags ? (Array.isArray(body.tags) ? body.tags.join(',') : body.tags) : null,
       link: body.link || null,
       createdAt: new Date().toISOString(),

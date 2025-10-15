@@ -5,6 +5,8 @@ import { useTrades } from '../../context/TradeContext';
 import { filterTradesByPeriod, TimePeriod } from './TimePeriodSelector';
 import { differenceInDays } from 'date-fns';
 import { TradeType } from '../../types';
+import { useI18n } from '../../context/I18nContext';
+import { PieChart, Activity } from 'lucide-react';
 
 interface DetailedStatsProps {
   selectedPeriod: TimePeriod;
@@ -12,6 +14,7 @@ interface DetailedStatsProps {
 }
 
 export default function DetailedStats({ selectedPeriod, tradeType }: DetailedStatsProps) {
+  const { t } = useI18n();
   const { trades } = useTrades();
 
   // Filter trades based on selected period and calculate detailed stats
@@ -212,21 +215,47 @@ export default function DetailedStats({ selectedPeriod, tradeType }: DetailedSta
     return `${value.toFixed(2)}%`;
   };
 
-  const StatItem = ({ label, value }: { label: string; value: string | number }) => (
-    <div className="py-3 border-b border-[#F3E9DC]/20">
-      <div className="flex justify-between">
-        <span className="text-white/70">{label}</span>
-        <span className="font-medium text-[#F0E4D3]">{value}</span>
+  const StatItem = ({ label, value, isCurrency = false, isTradeCount = false }: { label: string; value: string | number; isCurrency?: boolean; isTradeCount?: boolean }) => {
+    let valueColor = 'text-white';
+    let displayValue = value;
+    
+    if (isTradeCount) {
+      // Trade counts should always be white without plus signs
+      valueColor = 'text-white';
+      displayValue = value;
+    } else if (isCurrency && typeof value === 'string') {
+      const numericValue = parseFloat(value.replace(/[$,]/g, ''));
+      if (numericValue > 0) {
+        valueColor = 'text-green-400';
+        displayValue = `+${value}`;
+      } else if (numericValue < 0) {
+        valueColor = 'text-red-400';
+      }
+    } else if (typeof value === 'number') {
+      if (value > 0) {
+        valueColor = 'text-green-400';
+        displayValue = `+${value}`;
+      } else if (value < 0) {
+        valueColor = 'text-red-400';
+      }
+    }
+    
+    return (
+      <div className="py-3 border-b border-white/10">
+        <div className="flex justify-between">
+          <span className="text-white/70">{label}</span>
+          <span className={`font-bold ${valueColor}`}>{displayValue}</span>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (filteredTrades.length === 0) {
     return (
       <div className="bg-[#1C1719] shadow rounded-lg p-6 mt-8">
-        <h2 className="text-xl font-semibold mb-6 text-[#F0E4D3]">Detailed Statistics</h2>
+        <h2 className="text-xl font-semibold mb-6 text-[#F0E4D3]">{t('detailedStatistics')}</h2>
         <div className="text-center py-12">
-          <p className="text-gray-300">No trades found for the selected period.</p>
+          <p className="text-gray-300">{t('noTradesFound')}</p>
         </div>
       </div>
     );
@@ -237,46 +266,57 @@ export default function DetailedStats({ selectedPeriod, tradeType }: DetailedSta
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Profitability Card */}
         <div className="bg-[#1C1719] shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium mb-4 text-[#F0E4D3]">Profitability</h3>
+          <h3 className="text-lg font-bold mb-4 text-white flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-green-500/20">
+              <PieChart size={20} className="text-green-400" />
+            </div>
+            {t('profitability')}
+          </h3>
           <div className="space-y-1">
             <StatItem 
-              label="Total Profit/Loss" 
+              label={t('totalProfitLoss')} 
               value={formatCurrency(filteredStats.totalProfitLoss)} 
+              isCurrency={true}
             />
             <StatItem 
-              label="Average Profit/Loss" 
+              label={t('averageProfitLoss')} 
               value={formatCurrency(filteredStats.averageProfitLoss)} 
+              isCurrency={true}
             />
             <StatItem 
-              label="Average Winning Trade" 
+              label={t('avgWinningTrade')} 
               value={formatCurrency(filteredStats.averageWinningTrade)} 
+              isCurrency={true}
             />
             <StatItem 
-              label="Average Losing Trade" 
+              label={t('avgLosingTrade')} 
               value={formatCurrency(filteredStats.averageLosingTrade)} 
+              isCurrency={true}
             />
             <StatItem 
-              label="Largest Profit" 
+              label={t('largestProfit')} 
               value={formatCurrency(filteredStats.largestProfit)} 
+              isCurrency={true}
             />
             <StatItem 
-              label="Largest Loss" 
+              label={t('largestLoss')} 
               value={formatCurrency(filteredStats.largestLoss)} 
+              isCurrency={true}
             />
             <StatItem 
-              label="Risk/Reward Ratio" 
+              label={t('riskRewardRatio')} 
               value={filteredStats.riskRewardRatio.toFixed(2)} 
             />
             <StatItem 
-              label="Win Rate" 
+              label={t('winRate')} 
               value={formatPercent(filteredStats.winRate * 100)} 
             />
             <StatItem 
-              label="Sortino Ratio" 
+              label={t('sortinoRatio')} 
               value={filteredStats.sortino.toFixed(2)} 
             />
             <StatItem 
-              label="Sharpe Ratio" 
+              label={t('sharpeRatio')} 
               value={filteredStats.sharpeRatio.toFixed(2)} 
             />
           </div>
@@ -284,43 +324,54 @@ export default function DetailedStats({ selectedPeriod, tradeType }: DetailedSta
         
         {/* Trade Analysis Card */}
         <div className="bg-[#1C1719] shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium mb-4 text-[#F0E4D3]">Trade Analysis</h3>
+          <h3 className="text-lg font-bold mb-4 text-white flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-blue-500/20">
+              <Activity size={20} className="text-blue-400" />
+            </div>
+            {t('tradeAnalysis')}
+          </h3>
           <div className="space-y-1">
             <StatItem 
-              label="Total Trades" 
+              label={t('totalTrades')} 
               value={filteredStats.totalTrades} 
+              isTradeCount={true}
             />
             <StatItem 
-              label="Winning Trades" 
+              label={t('winningTrades')} 
               value={filteredStats.winningTrades} 
+              isTradeCount={true}
             />
             <StatItem 
-              label="Losing Trades" 
+              label={t('losingTrades')} 
               value={filteredStats.losingTrades} 
+              isTradeCount={true}
             />
             <StatItem 
-              label="Break Even Trades" 
+              label={t('breakEvenTrades')} 
               value={filteredStats.breakEvenTrades} 
+              isTradeCount={true}
             />
             <StatItem 
-              label="Max Consecutive Wins" 
+              label={t('maxConsecutiveWins')} 
               value={filteredStats.maxConsecutiveWins} 
+              isTradeCount={true}
             />
             <StatItem 
-              label="Max Consecutive Losses" 
+              label={t('maxConsecutiveLosses')} 
               value={filteredStats.maxConsecutiveLosses} 
+              isTradeCount={true}
             />
             <StatItem 
-              label="Average Hold Time (All)" 
-              value={`${filteredStats.averageHoldTime.toFixed(1)} days`} 
+              label={t('averageHoldTimeAll')} 
+              value={`${filteredStats.averageHoldTime.toFixed(1)} ${t('days')}`} 
             />
             <StatItem 
-              label="Average Hold Time (Winners)" 
-              value={`${filteredStats.averageWinningHoldTime.toFixed(1)} days`} 
+              label={t('averageHoldTimeWinners')} 
+              value={`${filteredStats.averageWinningHoldTime.toFixed(1)} ${t('days')}`} 
             />
             <StatItem 
-              label="Average Hold Time (Losers)" 
-              value={`${filteredStats.averageLosingHoldTime.toFixed(1)} days`} 
+              label={t('averageHoldTimeLosers')} 
+              value={`${filteredStats.averageLosingHoldTime.toFixed(1)} ${t('days')}`} 
             />
           </div>
         </div>

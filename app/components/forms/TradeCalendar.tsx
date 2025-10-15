@@ -18,6 +18,7 @@ export default function TradeCalendar() {
   const [selectedDay, setSelectedDay] = useState(new Date().getDate());
   const [selectedDateForDetails, setSelectedDateForDetails] = useState<string | null>(null);
   const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
+  const [dropdownSide, setDropdownSide] = useState<'left' | 'right'>('right');
   const [expandedTrades, setExpandedTrades] = useState<Set<string>>(new Set());
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
   const [backendDays, setBackendDays] = useState<Map<string, { totalPnL: number; trades: number }>>(new Map());
@@ -97,44 +98,59 @@ export default function TradeCalendar() {
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
     
-    // Calculate position considering scroll and viewport
-    let yPosition = rect.bottom + 10; // fixed -> viewport coords
-    let xPosition = rect.left + rect.width / 2;
-    
+    // Calculate position considering scroll and viewport (place LEFT/RIGHT of cell)
+    const offset = 12;
+    let yPosition = rect.top + rect.height / 2; // will be adjusted to top value below
+    let xPosition = rect.right + offset;
+
     // Estimate dropdown height more accurately based on viewport
     const maxDropdownHeight = Math.min(500, viewportHeight * 0.7); // Max 70% of viewport height
     const minDropdownHeight = 200; // Minimum height for basic content
     const estimatedDropdownHeight = maxDropdownHeight;
     
-    // Check available space above and below
+    // Check available horizontal space
+    const dropdownWidth = 384; // w-96
+    const spaceRight = viewportWidth - rect.right - offset;
+    const spaceLeft = rect.left - offset;
+    let side: 'left' | 'right' = 'right';
+    if (spaceRight >= dropdownWidth) {
+      side = 'right';
+      xPosition = rect.right + offset;
+    } else if (spaceLeft >= dropdownWidth) {
+      side = 'left';
+      xPosition = rect.left - dropdownWidth - offset;
+    } else {
+      side = spaceRight >= spaceLeft ? 'right' : 'left';
+      xPosition = side === 'right' ? Math.min(rect.right + offset, viewportWidth - dropdownWidth - 20) : Math.max(20, rect.left - dropdownWidth - offset);
+    }
+
+    // Vertical alignment strategy:
+    // - Default: center align with the cell (mid rows)
+    // - If bottom rows (spaceBelow kichik) → bottom align (dropdown pasti hujayra pastiga teng)
+    const margin = 20;
+    const desiredHeight = Math.min(estimatedDropdownHeight, viewportHeight - margin * 2);
     const spaceBelow = viewportHeight - rect.bottom;
     const spaceAbove = rect.top;
-    
-    // If not enough space below, position above the day cell
-    if (spaceBelow < estimatedDropdownHeight && spaceAbove > minDropdownHeight) {
-      yPosition = rect.top - minDropdownHeight - 10;
-    } else if (spaceBelow < minDropdownHeight) {
-      // If very little space below, position above with available space
-      yPosition = Math.max(20, rect.top - Math.min(estimatedDropdownHeight, spaceAbove - 20));
+
+    if (spaceBelow < minDropdownHeight + 20) {
+      // Bottom-align to the cell's bottom edge
+      yPosition = rect.bottom - desiredHeight;
+    } else if (spaceAbove < minDropdownHeight + 20) {
+      // Very top rows: keep within viewport (top clamp)
+      yPosition = Math.max(margin, rect.top);
+    } else {
+      // Center align around the cell
+      yPosition = rect.top + rect.height / 2 - desiredHeight / 2;
     }
-    
-    // Ensure dropdown stays within viewport horizontally
-    const dropdownWidth = 384; // w-96 = 384px
-    const margin = 20; // Increased margin for better spacing
-    
-    if (xPosition - dropdownWidth/2 < margin) {
-      xPosition = dropdownWidth/2 + margin;
-    } else if (xPosition + dropdownWidth/2 > viewportWidth - margin) {
-      xPosition = viewportWidth - dropdownWidth/2 - margin;
-    }
-    
-    // Ensure vertical position is within viewport bounds
-    yPosition = Math.max(margin, Math.min(yPosition, viewportHeight - minDropdownHeight - margin));
+
+    // Final clamp to viewport
+    yPosition = Math.max(margin, Math.min(yPosition, viewportHeight - desiredHeight - margin));
     
     setDropdownPosition({
       x: xPosition,
       y: yPosition
     });
+    setDropdownSide(side);
     setSelectedDateForDetails(dateKey);
     setExpandedTrades(new Set()); // Reset expanded trades when opening new dropdown
     
@@ -165,33 +181,37 @@ export default function TradeCalendar() {
       const rect = anchorElRef.current.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
       const viewportWidth = window.innerWidth;
-
-      let yPosition = rect.bottom + 10;
-      let xPosition = rect.left + rect.width / 2;
-
+      const offset = 12;
       const maxDropdownHeight = Math.min(500, viewportHeight * 0.7);
       const minDropdownHeight = 200;
-      const estimatedDropdownHeight = maxDropdownHeight;
+      const dropdownWidth = 384;
+      const margin = 20;
 
+      const spaceRight = viewportWidth - rect.right - offset;
+      const spaceLeft = rect.left - offset;
+      let side: 'left' | 'right' = dropdownSide;
+      if (spaceRight >= dropdownWidth) side = 'right';
+      else if (spaceLeft >= dropdownWidth) side = 'left';
+      else side = spaceRight >= spaceLeft ? 'right' : 'left';
+
+      let x = side === 'right' ? rect.right + offset : rect.left - dropdownWidth - offset;
+      x = Math.max(margin, Math.min(x, viewportWidth - dropdownWidth - margin));
+
+      const desiredHeight = Math.min(maxDropdownHeight, viewportHeight - margin * 2);
       const spaceBelow = viewportHeight - rect.bottom;
       const spaceAbove = rect.top;
-
-      if (spaceBelow < estimatedDropdownHeight && spaceAbove > minDropdownHeight) {
-        yPosition = rect.top - minDropdownHeight - 10;
-      } else if (spaceBelow < minDropdownHeight) {
-        yPosition = Math.max(20, rect.top - Math.min(estimatedDropdownHeight, spaceAbove - 20));
+      let y: number;
+      if (spaceBelow < minDropdownHeight + 20) {
+        y = rect.bottom - desiredHeight;
+      } else if (spaceAbove < minDropdownHeight + 20) {
+        y = Math.max(margin, rect.top);
+      } else {
+        y = rect.top + rect.height / 2 - desiredHeight / 2;
       }
+      y = Math.max(margin, Math.min(y, viewportHeight - desiredHeight - margin));
 
-      const dropdownWidth = 384; // w-96
-      const margin = 20;
-      if (xPosition - dropdownWidth / 2 < margin) {
-        xPosition = dropdownWidth / 2 + margin;
-      } else if (xPosition + dropdownWidth / 2 > viewportWidth - margin) {
-        xPosition = viewportWidth - dropdownWidth / 2 - margin;
-      }
-
-      yPosition = Math.max(margin, Math.min(yPosition, viewportHeight - minDropdownHeight - margin));
-      setDropdownPosition({ x: xPosition, y: yPosition });
+      setDropdownSide(side);
+      setDropdownPosition({ x, y });
     };
 
     window.addEventListener('scroll', updatePosition, { passive: true });
@@ -315,13 +335,20 @@ export default function TradeCalendar() {
         {!isBackendDataLoaded && (
           <div className="flex justify-center items-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
-            <span className="ml-3 text-gray-400">Loading calendar data...</span>
+            <span className="ml-3 text-gray-400">{t('loadingCalendarData')}</span>
           </div>
         )}
         {/* Calendar header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-white">
-            {format(currentMonth, 'MMMM yyyy')}
+            {(() => {
+              const monthIndex = currentMonth.getMonth();
+              const monthNames = [
+                'january', 'february', 'march', 'april', 'may', 'june',
+                'july', 'august', 'september', 'october', 'november', 'december'
+              ];
+              return `${t(monthNames[monthIndex])} ${currentMonth.getFullYear()}`;
+            })()}
           </h2>
           <div className="flex space-x-2">
             <button
@@ -437,11 +464,11 @@ export default function TradeCalendar() {
         {/* Calendar grid */}
         <div className="grid grid-cols-7 gap-2">
           {/* Day names */}
-          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
-            <div key={day} className={`font-medium text-center py-2 ${
-              day === 'Sat' || day === 'Sun' ? 'text-orange-400' : 'text-gray-300'
+          {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
+            <div key={day} className={`font-bold text-center py-2 ${
+              day === 'saturday' || day === 'sunday' ? 'text-orange-400' : 'text-gray-300'
             }`}>
-              {day}
+              {t(day)}
             </div>
           ))}
 
@@ -479,25 +506,27 @@ export default function TradeCalendar() {
                 } ${
                   hasTrades 
                     ? isProfitable 
-                      ? 'bg-green-900/30' 
+                      ? 'bg-green-900/30 border border-green-400/30 hover:border-green-400/50' 
                       : isBreakEven 
-                      ? 'bg-yellow-900/30' 
-                      : 'bg-red-900/30'
-                    : ''
+                      ? 'bg-yellow-900/30 border border-yellow-400/30 hover:border-yellow-400/50' 
+                      : 'bg-red-900/30 border border-red-400/30 hover:border-red-400/50'
+                    : isWeekend 
+                      ? 'border border-orange-400/20 hover:border-orange-400/40'
+                      : 'border border-gray-500/20 hover:border-gray-400/40'
                 }`}
                 style={{ backgroundColor: hasTrades ? undefined : '#231F21' }}
               >
                 <div className="text-left mb-1 px-1">
-                  <div className={`inline-flex items-center justify-center w-6 h-6 rounded-full ${
+                  <div className={`inline-flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 ${
                     isToday(day) 
-                      ? 'bg-blue-500/20' 
+                      ? 'bg-blue-500/20 border border-blue-400/50 hover:border-blue-400' 
                       : hasTrades 
                         ? (isProfitable 
-                          ? 'bg-green-500/20' 
+                          ? 'bg-green-500/20 border border-green-400/50 hover:border-green-400' 
                           : isBreakEven 
-                            ? 'bg-yellow-500/20' 
-                            : 'bg-red-500/20')
-                        : isWeekend ? 'bg-orange-400/20' : 'bg-[#342F31]'
+                            ? 'bg-yellow-500/20 border border-yellow-400/50 hover:border-yellow-400' 
+                            : 'bg-red-500/20 border border-red-400/50 hover:border-red-400')
+                        : isWeekend ? 'bg-orange-400/20 border border-orange-400/50 hover:border-orange-400' : 'bg-[#342F31] border border-gray-500/30 hover:border-gray-400'
                   }`}>
                     <span className={`text-sm font-medium ${
                       isToday(day) 
@@ -518,8 +547,8 @@ export default function TradeCalendar() {
                     }`}>
                       {isProfitable ? '+' : totalPnLVal < 0 ? '-' : ''}${Math.abs(totalPnLVal).toFixed(2)}
                     </div>
-                    <div className="text-sm text-gray-400">
-                      {numTrades} {numTrades === 1 ? 'trade' : 'trades'}
+                    <div className="text-sm text-white">
+                      {numTrades} {numTrades === 1 ? t('trade') : t('trades')}
                     </div>
                   </div>
                 )}
@@ -545,7 +574,7 @@ export default function TradeCalendar() {
       {selectedDateForDetails && (
         <div
           data-dropdown="trade-details"
-          className={`fixed z-[9999] bg-[#1C1719] border border-white/20 rounded-lg shadow-2xl p-4 pb-8 w-96 max-w-[90vw] max-h-[calc(100vh-40px)] overflow-y-auto overscroll-contain transition-all duration-300 ease-out ${
+          className={`fixed z-[9999] bg-[#1C1719] border border-white/20 rounded-lg shadow-2xl p-4 pb-8 w-96 max-w-[90vw] max-h-[calc(100vh-40px)] overflow-y-auto transition-all duration-300 ease-out ${
             isDropdownVisible 
               ? 'opacity-100 scale-100 backdrop-blur-sm' 
               : 'opacity-0 scale-95 backdrop-blur-none'
@@ -553,22 +582,25 @@ export default function TradeCalendar() {
           style={{
             left: `${dropdownPosition.x}px`,
             top: `${dropdownPosition.y}px`,
-            transform: 'translateX(-50%)',
-            WebkitOverflowScrolling: 'touch',
-            overscrollBehavior: 'contain',
-            touchAction: 'pan-y',
+            transform: 'translateX(0)',
             maxHeight: 'calc(100vh - 40px)',
             paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)'
           }}
         >
+          {/* Arrow pointer */}
+          <div
+            className={`absolute top-1/2 -translate-y-1/2 ${dropdownSide === 'left' ? 'right-[-8px]' : 'left-[-8px]'} w-0 h-0 border-t-8 border-b-8 ${dropdownSide === 'left' ? 'border-l-8 border-l-[#1C1719]' : 'border-r-8 border-r-[#1C1719]'} border-t-transparent border-b-transparent`}
+            style={{ filter: 'drop-shadow(0 0 2px rgba(255,255,255,0.15))' }}
+          />
           {console.log('Rendering dropdown for:', selectedDateForDetails, 'visible:', isDropdownVisible, 'position:', dropdownPosition)}
           {(() => {
             if (isLoadingDayDetails) {
               return (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-white">Loading...</h3>
+                    <h3 className="text-lg font-semibold text-white">{t('loading')}</h3>
                     <button
+                      className="spin-on-hover"
                       onClick={(e) => {
                         e.stopPropagation();
                         closeDropdown();
@@ -594,7 +626,7 @@ export default function TradeCalendar() {
               return (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-white">No Data</h3>
+                    <h3 className="text-lg font-semibold text-white">{t('noData')}</h3>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -606,7 +638,7 @@ export default function TradeCalendar() {
                     </button>
                   </div>
                   <div className="text-center text-gray-400 py-4">
-                    No trades found for this date
+                    {t('noTradesFound')}
                   </div>
                 </div>
               );
@@ -672,7 +704,7 @@ export default function TradeCalendar() {
 
                 {/* Summary Stats */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-gradient-to-r from-[#231F21] to-[#2A2527] rounded-lg p-2.5 border border-white/10">
+                  <div className="bg-gradient-to-r from-[#231F21] to-[#2A2527] rounded-lg p-2.5 border border-white/10 transition-transform duration-200 hover:scale-[1.02]">
                     <div className="flex items-center gap-1.5 mb-1">
                       <DollarSign size={16} className="text-gray-400" />
                       <span className="text-sm text-gray-400">{t('totalPL')}</span>
@@ -684,7 +716,7 @@ export default function TradeCalendar() {
                     </div>
                   </div>
                   
-                  <div className="bg-gradient-to-r from-[#231F21] to-[#2A2527] rounded-lg p-2.5 border border-white/10">
+                  <div className="bg-gradient-to-r from-[#231F21] to-[#2A2527] rounded-lg p-2.5 border border-white/10 transition-transform duration-200 hover:scale-[1.02]">
                     <div className="flex items-center gap-1.5 mb-1">
                       <BarChart3 size={16} className="text-gray-400" />
                       <span className="text-sm text-gray-400">{t('trades')}</span>
@@ -697,7 +729,7 @@ export default function TradeCalendar() {
 
                 {/* Assets Traded */}
                 {safeAssets.length > 0 && (
-                  <div className="bg-gradient-to-r from-[#231F21] to-[#2A2527] rounded-lg p-3 border border-white/10">
+                  <div className="bg-gradient-to-r from-[#231F21] to-[#2A2527] rounded-lg p-3 border border-white/10 transition-transform duration-200 hover:scale-[1.02]">
                     <div className="flex items-center gap-2 mb-2">
                       <TrendingUp size={16} className="text-gray-400" />
                       <span className="text-sm text-gray-400">{t('assetsTraded')}</span>
@@ -718,7 +750,7 @@ export default function TradeCalendar() {
                 {/* Trade Details */}
                 {safeTradeDetails.length > 0 && (
                 <div className="space-y-3 pb-2">
-                    <h4 className="text-sm font-medium text-gray-300">{t('tradeDetails')}</h4>
+                    <h4 className="text-sm font-medium text-gray-300">{t('tradeDetails').charAt(0).toUpperCase() + t('tradeDetails').slice(1)}</h4>
                     {safeTradeDetails.map((trade: any, index: number) => {
                     // Ensure trade has required properties
                     if (!trade || typeof trade !== 'object') {
@@ -765,14 +797,13 @@ export default function TradeCalendar() {
                     const isTradeProfitable = pnl > 0;
                     const isTradeBreakEven = pnl === 0;
                     const isExpanded = expandedTrades.has(tradeId);
-                    const hasNotes = Boolean(trade.setupNotes || trade.mistakesLearnings || trade.link);
+                    const hasNotes = Boolean(trade.setupNotes || trade.link);
                     
                     // Debug: Log trade data to see what's available
                     console.log('Trade details for expansion:', {
                       tradeId,
                       symbol: trade.symbol,
                       setupNotes: trade.setupNotes,
-                      mistakesLearnings: trade.mistakesLearnings,
                       link: trade.link,
                       hasNotes,
                       isExpanded
@@ -837,45 +868,31 @@ export default function TradeCalendar() {
                                 <div className="transform transition-all duration-300 ease-out">
                                   <div className="flex items-center gap-2 mb-1.5">
                                     <div className="p-1 rounded-lg bg-blue-500/20">
-                                      <FileText size={14} className="text-blue-400" />
+                                      <FileText size={16} className="text-blue-400" />
                                     </div>
-                                    <span className="text-xs font-medium text-blue-300">{t('setupNotes')}</span>
+                                    <span className="text-sm font-bold text-blue-300">{t('setupNotes')}</span>
                                   </div>
-                                  <p className="text-xs text-white bg-gradient-to-r from-blue-900/40 to-blue-800/30 rounded-lg py-3 px-2 transition-all duration-300 hover:from-blue-800/50 hover:to-blue-700/40 border border-blue-500/20">
+                                  <p className="text-xs text-white bg-gradient-to-r from-blue-900/25 to-blue-800/20 rounded-lg py-3 px-2 transition-all duration-300 hover:border-blue-400/40 border border-blue-500/20">
                                     {trade.setupNotes}
                                   </p>
                                 </div>
                               )}
 
-                              {/* Mistakes & Learnings */}
-                              {trade.mistakesLearnings && (
-                                <div className="transform transition-all duration-300 ease-out">
-                                  <div className="flex items-center gap-2 mb-1.5">
-                                    <div className="p-1 rounded-lg bg-orange-500/20">
-                                      <AlertCircle size={14} className="text-orange-400" />
-                                    </div>
-                                    <span className="text-xs font-medium text-orange-300">{t('mistakesLearnings')}</span>
-                                  </div>
-                                  <p className="text-xs text-white bg-gradient-to-r from-orange-900/40 to-red-800/30 rounded-lg py-3 px-2 transition-all duration-300 hover:from-orange-800/50 hover:to-red-700/40 border border-orange-500/20">
-                                    {trade.mistakesLearnings}
-                                  </p>
-                                </div>
-                              )}
 
                               {/* Trade Link */}
                               {trade.link && (
                                 <div className="transform transition-all duration-300 ease-out">
                                   <div className="flex items-center gap-2 mb-1.5">
                                     <div className="p-1 rounded-lg" style={{ backgroundColor: '#F4E9D720' }}>
-                                      <ExternalLink size={14} style={{ color: '#F4E9D7' }} />
+                                      <ExternalLink size={16} style={{ color: '#F4E9D7' }} />
                                     </div>
-                                    <span className="text-xs font-medium" style={{ color: '#F4E9D7' }}>{t('tradeLink')}</span>
+                                    <span className="text-sm font-bold" style={{ color: '#F4E9D7' }}>{t('tradeLink')}</span>
                                   </div>
                                   <a 
                                     href={trade.link} 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="text-xs text-white rounded-lg py-3 px-2 block transition-all duration-300 hover:from-[#F4E9D7]/30 hover:to-[#F4E9D7]/40 break-all border border-[#F4E9D7]/20 bg-gradient-to-r from-[#F4E9D7]/10 to-[#F4E9D7]/10"
+                                    className="text-xs text-white rounded-lg py-3 px-2 block transition-all duration-300 hover:border-[#F4E9D7]/40 break-all border border-[#F4E9D7]/20 bg-gradient-to-r from-[#F4E9D7]/8 to-[#F4E9D7]/6"
                                   >
                                     {trade.link}
                                   </a>

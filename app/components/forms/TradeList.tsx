@@ -4,13 +4,13 @@ import { useState, useEffect } from 'react';
 import { useTrades } from '../../context/TradeContext';
 import { Trade } from '../../types';
 import { format } from 'date-fns';
-import { Pencil, Trash2, ArrowUp, ArrowDown, Download, FileDown, AlertTriangle, ExternalLink, FileText, AlertCircle } from 'lucide-react';
+import { Pencil, Trash2, ArrowUp, ArrowDown, AlertTriangle, ExternalLink, FileText, AlertCircle } from 'lucide-react';
 import TradeForm from './TradeForm';
 import { useI18n } from '../../context/I18nContext';
 
 export default function TradeList() {
   const { t } = useI18n();
-  const { trades, deleteTrade, importTradesFromApi, isImporting, importError, clearAllTrades } = useTrades();
+  const { trades, deleteTrade, clearAllTrades } = useTrades();
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
   const [isAddingTrade, setIsAddingTrade] = useState(false);
   const [sortBy, setSortBy] = useState<keyof Trade>(() => {
@@ -35,24 +35,7 @@ export default function TradeList() {
   const [currentPage, setCurrentPage] = useState(1);
   const tradesPerPage = 20;
 
-  // Update API message when import error changes
-  useEffect(() => {
-    if (importError) {
-      setApiMessage({ type: 'error', text: importError });
-      
-      // Clear error message after 5 seconds
-      const timer = setTimeout(() => {
-        setApiMessage(null);
-      }, 5000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [importError]);
 
-  // Show script instructions instead of fetching API data
-  const handleImportTrades = () => {
-    setShowScriptModal(true);
-  };
 
   const handleSort = (column: keyof Trade) => {
     let newSortDirection: 'asc' | 'desc';
@@ -92,8 +75,6 @@ export default function TradeList() {
         exitPrice: b.sell_price != null ? Number(b.sell_price) : 0,
         quantity: Number(b.quantity),
         setupNotes: b.trade_setup_notes || '',
-        mistakesLearnings: b.ml_notes || '',
-        tags: Array.isArray(b.tags) ? b.tags : [],
         link: b.trade_link || '',
         pnlAmount: b.pnl_amount ?? null,
         pnlPercentage: b.pnl_percentage ?? null,
@@ -188,8 +169,8 @@ export default function TradeList() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 w-full max-w-none">
+      <div className="flex justify-between items-center px-4 sm:px-6 lg:px-8">
         <h2 className="text-xl font-semibold text-white">{t('yourTrades')}</h2>
         <div className="flex space-x-3">
           <button
@@ -204,7 +185,7 @@ export default function TradeList() {
               className="flex items-center px-2.5 py-1.5 bg-red-700 text-white rounded-md hover:bg-red-800 text-sm"
             >
               <AlertTriangle size={13} className="mr-1.5" />
-              DELETE ALL
+              {t('deleteAll')}
             </button>
           )}
         </div>
@@ -282,15 +263,25 @@ export default function TradeList() {
           <div className="bg-[#1C1719] rounded-lg p-6 max-w-md w-full mx-4 border border-red-500">
             <div className="flex items-center mb-4">
               <AlertTriangle className="h-6 w-6 text-red-500 mr-3" />
-              <h3 className="text-lg font-semibold text-white">Delete All Trades</h3>
+              <h3 className="text-lg font-semibold text-white">{t('deleteAllTradesTitle')}</h3>
             </div>
             
             <div className="mb-6">
               <p className="text-gray-300 mb-2">
-                Are you sure you want to delete <strong className="text-red-400">{trades.length}</strong> trade{trades.length !== 1 ? 's' : ''}?
+                {(() => {
+                  const tpl = t('deleteAllConfirm');
+                  const parts = tpl.split('{count}');
+                  return (
+                    <>
+                      {parts[0]}
+                      <strong className="text-red-400">{trades.length}</strong>
+                      {parts[1]}
+                    </>
+                  );
+                })()}
               </p>
               <p className="text-red-400 text-sm">
-                ⚠️ This action cannot be undone!
+                ⚠️ {t('deleteAllWarning')}
               </p>
             </div>
             
@@ -324,13 +315,13 @@ export default function TradeList() {
                 }}
                 className="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
               >
-                Yes, Delete All
+                {t('yesDeleteAll')}
               </button>
               <button
                 onClick={() => setShowDeleteAllModal(false)}
                 className="flex-1 bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors"
               >
-                Cancel
+                {t('cancel')}
               </button>
             </div>
           </div>
@@ -350,18 +341,18 @@ export default function TradeList() {
           <p className="text-gray-300">{t('emptyTradesHint')}</p>
         </div>
       ) : (
-        <div className="relative w-full">
-          <div className="rounded-20 glass-70 border-2 border-[#2b2b2b] overflow-hidden">
+        <div className="relative left-1/2 -translate-x-1/2 w-[90vw] overflow-x-hidden pb-4">
+          <div className="block w-[90vw] ml-0 rounded-20 glass-70 border-2 border-[#2b2b2b] overflow-hidden">
             <table className="w-full table-auto divide-y divide-[#2b2b2b]">
               <thead className="text-white ring-2 ring-[#2d282a] shadow-lg backdrop-blur-2xl sticky top-0 z-30" style={{ backgroundColor: 'rgba(25, 7, 15, 0.63)' }}>
                 <tr>
                   <th 
                     scope="col" 
-                    className="px-4 py-3 text-center text-sm font-medium text-white uppercase tracking-wider cursor-pointer w-[12%]"
+                    className="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider cursor-pointer w-[11%]"
                     onClick={() => handleSort('symbol')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
-                      Symbol
+                      {t('symbol')}
                       {sortBy === 'symbol' && (
                         sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-green-400" /> : <ArrowDown size={12} className="ml-0.5 text-red-400" />
                       )}
@@ -369,11 +360,11 @@ export default function TradeList() {
                   </th>
                   <th 
                     scope="col" 
-                    className="px-4 py-3 text-center text-sm font-medium text-white uppercase tracking-wider cursor-pointer w-[8%]"
+                    className="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider cursor-pointer w-[8%]"
                     onClick={() => handleSort('type')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
-                      Type
+                      {t('type')}
                       {sortBy === 'type' && (
                         sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-green-400" /> : <ArrowDown size={12} className="ml-0.5 text-red-400" />
                       )}
@@ -381,7 +372,7 @@ export default function TradeList() {
                   </th>
                   <th 
                     scope="col" 
-                    className="px-4 py-3 text-center text-sm font-medium text-white uppercase tracking-wider cursor-pointer w-[10%]"
+                    className="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider cursor-pointer w-[10%]"
                     onClick={() => handleSort('direction')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
@@ -393,7 +384,7 @@ export default function TradeList() {
                   </th>
                   <th 
                     scope="col" 
-                    className="px-4 py-3 text-center text-sm font-medium text-white uppercase tracking-wider cursor-pointer w-[12%]"
+                    className="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider cursor-pointer w-[11%]"
                     onClick={() => handleSort('entryDate')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
@@ -405,7 +396,7 @@ export default function TradeList() {
                   </th>
                   <th 
                     scope="col" 
-                    className="px-4 py-3 text-center text-sm font-medium text-white uppercase tracking-wider cursor-pointer w-[12%]"
+                    className="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider cursor-pointer w-[11%]"
                     onClick={() => handleSort('exitDate')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
@@ -417,7 +408,7 @@ export default function TradeList() {
                   </th>
                   <th 
                     scope="col" 
-                    className="px-4 py-3 text-center text-sm font-medium text-gray-300 uppercase tracking-wider cursor-pointer w-[10%]"
+                    className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer w-[10%]"
                     onClick={() => handleSort('entryPrice')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
@@ -429,7 +420,7 @@ export default function TradeList() {
                   </th>
                   <th 
                     scope="col" 
-                    className="px-4 py-3 text-center text-sm font-medium text-gray-300 uppercase tracking-wider cursor-pointer w-[10%]"
+                    className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer w-[10%]"
                     onClick={() => handleSort('exitPrice')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
@@ -441,7 +432,7 @@ export default function TradeList() {
                   </th>
                   <th 
                     scope="col" 
-                    className="px-4 py-3 text-center text-sm font-medium text-gray-300 uppercase tracking-wider cursor-pointer w-[8%]"
+                    className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer w-[8%]"
                     onClick={() => handleSort('quantity')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
@@ -451,14 +442,14 @@ export default function TradeList() {
                       )}
                     </div>
                   </th>
-                  <th scope="col" className="px-4 py-3 text-center text-sm font-medium text-white uppercase tracking-wider w-[10%]">
+                  <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider w-[8%]">
                     P/L
                   </th>
-                  <th scope="col" className="px-4 py-3 text-center text-sm font-medium text-white uppercase tracking-wider w-[6%]">
-                    Link
+                  <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider w-[7%]">
+                    {t('link')}
                   </th>
-                  <th scope="col" className="px-4 py-3 text-center text-sm font-medium text-white uppercase tracking-wider w-[8%]">
-                    Actions
+                  <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider w-[9%]">
+                    {t('actions')}
                   </th>
                 </tr>
               </thead>
@@ -503,24 +494,49 @@ export default function TradeList() {
                         {format(new Date(trade.entryDate), 'MMM dd, yyyy')}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-300 text-center whitespace-nowrap">
-                        {format(new Date(trade.exitDate), 'MMM dd, yyyy')}
+                        {trade.exitDate ? format(new Date(trade.exitDate), 'MMM dd, yyyy') : (
+                          <span className="text-yellow-400 text-xs">-</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-300 text-center whitespace-nowrap">
                         {typeof trade.entryPrice === 'number' ? trade.entryPrice.toFixed(2) : trade.entryPrice}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-300 text-center whitespace-nowrap">
-                        {typeof trade.exitPrice === 'number' ? trade.exitPrice.toFixed(2) : trade.exitPrice}
+                        {trade.exitPrice && trade.exitPrice !== 0 ? (
+                          typeof trade.exitPrice === 'number' ? trade.exitPrice.toFixed(2) : trade.exitPrice
+                        ) : (
+                          <span className="text-yellow-400 text-xs">-</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-300 text-center whitespace-nowrap">
                         {trade.quantity}
                       </td>
-                      <td className="px-4 py-3 text-center whitespace-nowrap">
-                        <div className={`text-sm font-medium ${isProfitable ? 'text-green-600' : pnl < 0 ? 'text-red-500' : 'text-gray-400'}`}>
-                          {isProfitable ? '+' : pnl < 0 ? '-' : ''}${Math.abs(pnl).toFixed(2)}
-                        </div>
-                        <div className={`text-xs ${isProfitable ? 'text-green-400' : pnl < 0 ? 'text-red-400' : 'text-gray-500'}`}>
-                          {isProfitable ? '+' : pnl < 0 ? '-' : ''}{Math.abs(pnlPercent).toFixed(2)}%
-                        </div>
+                        <td className="px-4 py-3 text-center whitespace-nowrap">
+                        {(() => {
+                          // Check if trade is pending (missing exit date or exit price)
+                          const isPending = !trade.exitDate || !trade.exitPrice || trade.exitPrice === 0;
+                          
+                          if (isPending) {
+                            return (
+                              <div className="flex flex-col items-center">
+                                <span className="text-sm font-medium text-yellow-400 bg-yellow-400/20 px-2 py-1 rounded-full">
+                                  {t('pending')}
+                                </span>
+                              </div>
+                            );
+                          }
+                          
+                          return (
+                            <>
+                              <div className={`text-sm font-medium ${isProfitable ? 'text-green-600' : pnl < 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                                {isProfitable ? '+' : pnl < 0 ? '-' : ''}${Math.abs(pnl).toFixed(2)}
+                              </div>
+                              <div className={`text-xs ${isProfitable ? 'text-green-400' : pnl < 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                                {isProfitable ? '+' : pnl < 0 ? '-' : ''}{Math.abs(pnlPercent).toFixed(2)}%
+                              </div>
+                            </>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-center text-sm font-medium whitespace-nowrap">
                         <div className="flex justify-center items-center">
@@ -553,7 +569,7 @@ export default function TradeList() {
                         <button
                           onClick={async (e) => {
                             e.stopPropagation();
-                            if (window.confirm('Are you sure you want to delete this trade?')) {
+                            if (window.confirm(t('confirmDeleteOne'))) {
                               try {
                                 await deleteTrade(trade.id);
                                 setApiMessage({ 
@@ -736,14 +752,14 @@ export default function TradeList() {
               <div className="grid grid-cols-2 gap-6 mb-6">
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Symbol</label>
+                    <label className="block text-sm text-gray-400 mb-1">{t('symbol')}</label>
                     <div className="text-white font-medium">
                       {selectedTradeDetails.symbol.replace(/USDT$/, '')}
                     </div>
                   </div>
                   
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Type</label>
+                    <label className="block text-sm text-gray-400 mb-1">{t('type')}</label>
                     <span
                       className="px-2.5 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full"
                       style={{
@@ -751,19 +767,19 @@ export default function TradeList() {
                         color: selectedTradeDetails.type === 'stock' ? '#3B82F6' : '#FFA500'
                       }}
                     >
-                      {selectedTradeDetails.type === 'stock' ? 'Stock' : 'Crypto'}
+                      {selectedTradeDetails.type === 'stock' ? t('stock') : t('crypto')}
                     </span>
                   </div>
 
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Direction</label>
+                    <label className="block text-sm text-gray-400 mb-1">{t('direction')}</label>
                     <div className="text-white font-medium capitalize">
-                      {selectedTradeDetails.direction}
+                      {selectedTradeDetails.direction === 'long' ? t('long') : t('short')}
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Quantity</label>
+                    <label className="block text-sm text-gray-400 mb-1">{t('quantity')}</label>
                     <div className="text-white font-medium">
                       {selectedTradeDetails.quantity}
                     </div>
@@ -772,7 +788,7 @@ export default function TradeList() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Entry Price</label>
+                    <label className="block text-sm text-gray-400 mb-1">{t('entryPrice')}</label>
                     <div className="text-white font-medium">
                       ${(() => {
                         const price = typeof selectedTradeDetails.entryPrice === 'number' 
@@ -784,7 +800,7 @@ export default function TradeList() {
                   </div>
 
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Exit Price</label>
+                    <label className="block text-sm text-gray-400 mb-1">{t('exitPrice')}</label>
                     <div className="text-white font-medium">
                       ${(() => {
                         const price = typeof selectedTradeDetails.exitPrice === 'number' 
@@ -796,14 +812,14 @@ export default function TradeList() {
                   </div>
 
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Entry Date</label>
+                    <label className="block text-sm text-gray-400 mb-1">{t('entryDate')}</label>
                     <div className="text-white font-medium">
                       {format(new Date(selectedTradeDetails.entryDate), 'MMM dd, yyyy HH:mm')}
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Exit Date</label>
+                    <label className="block text-sm text-gray-400 mb-1">{t('exitDate')}</label>
                     <div className="text-white font-medium">
                       {format(new Date(selectedTradeDetails.exitDate), 'MMM dd, yyyy HH:mm')}
                     </div>
@@ -813,7 +829,7 @@ export default function TradeList() {
 
               {/* P/L Section */}
               <div className="rounded-xl p-5 mb-6 border border-[#2f2a2c] bg-gradient-to-br from-[#171317] to-[#181419]">
-                <h4 className="text-white font-medium mb-4">Profit & Loss</h4>
+                <h4 className="text-white font-medium mb-4">{t('profitLoss')}</h4>
                 <div className="grid grid-cols-2 gap-6">
                   {(() => {
                     const pnl = selectedTradeDetails.pnlAmount != null ? Number(selectedTradeDetails.pnlAmount) : calculatePnL(selectedTradeDetails);
@@ -823,13 +839,13 @@ export default function TradeList() {
                     return (
                       <>
                         <div>
-                          <label className="block text-sm text-gray-400 mb-1">Amount</label>
+                          <label className="block text-sm text-gray-400 mb-1">{t('amount')}</label>
                           <div className={`text-xl font-semibold ${isProfitable ? 'text-green-400' : pnl < 0 ? 'text-red-400' : 'text-gray-400'}`}>
                             {isProfitable ? '+' : pnl < 0 ? '-' : ''}${Math.abs(pnl).toFixed(2)}
                           </div>
                         </div>
                         <div>
-                          <label className="block text-sm text-gray-400 mb-1">Percentage</label>
+                          <label className="block text-sm text-gray-400 mb-1">{t('percentage')}</label>
                           <div className={`text-xl font-semibold ${isProfitable ? 'text-green-400' : pnl < 0 ? 'text-red-400' : 'text-gray-400'}`}>
                             {isProfitable ? '+' : pnl < 0 ? '-' : ''}{Math.abs(pnlPercent).toFixed(2)}%
                           </div>
@@ -848,7 +864,7 @@ export default function TradeList() {
                     <div className="p-1 rounded-lg bg-blue-500/20">
                       <FileText size={14} className="text-blue-400" />
                     </div>
-                    <h4 className="text-sm font-medium text-blue-300">Trade Setup Notes</h4>
+                    <h4 className="text-sm font-bold text-blue-300">{t('setupNotes')}</h4>
                   </div>
                   <div className="text-sm text-white bg-gradient-to-r from-blue-900/30 to-blue-800/20 rounded-lg py-3 px-2 border border-blue-500/20 transition-all duration-300 hover:from-blue-800/40 hover:to-blue-700/30 hover:shadow-lg hover:shadow-blue-500/20 hover:border-blue-400/40">
                     {selectedTradeDetails.setupNotes && selectedTradeDetails.setupNotes.trim() !== ''
@@ -857,19 +873,6 @@ export default function TradeList() {
                   </div>
                 </div>
 
-                <div>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="p-1 rounded-lg bg-orange-500/20">
-                      <AlertCircle size={14} className="text-orange-400" />
-                    </div>
-                    <h4 className="text-sm font-medium text-orange-300">Mistakes & Learnings</h4>
-                  </div>
-                  <div className="text-sm text-white bg-gradient-to-r from-orange-900/30 to-red-800/20 rounded-lg py-3 px-2 border border-orange-500/20 transition-all duration-300 hover:from-orange-800/40 hover:to-red-700/30 hover:shadow-lg hover:shadow-orange-500/20 hover:border-orange-400/40">
-                    {selectedTradeDetails.mistakesLearnings && selectedTradeDetails.mistakesLearnings.trim() !== ''
-                      ? selectedTradeDetails.mistakesLearnings
-                      : 'No mistakes/learnings added'}
-                  </div>
-                </div>
               </div>
 
               {/* Link */}
@@ -880,7 +883,7 @@ export default function TradeList() {
                       <div className="p-1 rounded-lg" style={{ backgroundColor: '#F4E9D720' }}>
                         <ExternalLink size={14} style={{ color: '#F4E9D7' }} />
                       </div>
-                      <h4 className="text-sm font-medium" style={{ color: '#F4E9D7' }}>Trade Link</h4>
+                      <h4 className="text-sm font-bold" style={{ color: '#F4E9D7' }}>{t('tradeLink')}</h4>
                     </div>
                     <a
                       href={selectedTradeDetails.link}
@@ -897,7 +900,7 @@ export default function TradeList() {
                       <div className="p-1 rounded-lg" style={{ backgroundColor: '#F4E9D720' }}>
                         <ExternalLink size={14} style={{ color: '#F4E9D7' }} />
                       </div>
-                      <h4 className="text-sm font-medium" style={{ color: '#F4E9D7' }}>Trade Link</h4>
+                      <h4 className="text-sm font-bold" style={{ color: '#F4E9D7' }}>{t('tradeLink')}</h4>
                     </div>
                     <span className="text-sm text-gray-500">No link provided</span>
                   </div>

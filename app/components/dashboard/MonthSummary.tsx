@@ -72,48 +72,58 @@ export default function MonthSummary({ currentMonth }: MonthSummaryProps) {
     const absValue = Math.abs(value);
     return `${value >= 0 ? '+' : '-'}$${absValue.toFixed(2)}`;
   };
+
+  // Get month name in current language
+  const getMonthName = (date: Date) => {
+    const monthIndex = date.getMonth();
+    const monthNames = [
+      'january', 'february', 'march', 'april', 'may', 'june',
+      'july', 'august', 'september', 'october', 'november', 'december'
+    ];
+    return t(monthNames[monthIndex]);
+  };
   
   return (
     <div className="bg-[#1C1719] rounded-lg shadow p-6 mb-4">
       <h2 className="text-xl font-semibold text-white mb-4">
-        {format(currentMonth, 'MMMM yyyy')} {t('tradingStatistics')}
+        {getMonthName(currentMonth)} {currentMonth.getFullYear()} {t('tradingStatistics').toLowerCase()}
       </h2>
       
       {isLoading ? (
         <div className="flex justify-center items-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
-          <span className="ml-3 text-gray-400">Loading summary...</span>
+          <span className="ml-3 text-gray-400">{t('loadingSummary')}</span>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-[#1C1719] p-4 rounded-lg">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 justify-center">
+        <div className="bg-[#1C1719] p-4 rounded-lg text-center">
           <div className="text-gray-400 text-sm">{t('totalTrades')}</div>
           <div className="text-white text-xl font-bold">{monthStats.totalTrades}</div>
         </div>
         
-        <div className="bg-[#1C1719] p-4 rounded-lg">
+        <div className="bg-[#1C1719] p-4 rounded-lg text-center">
           <div className="text-gray-400 text-sm">{t('totalPL')}</div>
           <div className={`text-xl font-bold ${monthStats.totalPnL > 0 ? 'text-success' : monthStats.totalPnL < 0 ? 'text-danger' : 'text-gray-300'}`}>
             {formatCurrency(monthStats.totalPnL)}
           </div>
         </div>
         
-        <div className="bg-[#1C1719] p-4 rounded-lg">
+        <div className="bg-[#1C1719] p-4 rounded-lg text-center">
           <div className="text-gray-400 text-sm">{t('winRate')}</div>
           <div className="text-white text-xl font-bold">
             {monthStats.winRate.toFixed(1)}%
           </div>
         </div>
         
-        <div className="bg-[#1C1719] p-4 rounded-lg">
-          <div className="text-gray-400 text-sm">{t('winningTrades') ?? 'Winning Trades'}</div>
+        <div className="bg-[#1C1719] p-4 rounded-lg text-center">
+          <div className="text-gray-400 text-sm">{t('winningTrades')}</div>
           <div className="text-success text-xl font-bold">
             {monthStats.winCount}
           </div>
         </div>
         
-        <div className="bg-[#1C1719] p-4 rounded-lg">
-          <div className="text-gray-400 text-sm">{t('losingTrades') ?? 'Losing Trades'}</div>
+        <div className="bg-[#1C1719] p-4 rounded-lg text-center">
+          <div className="text-gray-400 text-sm">{t('losingTrades')}</div>
           <div className="text-danger text-xl font-bold">
             {monthStats.lossCount}
           </div>

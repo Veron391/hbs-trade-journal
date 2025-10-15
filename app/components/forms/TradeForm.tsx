@@ -5,6 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { Trade, TradeType, Direction } from '../../types';
 import { useI18n } from '../../context/I18nContext';
 import { useTrades } from '../../context/TradeContext';
+import { useFormContext } from '../../context/FormContext';
 import { X, CheckCircle } from 'lucide-react';
 import clsx from 'clsx';
 import DatePicker from '../ui/DatePicker';
@@ -17,8 +18,10 @@ interface TradeFormProps {
 export default function TradeForm({ existingTrade, onComplete }: TradeFormProps) {
   const { t } = useI18n();
   const { addTrade, updateTrade } = useTrades();
+  const { setIsTradeFormOpen } = useFormContext();
   const [showSuccess, setShowSuccess] = useState(false);
   const [tradeTypes, setTradeTypes] = useState<Array<{ id: number; name: string; slug: string }>>([]);
+  const [isFormOpen, setIsFormOpen] = useState(true);
 
   const { register, handleSubmit, control, watch, formState: { errors } } = useForm<Omit<Trade, 'id'>>({
     defaultValues: existingTrade ? {
@@ -31,7 +34,6 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
       exitPrice: existingTrade.exitPrice,
       quantity: existingTrade.quantity,
       setupNotes: existingTrade.setupNotes,
-      mistakesLearnings: existingTrade.mistakesLearnings,
       link: existingTrade.link,
     } : {
       type: '' as unknown as TradeType,
@@ -43,7 +45,6 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
       exitPrice: undefined,
       quantity: undefined,
       setupNotes: '',
-      mistakesLearnings: '',
       link: '',
     }
   });
@@ -68,6 +69,44 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
 
   const entryDate = watch('entryDate');
 
+  // Block navigation when form is open (only for new trades, not editing)
+  useEffect(() => {
+    if (existingTrade) return; // Don't block navigation for editing existing trades
+
+    // Set global form state
+    setIsTradeFormOpen(isFormOpen);
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isFormOpen) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+
+    const handlePopState = (e: PopStateEvent) => {
+      if (isFormOpen) {
+        e.preventDefault();
+        window.history.pushState(null, '', window.location.href);
+      }
+    };
+
+    // Add event listeners
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    
+    // Push a state to prevent back button
+    if (isFormOpen) {
+      window.history.pushState(null, '', window.location.href);
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+      setIsTradeFormOpen(false); // Clean up on unmount
+    };
+  }, [isFormOpen, existingTrade, setIsTradeFormOpen]);
+
   const onSubmit = async (data: Omit<Trade, 'id'>) => {
     const tradeData = {
       ...data,
@@ -82,12 +121,14 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
       }
 
       setShowSuccess(true);
+      setIsFormOpen(false); // Allow navigation after successful submission
       setTimeout(() => {
         onComplete();
       }, 800);
     } catch (error) {
       console.error('Error saving trade:', error);
       setShowSuccess(true);
+      setIsFormOpen(false); // Allow navigation after error
       setTimeout(() => {
         onComplete();
       }, 800);
@@ -183,6 +224,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
             <p className="text-danger text-sm mt-1">{errors.quantity.message}</p>
           )}
         </div>
+
 
         <div>
         <label className="block text-sm font-medium mb-1 text-gray-200">{t('entryDate')}</label>
@@ -285,7 +327,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
 
       {/* Link field - full width */}
       <div>
-        <label className="block text-sm font-medium mb-1 text-gray-200">{t('tradeLink')}</label>
+          <label className="block text-sm font-medium mb-1 text-white" style={{ color: '#ffffff' }}>{t('tradeLink')}</label>
         <input
           type="url"
           {...register('link', {
@@ -295,13 +337,14 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
             }
           })}
           placeholder="https://example.com/trade-screenshot"
-          className={clsx(
-            "w-full rounded-md border px-3 py-2 bg-[#342f31] text-white placeholder-gray-400/30",
-            errors.link ? "border-danger" : "border-white/15"
-          )}
+            className={clsx(
+              "w-full rounded-md border px-3 py-2 bg-[#342f31] text-white placeholder-gray-400/20",
+              errors.link ? "border-danger" : "border-white/15"
+            )}
           style={{
             WebkitBoxShadow: '0 0 0 1000px #342f31 inset',
             WebkitTextFillColor: 'white',
+            color: 'white',
             transition: 'background-color 5000s ease-in-out 0s'
           }}
         />
@@ -318,24 +361,18 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
           {...register('setupNotes')}
           rows={4}
           placeholder="Describe your trade setup and strategy..."
-          className="w-full rounded-md border border-white/15 px-3 py-2 bg-[#342f31] text-white placeholder-gray-400/30"
+          className="w-full rounded-md border border-white/15 px-3 py-2 bg-[#342f31] text-white placeholder-gray-400/20"
         ></textarea>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-1 text-gray-200">{t('mistakesLearnings')}</label>
-        <textarea
-          {...register('mistakesLearnings')}
-          rows={4}
-          placeholder="What mistakes did you make? What did you learn?"
-          className="w-full rounded-md border border-white/15 px-3 py-2 bg-[#342f31] text-white placeholder-gray-400/30"
-        ></textarea>
-      </div>
 
       <div className="flex justify-end gap-4">
         <button
           type="button"
-          onClick={onComplete}
+          onClick={() => {
+            setIsFormOpen(false); // Allow navigation when canceling
+            onComplete();
+          }}
           className="px-4 py-2 border border-white/15 rounded-md bg-[#342f31] text-white hover:bg-yellow-600/80 hover:text-white"
         >
           Cancel
