@@ -5,30 +5,46 @@ import PLLine from '../charts/PLLine';
 import { getPLSeries, type PLPoint } from '../../../lib/services/admin';
 
 const PLLineCard = React.memo(() => {
-  const { period, category } = useFilters();
+  const { period, category, tradeType, customStartDate, customEndDate } = useFilters();
   const legacyData = useLineSeries();
-  const [mockData, setMockData] = useState<PLPoint[]>([]);
+  const [pnlData, setPnlData] = useState<PLPoint[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Load mock data from API
+  // Load PnL data from API
   useEffect(() => {
-    const loadMockData = async () => {
+    const loadPnLData = async () => {
       try {
         setLoading(true);
-        const plSeries = await getPLSeries({ period, category });
-        setMockData(plSeries);
+        console.log('PLLineCard: Loading PnL data with filters:', { 
+          period, 
+          category, 
+          tradeType, 
+          customStartDate, 
+          customEndDate 
+        });
+        
+        const plSeries = await getPLSeries({ 
+          period, 
+          category, 
+          tradeType, 
+          customStartDate, 
+          customEndDate 
+        });
+        
+        console.log('PLLineCard: Received PnL data:', plSeries);
+        setPnlData(plSeries);
       } catch (error) {
-        console.error('Error loading P/L series:', error);
+        console.error('PLLineCard: Error loading P/L series:', error);
       } finally {
         setLoading(false);
       }
     };
     
-    loadMockData();
-  }, [period, category]);
+    loadPnLData();
+  }, [period, category, tradeType, customStartDate, customEndDate]);
   
-  // Use mock data if available, otherwise fallback to legacy data
-  const data = mockData.length > 0 ? mockData : legacyData;
+  // Use PnL data if available, otherwise fallback to legacy data
+  const data = pnlData.length > 0 ? pnlData : legacyData;
   
   return (
     <section className="panel bg-[#1A1A1F] border-neutral-700/50 p-5 md:p-6">

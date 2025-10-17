@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAdmin } from '../../context/AdminContext';
 import { Shield, Eye, EyeOff } from 'lucide-react';
@@ -12,8 +12,16 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const { adminLogin } = useAdmin();
+  const { adminLogin, isAdminAuthenticated } = useAdmin();
   const router = useRouter();
+
+  // Redirect to dashboard if already authenticated
+  useEffect(() => {
+    if (isAdminAuthenticated) {
+      console.log('Login page - user already authenticated, redirecting to dashboard');
+      router.push('/admin/dashboard');
+    }
+  }, [isAdminAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,12 +29,11 @@ export default function AdminLoginPage() {
     setError('');
 
     try {
-      // Simple demo authentication
-      if (username === 'admin' && password === 'admin123') {
-        adminLogin(username, password);
+      const success = await adminLogin(username, password);
+      if (success) {
         router.push('/admin/dashboard');
       } else {
-        setError('Invalid username or password');
+        setError('Invalid identifier or password');
       }
     } catch (err) {
       setError('Login failed. Please try again.');
@@ -42,9 +49,9 @@ export default function AdminLoginPage() {
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-4">
             <Shield className="h-8 w-8 text-blue-500" />
-            <span className="text-2xl font-bold text-white">Admin Panel</span>
+            <span className="text-2xl font-bold text-white">Admin Access</span>
           </div>
-          <p className="text-neutral-400">Sign in to access the admin dashboard</p>
+          <p className="text-neutral-400">Enter your credentials to continue</p>
         </div>
 
         {/* Login Form */}
@@ -52,7 +59,7 @@ export default function AdminLoginPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-neutral-200 mb-2">
-                Username
+                Identifier
               </label>
               <input
                 id="username"
@@ -60,7 +67,7 @@ export default function AdminLoginPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full px-4 py-3 bg-[#0f0f12] border border-neutral-700 rounded-lg text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter your username"
+                placeholder="Enter your identifier"
                 required
               />
             </div>
@@ -110,17 +117,6 @@ export default function AdminLoginPage() {
               )}
             </button>
           </form>
-
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
-            <p className="text-blue-400 text-sm font-medium mb-2">Demo Credentials:</p>
-            <p className="text-neutral-400 text-sm">
-              Username: <span className="text-white font-mono">admin</span>
-            </p>
-            <p className="text-neutral-400 text-sm">
-              Password: <span className="text-white font-mono">admin123</span>
-            </p>
-          </div>
         </div>
       </div>
     </div>

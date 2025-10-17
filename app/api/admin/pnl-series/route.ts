@@ -32,16 +32,16 @@ export async function GET(request: NextRequest) {
     if (startDate) queryParams.append('start_date', startDate);
     if (endDate) queryParams.append('end_date', endDate);
 
-    const apiUrl = `https://journal.saraftech.com/api/v1/dashboard/dashboard/top-assets/?${queryParams.toString()}`;
+    const apiUrl = `https://journal.saraftech.com/api/v1/dashboard/dashboard/pnl-series/?${queryParams.toString()}`;
     
-    console.log('Top Assets API URL:', apiUrl);
+    console.log('PnL Series API URL:', apiUrl);
     console.log('Query params:', queryParams.toString());
 
-    // Call the Top Assets API with admin token
+    // Call the PnL series API with admin token
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
-    const topAssetsRes = await fetch(apiUrl, {
+    const pnlRes = await fetch(apiUrl, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${adminAccessToken}`,
@@ -52,31 +52,31 @@ export async function GET(request: NextRequest) {
     
     clearTimeout(timeoutId);
 
-    console.log('Top Assets API Response Status:', topAssetsRes.status);
+    console.log('PnL API Response Status:', pnlRes.status);
     
-    if (topAssetsRes.status === 403 || topAssetsRes.status === 401) {
-      console.log('Authentication failed for Top Assets API');
+    if (pnlRes.status === 403 || pnlRes.status === 401) {
+      console.log('Authentication failed for PnL series API');
       return NextResponse.json(
         { error: 'Admin authentication required', requiresAuth: true },
-        { status: topAssetsRes.status }
+        { status: pnlRes.status }
       );
     }
 
-    if (!topAssetsRes.ok) {
-      const errorText = await topAssetsRes.text();
-      console.error('Top Assets API error:', topAssetsRes.status, errorText);
+    if (!pnlRes.ok) {
+      const errorText = await pnlRes.text();
+      console.error('PnL series API error:', pnlRes.status, errorText);
       return NextResponse.json(
-        { error: `Top Assets API error: ${topAssetsRes.status} - ${errorText}` },
-        { status: topAssetsRes.status }
+        { error: `PnL series API error: ${pnlRes.status} - ${errorText}` },
+        { status: pnlRes.status }
       );
     }
 
-    const topAssetsData = await topAssetsRes.json();
-    console.log('Top Assets data received:', topAssetsData);
-    return NextResponse.json(topAssetsData, { status: 200 });
+    const pnlData = await pnlRes.json();
+    console.log('PnL data received:', pnlData);
+    return NextResponse.json(pnlData, { status: 200 });
 
   } catch (error) {
-    console.error('Top Assets API error:', error);
+    console.error('PnL series API error:', error);
     
     if (error instanceof Error && error.name === 'AbortError') {
       return NextResponse.json(

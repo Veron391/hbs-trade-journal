@@ -8,7 +8,7 @@ import TopPerformers from '../../components/ui/TopPerformers';
 import RecentUsers from '../../components/ui/RecentUsers';
 import PeriodAndCategoryBar from '../../components/dashboard/PeriodAndCategoryBar';
 import { formatCurrency, formatPercent, formatCompactNumber } from '../../../lib/mock';
-import { useFilters } from '../../../lib/filters';
+import { useFilters, getBackendRange, formatDateForBackend } from '../../../lib/filters';
 import { getAdminStats, UserStats } from '../../../lib/services/userStats';
 import { getAdminAggregates, getTopPerformers, getRecentUsers, type Aggregates, type Performer, type RecentUser } from '../../../lib/services/admin';
 import { 
@@ -18,10 +18,13 @@ import {
   UserCheck,
   Target
 } from 'lucide-react';
-import UILock from '../../components/ui/UILock';
+import { useAdmin } from '../../context/AdminContext';
+import { useRouter } from 'next/navigation';
 
 export default function AdminDashboard() {
-  const { period, category, range } = useFilters();
+  const { period, category, tradeType, range, customStartDate, customEndDate } = useFilters();
+  const { isAdminAuthenticated } = useAdmin();
+  const router = useRouter();
   
   // Real user data
   const [adminStats, setAdminStats] = useState<any>(null);
@@ -33,50 +36,97 @@ export default function AdminDashboard() {
   const [aggregates, setAggregates] = useState<Aggregates | null>(null);
   const [apiTopPerformers, setApiTopPerformers] = useState<Performer[]>([]);
   const [apiRecentUsers, setApiRecentUsers] = useState<RecentUser[]>([]);
+  
+  // Dashboard overview data from real API
+  const [dashboardOverview, setDashboardOverview] = useState<any>(null);
 
-  // Load admin data from new API endpoints
+  // Check authentication and load data
   useEffect(() => {
-    const loadAdminData = async () => {
-      try {
-        setLoading(true);
-        console.log('Loading admin data...');
-        
-        // Load data from new API endpoints
-        const [aggregatesData, topPerformersData, recentUsersData] = await Promise.all([
-          getAdminAggregates({ period, category }),
-          getTopPerformers({ period, category, limit: 10 }),
-          getRecentUsers({ period, category, limit: 10 })
-        ]);
-        
-        console.log('Aggregates loaded:', aggregatesData);
-        console.log('Top performers loaded:', topPerformersData);
-        console.log('Recent users loaded:', recentUsersData);
-        
-        setAggregates(aggregatesData);
-        setApiTopPerformers(topPerformersData);
-        setApiRecentUsers(recentUsersData);
-        
-        // Also load legacy data for backward compatibility
-        const registeredUsers = localStorage.getItem('registeredUsers');
-        const trades = localStorage.getItem('trades');
-        console.log('Registered users:', registeredUsers ? JSON.parse(registeredUsers) : 'None');
-        console.log('Trades:', trades ? JSON.parse(trades) : 'None');
-        
-        const stats = await getAdminStats();
-        console.log('Legacy admin stats loaded:', stats);
-        
-        setAdminStats(stats);
-        setRecentUsers(stats.recentUsers);
-        setTopPerformers(stats.topPerformers);
-      } catch (error) {
-        console.error('Error loading admin data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
+    if (!isAdminAuthenticated) {
+      router.push('/admin/login');
+      return;
+    }
+    // If authenticated, load data
     loadAdminData();
-  }, [period, category]);
+  }, [isAdminAuthenticated, router]);
+
+  // Reload data when filters change
+  useEffect(() => {
+    if (isAdminAuthenticated) {
+      loadAdminData();
+    }
+  }, [period, tradeType, customStartDate, customEndDate, isAdminAuthenticated]);
+
+  // Load admin data function
+  const loadAdminData = async () => {
+    try {
+      setLoading(true);
+      console.log('Loading admin data...');
+      
+      // Build query parameters for dashboard overview API
+      const queryParams = new URLSearchParams();
+      if (tradeType) queryParams.append('trade_type', tradeType);
+      
+      // Handle range parameters
+      if (period === 'custom' && customStartDate && customEndDate) {
+        // Custom range - use start_date and end_date
+        queryParams.append('start_date', customStartDate);
+        queryParams.append('end_date', customEndDate);
+      } else {
+        // Predefined ranges
+        const backendRange = getBackendRange(period);
+        if (backendRange) {
+          queryParams.append('range', backendRange);
+        }
+      }
+      
+      // Load dashboard overview from real API
+      const overviewResponse = await fetch(`/api/admin/dashboard-overview?${queryParams.toString()}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      
+      if (overviewResponse.ok) {
+        const overviewData = await overviewResponse.json();
+        console.log('Dashboard overview loaded:', overviewData);
+        setDashboardOverview(overviewData);
+      } else {
+        console.error('Failed to load dashboard overview:', overviewResponse.status);
+      }
+      
+      // Load data from other API endpoints
+      const [aggregatesData, topPerformersData, recentUsersData] = await Promise.all([
+        getAdminAggregates({ period, category, tradeType, customStartDate, customEndDate }),
+        getTopPerformers({ period, category, tradeType, customStartDate, customEndDate, limit: 10 }),
+        getRecentUsers({ period, category, tradeType, customStartDate, customEndDate, limit: 10 })
+      ]);
+      
+      console.log('Aggregates loaded:', aggregatesData);
+      console.log('Top performers loaded:', topPerformersData);
+      console.log('Recent users loaded:', recentUsersData);
+      
+      setAggregates(aggregatesData);
+      setApiTopPerformers(topPerformersData);
+      setApiRecentUsers(recentUsersData);
+      
+      // Also load legacy data for backward compatibility
+      const registeredUsers = localStorage.getItem('registeredUsers');
+      const trades = localStorage.getItem('trades');
+      console.log('Registered users:', registeredUsers ? JSON.parse(registeredUsers) : 'None');
+      console.log('Trades:', trades ? JSON.parse(trades) : 'None');
+      
+      const stats = await getAdminStats();
+      console.log('Legacy admin stats loaded:', stats);
+      
+      setAdminStats(stats);
+      setRecentUsers(stats.recentUsers);
+      setTopPerformers(stats.topPerformers);
+    } catch (error) {
+      console.error('Error loading admin data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Refresh data when period/category changes
   useEffect(() => {
@@ -137,14 +187,14 @@ export default function AdminDashboard() {
 
   const periodLabels = getPeriodLabels(period);
 
-  // Get data from new API or fallback to legacy
-  const totalUsersCount = aggregates?.totalUsers || adminStats?.totalUsers || 0;
+  // Get data from real API or fallback to legacy
+  const totalUsersCount = dashboardOverview?.total_users?.value || aggregates?.totalUsers || adminStats?.totalUsers || 0;
 
-  // KPI Cards data - using new API data with fallback
+  // KPI Cards data - using real API data with fallback
   const kpiCards = [
     {
       title: 'Total Users',
-      value: formatCompactNumber(aggregates?.totalUsers || adminStats?.totalUsers || 0),
+      value: formatCompactNumber(dashboardOverview?.total_users?.value || aggregates?.totalUsers || adminStats?.totalUsers || 0),
       sublabel: 'Registered users',
       change: '+2.5%',
       trend: 'up' as const,
@@ -153,7 +203,7 @@ export default function AdminDashboard() {
     },
     {
       title: `Active Users (${periodLabels.shortLabel})`,
-      value: formatCompactNumber(aggregates?.activeUsersMTD || adminStats?.activeUsers || 0),
+      value: formatCompactNumber(dashboardOverview?.active_users?.value || aggregates?.activeUsersMTD || adminStats?.activeUsers || 0),
       sublabel: periodLabels.sublabel,
       change: '+14.7%',
       trend: 'up' as const,
@@ -162,7 +212,7 @@ export default function AdminDashboard() {
     },
     {
       title: `Total Trades (${periodLabels.shortLabel})`,
-      value: formatCompactNumber(aggregates?.totalTradesMTD || adminStats?.totalTrades || 0),
+      value: formatCompactNumber(dashboardOverview?.total_trades?.value || aggregates?.totalTradesMTD || adminStats?.totalTrades || 0),
       sublabel: periodLabels.sublabel,
       change: '+1.1%',
       trend: 'up' as const,
@@ -171,16 +221,16 @@ export default function AdminDashboard() {
     },
     {
       title: `Total P&L (${periodLabels.shortLabel})`,
-      value: formatCurrency(aggregates?.totalPLMTD || adminStats?.totalPnL || 0),
+      value: formatCurrency(dashboardOverview?.total_pnl?.value || aggregates?.totalPLMTD || adminStats?.totalPnL || 0),
       sublabel: periodLabels.sublabel,
-      change: (aggregates?.totalPLMTD || adminStats?.totalPnL || 0) >= 0 ? '+12.4%' : '-12.4%',
-      trend: (aggregates?.totalPLMTD || adminStats?.totalPnL || 0) >= 0 ? 'up' as const : 'down' as const,
+      change: (dashboardOverview?.total_pnl?.value || aggregates?.totalPLMTD || adminStats?.totalPnL || 0) >= 0 ? '+12.4%' : '-12.4%',
+      trend: (dashboardOverview?.total_pnl?.value || aggregates?.totalPLMTD || adminStats?.totalPnL || 0) >= 0 ? 'up' as const : 'down' as const,
       icon: <DollarSign className="h-6 w-6 text-white" />,
-      intent: (aggregates?.totalPLMTD || adminStats?.totalPnL || 0) >= 0 ? 'green' as const : 'red' as const
+      intent: (dashboardOverview?.total_pnl?.value || aggregates?.totalPLMTD || adminStats?.totalPnL || 0) >= 0 ? 'green' as const : 'red' as const
     },
     {
       title: `Avg Win Rate (${periodLabels.shortLabel})`,
-      value: formatPercent(aggregates?.avgWinRateMTD || adminStats?.avgWinRate || 0),
+      value: formatPercent(dashboardOverview?.avg_win_rate?.value || aggregates?.avgWinRateMTD || adminStats?.avgWinRate || 0),
       sublabel: periodLabels.sublabel,
       change: '+9.8%',
       trend: 'up' as const,
@@ -192,7 +242,6 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <UILock isAdmin={true} />
         <div className="flex items-center justify-center h-64">
           <div className="text-white text-lg">Loading dashboard data...</div>
         </div>
@@ -202,9 +251,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* UI Lock Component */}
-      <UILock isAdmin={true} />
-      
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -243,7 +289,6 @@ export default function AdminDashboard() {
         <TopPerformers data={apiTopPerformers.length > 0 ? apiTopPerformers : topPerformers} />
         <RecentUsers data={apiRecentUsers.length > 0 ? apiRecentUsers : recentUsers} />
       </div>
-
     </div>
   );
 }

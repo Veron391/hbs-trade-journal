@@ -5,43 +5,60 @@ import SegmentedDonut from '../charts/SegmentedDonut';
 import { getTopAssets, type TopAsset } from '../../../lib/services/admin';
 
 const TopAssetsDonutCard = React.memo(() => {
-  const { period, category } = useFilters();
+  const { period, category, tradeType, customStartDate, customEndDate } = useFilters();
   const legacyDonutData = useDonutData();
-  const [mockAssets, setMockAssets] = useState<TopAsset[]>([]);
+  const [topAssets, setTopAssets] = useState<TopAsset[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Load mock data from API
+  // Load top assets data from API
   useEffect(() => {
-    const loadMockData = async () => {
+    const loadTopAssetsData = async () => {
       try {
         setLoading(true);
-        const topAssets = await getTopAssets({ period, category, limit: 7 });
-        setMockAssets(topAssets);
+        console.log('TopAssetsDonutCard: Loading top assets data with filters:', { 
+          period, 
+          category, 
+          tradeType, 
+          customStartDate, 
+          customEndDate 
+        });
+        
+        const assets = await getTopAssets({ 
+          period, 
+          category, 
+          tradeType, 
+          customStartDate, 
+          customEndDate,
+          limit: 7 
+        });
+        
+        console.log('TopAssetsDonutCard: Received top assets data:', assets);
+        setTopAssets(assets);
       } catch (error) {
-        console.error('Error loading top assets:', error);
+        console.error('TopAssetsDonutCard: Error loading top assets:', error);
       } finally {
         setLoading(false);
       }
     };
     
-    loadMockData();
-  }, [period, category]);
+    loadTopAssetsData();
+  }, [period, category, tradeType, customStartDate, customEndDate]);
 
-  // Convert mock data to donut format
-  const mockDonutData = useMemo(() => {
-    if (!mockAssets || !Array.isArray(mockAssets)) {
+  // Convert top assets data to donut format
+  const topAssetsDonutData = useMemo(() => {
+    if (!topAssets || !Array.isArray(topAssets)) {
       return [];
     }
-    return mockAssets
+    return topAssets
       .filter(asset => asset && asset.symbol && typeof asset.trades === 'number' && asset.trades > 0)
       .map(asset => ({
         label: asset.symbol,
         value: asset.trades
       }));
-  }, [mockAssets]);
+  }, [topAssets]);
 
-  // Use mock data if available, otherwise fallback to legacy data
-  const donutData = mockDonutData.length > 0 ? mockDonutData : legacyDonutData;
+  // Use top assets data if available, otherwise fallback to legacy data
+  const donutData = topAssetsDonutData.length > 0 ? topAssetsDonutData : legacyDonutData;
 
   // Use real data without modification
   const modifiedDonutData = useMemo(() => {

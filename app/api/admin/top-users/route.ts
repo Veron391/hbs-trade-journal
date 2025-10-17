@@ -32,16 +32,16 @@ export async function GET(request: NextRequest) {
     if (startDate) queryParams.append('start_date', startDate);
     if (endDate) queryParams.append('end_date', endDate);
 
-    const apiUrl = `https://journal.saraftech.com/api/v1/dashboard/dashboard/top-assets/?${queryParams.toString()}`;
+    const apiUrl = `https://journal.saraftech.com/api/v1/dashboard/dashboard/top-users/?${queryParams.toString()}`;
     
-    console.log('Top Assets API URL:', apiUrl);
+    console.log('Top Users API URL:', apiUrl);
     console.log('Query params:', queryParams.toString());
 
-    // Call the Top Assets API with admin token
+    // Call the Top Users API with admin token
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
-    const topAssetsRes = await fetch(apiUrl, {
+    const topUsersRes = await fetch(apiUrl, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${adminAccessToken}`,
@@ -52,31 +52,31 @@ export async function GET(request: NextRequest) {
     
     clearTimeout(timeoutId);
 
-    console.log('Top Assets API Response Status:', topAssetsRes.status);
+    console.log('Top Users API Response Status:', topUsersRes.status);
     
-    if (topAssetsRes.status === 403 || topAssetsRes.status === 401) {
-      console.log('Authentication failed for Top Assets API');
+    if (topUsersRes.status === 403 || topUsersRes.status === 401) {
+      console.log('Authentication failed for Top Users API');
       return NextResponse.json(
         { error: 'Admin authentication required', requiresAuth: true },
-        { status: topAssetsRes.status }
+        { status: topUsersRes.status }
       );
     }
 
-    if (!topAssetsRes.ok) {
-      const errorText = await topAssetsRes.text();
-      console.error('Top Assets API error:', topAssetsRes.status, errorText);
+    if (!topUsersRes.ok) {
+      const errorText = await topUsersRes.text();
+      console.error('Top Users API error:', topUsersRes.status, errorText);
       return NextResponse.json(
-        { error: `Top Assets API error: ${topAssetsRes.status} - ${errorText}` },
-        { status: topAssetsRes.status }
+        { error: `Top Users API error: ${topUsersRes.status} - ${errorText}` },
+        { status: topUsersRes.status }
       );
     }
 
-    const topAssetsData = await topAssetsRes.json();
-    console.log('Top Assets data received:', topAssetsData);
-    return NextResponse.json(topAssetsData, { status: 200 });
+    const topUsersData = await topUsersRes.json();
+    console.log('Top Users data received:', topUsersData);
+    return NextResponse.json(topUsersData, { status: 200 });
 
   } catch (error) {
-    console.error('Top Assets API error:', error);
+    console.error('Top Users API error:', error);
     
     if (error instanceof Error && error.name === 'AbortError') {
       return NextResponse.json(

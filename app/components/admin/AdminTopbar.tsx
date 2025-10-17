@@ -20,8 +20,8 @@ export default function AdminTopbar({}: AdminTopbarProps) {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
-  const handleLogout = () => {
-    adminLogout();
+  const handleLogout = async () => {
+    await adminLogout();
     router.push('/admin/login');
   };
 

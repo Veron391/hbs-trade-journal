@@ -24,8 +24,8 @@ interface AdminContextType {
   adminUser: AdminUser | null;
   users: UserData[];
   isAdminAuthenticated: boolean;
-  adminLogin: (username: string, password: string) => Promise<boolean>;
-  adminLogout: () => void;
+  adminLogin: (identifier: string, password: string) => Promise<boolean>;
+  adminLogout: () => Promise<void>;
   getAllUsers: () => UserData[];
   getUserById: (id: string) => UserData | null;
   refreshUserData: () => void;
@@ -33,11 +33,7 @@ interface AdminContextType {
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
-// Mock admin credentials - In production, this would be handled by a backend
-const ADMIN_CREDENTIALS = {
-  username: 'admin',
-  password: 'admin123'
-};
+// Admin authentication is now handled by the backend API
 
 export function AdminProvider({ children }: { children: ReactNode }) {
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
@@ -46,39 +42,82 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
   // Check for existing admin session on mount
   useEffect(() => {
-    const adminSession = localStorage.getItem('adminSession');
-    if (adminSession) {
-      try {
-        const session = JSON.parse(adminSession);
-        setAdminUser(session);
-        setIsAdminAuthenticated(true);
-        refreshUserData();
-      } catch (error) {
-        console.error('Invalid admin session:', error);
-        localStorage.removeItem('adminSession');
+    const checkAuthStatus = () => {
+      console.log('AdminContext - checking localStorage session');
+      
+      const adminSession = localStorage.getItem('adminSession');
+      console.log('AdminContext - checking session:', adminSession);
+      
+      if (adminSession) {
+        try {
+          const session = JSON.parse(adminSession);
+          console.log('AdminContext - restoring session:', session);
+          setAdminUser(session);
+          setIsAdminAuthenticated(true);
+          refreshUserData();
+        } catch (error) {
+          console.error('AdminContext - invalid session in localStorage:', error);
+          localStorage.removeItem('adminSession');
+          setAdminUser(null);
+          setIsAdminAuthenticated(false);
+        }
+      } else {
+        console.log('AdminContext - no session found');
+        setAdminUser(null);
+        setIsAdminAuthenticated(false);
       }
-    }
+    };
+    
+    checkAuthStatus();
   }, []);
 
-  const adminLogin = async (username: string, password: string): Promise<boolean> => {
-    // Simple authentication - in production, this would be a secure API call
-    if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
-      const adminUser: AdminUser = {
-        id: 'admin-1',
-        username: username,
-        isAdmin: true
-      };
-      
-      setAdminUser(adminUser);
-      setIsAdminAuthenticated(true);
-      localStorage.setItem('adminSession', JSON.stringify(adminUser));
-      refreshUserData();
-      return true;
+  const adminLogin = async (identifier: string, password: string): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/auth/admin-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ identifier, password }),
+      });
+
+      if (response.ok) {
+        await response.json(); // Just consume the response
+        const adminUser: AdminUser = {
+          id: 'admin-1',
+          username: identifier,
+          isAdmin: true
+        };
+        
+        setAdminUser(adminUser);
+        setIsAdminAuthenticated(true);
+        localStorage.setItem('adminSession', JSON.stringify(adminUser));
+        refreshUserData();
+        return true;
+      } else {
+        console.error('Admin login failed:', response.status);
+        return false;
+      }
+    } catch (error) {
+      console.error('Admin login error:', error);
+      return false;
     }
-    return false;
   };
 
-  const adminLogout = () => {
+  const adminLogout = async () => {
+    try {
+      // Clear server-side cookies
+      await fetch('/api/auth/admin-logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      console.error('Error clearing admin cookies:', error);
+    }
+    
+    // Clear client-side state
     setAdminUser(null);
     setIsAdminAuthenticated(false);
     localStorage.removeItem('adminSession');
@@ -144,6 +183,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const getUserById = (id: string): UserData | null => {
     return users.find(user => user.id === id) || null;
   };
+
 
   const value: AdminContextType = {
     adminUser,

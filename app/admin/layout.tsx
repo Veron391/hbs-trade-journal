@@ -1,40 +1,82 @@
 "use client";
 
-import { AdminProvider } from '../context/AdminContext';
-import { SidebarProvider, useSidebar } from '../context/SidebarContext';
+import { AdminProvider, useAdmin } from '../context/AdminContext';
 import { RiskProvider } from '../context/RiskContext';
-import AdminTopbar from '../components/admin/AdminTopbar';
+import { SidebarProvider } from '../context/SidebarContext';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import AdminSidebar from '../components/admin/AdminSidebar';
-import { usePathname } from 'next/navigation';
+import AdminTopbar from '../components/admin/AdminTopbar';
 
 function AdminContent({ children }: { children: React.ReactNode }) {
-  const { isCollapsed } = useSidebar();
+  const { isAdminAuthenticated } = useAdmin();
   const pathname = usePathname();
+  const router = useRouter();
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  
+  // Check authentication status on mount and when pathname changes
+  useEffect(() => {
+    const checkAuthAndRedirect = async () => {
+      console.log('Admin layout - checking auth for pathname:', pathname, 'isAdminAuthenticated:', isAdminAuthenticated);
+      
+      // Don't redirect if already on login page
+      if (pathname.endsWith('/admin/login')) {
+        console.log('Admin layout - on login page, not redirecting');
+        setIsCheckingAuth(false);
+        return;
+      }
+      
+      // If not authenticated and not on login page, redirect to login
+      if (!isAdminAuthenticated) {
+        console.log('Admin layout - not authenticated, redirecting to login');
+        router.push('/admin/login');
+        setIsCheckingAuth(false);
+        return;
+      }
+      
+      // If authenticated, allow access
+      console.log('Admin layout - authenticated, allowing access to:', pathname);
+      setIsCheckingAuth(false);
+    };
+    
+    checkAuthAndRedirect();
+  }, [isAdminAuthenticated, pathname, router]);
+  
+  // Show loading while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-[#111114] flex items-center justify-center">
+        <div className="text-white text-lg">Checking authentication...</div>
+      </div>
+    );
+  }
   
   // Don't show sidebar and topbar on login page
-  if (pathname === '/admin/login') {
-    return <>{children}</>;
+  if (pathname.endsWith('/admin/login')) {
+    return (
+      <div className="min-h-screen bg-[#111114] text-neutral-200">
+        {children}
+      </div>
+    );
   }
   
   return (
-    <div className="min-h-screen bg-[#111114] text-neutral-200">
-      {/* Admin Topbar */}
-      <AdminTopbar />
-
-      <div className="flex">
-        {/* Admin Sidebar */}
+    <SidebarProvider>
+      <div className="min-h-screen bg-[#111114] text-neutral-200">
+        {/* Sidebar */}
         <AdminSidebar />
-
+        
+        {/* Topbar */}
+        <AdminTopbar />
+        
         {/* Main Content Area */}
-        <main className={`flex-1 pt-16 transition-all duration-300 ${
-          isCollapsed ? 'ml-16' : 'ml-64'
-        }`}>
+        <main className="ml-16 lg:ml-64 pt-24">
           <div className="container mx-auto px-6 py-8">
             {children}
           </div>
         </main>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }
 
@@ -45,11 +87,9 @@ export default function AdminLayout({
 }) {
   return (
     <AdminProvider>
-      <SidebarProvider>
-        <RiskProvider>
-          <AdminContent>{children}</AdminContent>
-        </RiskProvider>
-      </SidebarProvider>
+      <RiskProvider>
+        <AdminContent>{children}</AdminContent>
+      </RiskProvider>
     </AdminProvider>
   );
 }

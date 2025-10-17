@@ -4,6 +4,7 @@
  */
 
 import { isMockEnabled, shouldUseMock } from '@/lib/mocks/flag';
+import { getBackendRange } from '@/lib/filters';
 import { 
   mockAggregates, 
   mockPLSeries, 
@@ -32,9 +33,45 @@ async function realGetAdminAggregates(params: any): Promise<Aggregates | null> {
 
 async function realGetPLSeries(params: any): Promise<PLPoint[]> {
   try {
-    // This would call your existing P/L series function
-    // For now, return empty array to trigger mock fallback
-    return [];
+    // Build query parameters for the PnL series API
+    const queryParams = new URLSearchParams();
+    
+    // Add trade type filter
+    if (params.tradeType) {
+      queryParams.append('trade_type', params.tradeType);
+    }
+    
+    // Add date range
+    if (params.period) {
+      const range = getBackendRange(params.period);
+      if (range) {
+        queryParams.append('range', range);
+      }
+    }
+    
+    // Add custom dates if period is custom
+    if (params.period === 'custom' && params.customStartDate && params.customEndDate) {
+      queryParams.append('start_date', params.customStartDate);
+      queryParams.append('end_date', params.customEndDate);
+    }
+    
+    console.log('Calling PnL series API with params:', queryParams.toString());
+    const response = await fetch(`/api/admin/pnl-series?${queryParams.toString()}`);
+    
+    if (!response.ok) {
+      console.error('PnL series API error:', response.status);
+      return [];
+    }
+    
+    const data = await response.json();
+    console.log('PnL series data received:', data);
+    
+    // Transform the data to match PLPoint format
+    return data.series?.map((point: any) => ({
+      date: point.date,
+      pnl: point.pnl
+    })) || [];
+    
   } catch (error) {
     console.error('Error fetching real P/L series:', error);
     return [];
@@ -43,9 +80,45 @@ async function realGetPLSeries(params: any): Promise<PLPoint[]> {
 
 async function realGetTopAssets(params: any): Promise<TopAsset[]> {
   try {
-    // This would call your existing top assets function
-    // For now, return empty array to trigger mock fallback
-    return [];
+    // Build query parameters for the Top Assets API
+    const queryParams = new URLSearchParams();
+    
+    // Add trade type filter
+    if (params.tradeType) {
+      queryParams.append('trade_type', params.tradeType);
+    }
+    
+    // Add date range
+    if (params.period) {
+      const range = getBackendRange(params.period);
+      if (range) {
+        queryParams.append('range', range);
+      }
+    }
+    
+    // Add custom dates if period is custom
+    if (params.period === 'custom' && params.customStartDate && params.customEndDate) {
+      queryParams.append('start_date', params.customStartDate);
+      queryParams.append('end_date', params.customEndDate);
+    }
+    
+    console.log('Calling Top Assets API with params:', queryParams.toString());
+    const response = await fetch(`/api/admin/top-assets?${queryParams.toString()}`);
+    
+    if (!response.ok) {
+      console.error('Top Assets API error:', response.status);
+      return [];
+    }
+    
+    const data = await response.json();
+    console.log('Top Assets data received:', data);
+    
+    // Transform the data to match TopAsset format
+    return data.assets?.map((asset: any) => ({
+      symbol: asset.symbol,
+      trades: asset.count
+    })) || [];
+    
   } catch (error) {
     console.error('Error fetching real top assets:', error);
     return [];
@@ -54,9 +127,49 @@ async function realGetTopAssets(params: any): Promise<TopAsset[]> {
 
 async function realGetTopPerformers(params: any): Promise<Performer[]> {
   try {
-    // This would call your existing top performers function
-    // For now, return empty array to trigger mock fallback
-    return [];
+    // Build query parameters for the Top Users API
+    const queryParams = new URLSearchParams();
+    
+    // Add trade type filter
+    if (params.tradeType) {
+      queryParams.append('trade_type', params.tradeType);
+    }
+    
+    // Add date range
+    if (params.period) {
+      const range = getBackendRange(params.period);
+      if (range) {
+        queryParams.append('range', range);
+      }
+    }
+    
+    // Add custom dates if period is custom
+    if (params.period === 'custom' && params.customStartDate && params.customEndDate) {
+      queryParams.append('start_date', params.customStartDate);
+      queryParams.append('end_date', params.customEndDate);
+    }
+    
+    console.log('Calling Top Users API with params:', queryParams.toString());
+    const response = await fetch(`/api/admin/top-users?${queryParams.toString()}`);
+    
+    if (!response.ok) {
+      console.error('Top Users API error:', response.status);
+      return [];
+    }
+    
+    const data = await response.json();
+    console.log('Top Users data received:', data);
+    
+    // Transform the data to match Performer format
+    return data.users?.map((user: any, index: number) => ({
+      id: `user_${index + 1}`, // Generate ID since API doesn't provide one
+      fullName: user.full_name,
+      email: user.email,
+      totalTrades: user.trade_count,
+      totalPnL: user.pnl,
+      winRate: user.win_rate
+    })) || [];
+    
   } catch (error) {
     console.error('Error fetching real top performers:', error);
     return [];
@@ -65,9 +178,49 @@ async function realGetTopPerformers(params: any): Promise<Performer[]> {
 
 async function realGetRecentUsers(params: any): Promise<RecentUser[]> {
   try {
-    // This would call your existing recent users function
-    // For now, return empty array to trigger mock fallback
-    return [];
+    // Build query parameters for the Recent Users API
+    const queryParams = new URLSearchParams();
+    
+    // Add trade type filter
+    if (params.tradeType) {
+      queryParams.append('trade_type', params.tradeType);
+    }
+    
+    // Add date range
+    if (params.period) {
+      const range = getBackendRange(params.period);
+      if (range) {
+        queryParams.append('range', range);
+      }
+    }
+    
+    // Add custom dates if period is custom
+    if (params.period === 'custom' && params.customStartDate && params.customEndDate) {
+      queryParams.append('start_date', params.customStartDate);
+      queryParams.append('end_date', params.customEndDate);
+    }
+    
+    console.log('Calling Recent Users API with params:', queryParams.toString());
+    const response = await fetch(`/api/admin/recent-users?${queryParams.toString()}`);
+    
+    if (!response.ok) {
+      console.error('Recent Users API error:', response.status);
+      return [];
+    }
+    
+    const data = await response.json();
+    console.log('Recent Users data received:', data);
+    
+    // Transform the data to match RecentUser format
+    return data.users?.map((user: any, index: number) => ({
+      id: `user_${index + 1}`, // Generate ID since API doesn't provide one
+      fullName: user.full_name,
+      email: user.email,
+      lastActive: user.last_trade_at,
+      totalTrades: user.trade_count,
+      status: user.active ? 'active' : 'inactive'
+    })) || [];
+    
   } catch (error) {
     console.error('Error fetching real recent users:', error);
     return [];
