@@ -24,6 +24,7 @@ interface AdminContextType {
   adminUser: AdminUser | null;
   users: UserData[];
   isAdminAuthenticated: boolean;
+  isAuthChecking: boolean;
   adminLogin: (identifier: string, password: string) => Promise<boolean>;
   adminLogout: () => Promise<void>;
   getAllUsers: () => UserData[];
@@ -39,6 +40,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [users, setUsers] = useState<UserData[]>([]);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
 
   // Check for existing admin session on mount
   useEffect(() => {
@@ -66,6 +68,9 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         setAdminUser(null);
         setIsAdminAuthenticated(false);
       }
+      
+      // Mark auth checking as complete
+      setIsAuthChecking(false);
     };
     
     checkAuthStatus();
@@ -189,6 +194,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     adminUser,
     users,
     isAdminAuthenticated,
+    isAuthChecking,
     adminLogin,
     adminLogout,
     getAllUsers,

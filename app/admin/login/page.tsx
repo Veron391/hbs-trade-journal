@@ -12,16 +12,25 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const { adminLogin, isAdminAuthenticated } = useAdmin();
+  const { adminLogin, isAdminAuthenticated, isAuthChecking } = useAdmin();
   const router = useRouter();
 
   // Redirect to dashboard if already authenticated
   useEffect(() => {
-    if (isAdminAuthenticated) {
+    if (!isAuthChecking && isAdminAuthenticated) {
       console.log('Login page - user already authenticated, redirecting to dashboard');
       router.push('/admin/dashboard');
     }
-  }, [isAdminAuthenticated, router]);
+  }, [isAdminAuthenticated, isAuthChecking, router]);
+
+  // Show loading while checking authentication
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen bg-[#0f0f12] flex items-center justify-center">
+        <div className="text-white text-lg">Checking authentication...</div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

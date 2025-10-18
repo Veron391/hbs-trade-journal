@@ -6,18 +6,23 @@ import DataTable from '../../components/ui/DataTable';
 import FilterBar from '../../components/admin/FilterBar';
 import { mockData, formatCurrency, formatPercent, MOCK_TRADES } from '../../../lib/mock';
 import { useFilters } from '../../../lib/filters';
+import { getUserManagementSummary, getUserManagementUsers, type UserManagementSummary, type UserManagementUsersResponse } from '../../../lib/services/admin';
 import { Eye, Users, TrendingUp, TrendingDown, UserCheck, UserX, Calendar, DollarSign, Target, BarChart3 } from 'lucide-react';
 
 export default function UsersPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { period, category, range } = useFilters();
+  const { period, category, tradeType, range } = useFilters();
   const [users, setUsers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'recent'>('all');
   const [recentUsers, setRecentUsers] = useState<any[]>([]);
   const [highlightUserId, setHighlightUserId] = useState<number | null>(null);
   const [recentUsersCount, setRecentUsersCount] = useState<number>(0);
+  const [apiSummary, setApiSummary] = useState<UserManagementSummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [apiUsers, setApiUsers] = useState<UserManagementUsersResponse | null>(null);
+  const [usersLoading, setUsersLoading] = useState(false);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -30,6 +35,68 @@ export default function UsersPage() {
     const recentUsersData = mockData.getRecentUsers();
     setRecentUsers(recentUsersData);
   }, []);
+
+  // Load user management summary from API
+  useEffect(() => {
+    const loadSummaryData = async () => {
+      try {
+        setSummaryLoading(true);
+        console.log('UsersPage: Loading summary data with filters:', { 
+          period, category, statusFilter 
+        });
+        
+        const summary = await getUserManagementSummary({ 
+          period, 
+          category, 
+          status: statusFilter,
+          tradeType: tradeType
+        });
+        
+        console.log('UsersPage: Received summary data:', summary);
+        setApiSummary(summary);
+      } catch (error) {
+        console.error('UsersPage: Error loading summary data:', error);
+        setApiSummary(null);
+      } finally {
+        setSummaryLoading(false);
+      }
+    };
+    
+    loadSummaryData();
+  }, [period, category, tradeType, statusFilter]);
+
+  // Load user management users from API
+  useEffect(() => {
+    const loadUsersData = async () => {
+      try {
+        setUsersLoading(true);
+        console.log('UsersPage: Loading users data with filters:', { 
+          period, category, statusFilter, searchQuery, currentPage, itemsPerPage
+        });
+        
+        const offset = (currentPage - 1) * itemsPerPage;
+        const usersData = await getUserManagementUsers({ 
+          period, 
+          category, 
+          status: statusFilter,
+          tradeType: tradeType,
+          search: searchQuery || undefined,
+          limit: itemsPerPage,
+          offset: offset
+        });
+        
+        console.log('UsersPage: Received users data:', usersData);
+        setApiUsers(usersData);
+      } catch (error) {
+        console.error('UsersPage: Error loading users data:', error);
+        setApiUsers(null);
+      } finally {
+        setUsersLoading(false);
+      }
+    };
+    
+    loadUsersData();
+  }, [period, category, tradeType, statusFilter, searchQuery, currentPage, itemsPerPage]);
 
   // Calculate recent users count (only inactive users)
   useEffect(() => {
@@ -56,104 +123,136 @@ export default function UsersPage() {
     }
   }, [searchParams]);
 
+  // Update users and pagination when API data changes
   useEffect(() => {
-    const allUsers = mockData.getDetailedUsers();
-    
-    const filteredUsers = allUsers.map(user => {
-      // Get user trades for the selected period and category
-      const userTrades = MOCK_TRADES.filter(trade => trade.userId === `user_${user.id.toString().padStart(3, '0')}`);
-      const tradesInPeriod = userTrades.filter(trade => {
-        const tradeDate = new Date(trade.date);
-        return tradeDate >= range.start && tradeDate <= range.end;
+    if (apiUsers) {
+      // Transform API users to match the expected format
+      const transformedUsers = apiUsers.items.map((user, index) => ({
+        id: user.id || user.user_id || `user_${index + 1}`, // Use actual ID from API if available
+        name: user.full_name,
+        email: user.email,
+        status: user.status,
+        totalTrades: user.trade_count,
+        pnl: user.pnl,
+        winRate: user.win_rate,
+        lastActive: user.last_active_at || user.joined_at,
+        joinedDate: user.joined_at
+      }));
+      
+      setUsers(transformedUsers);
+      setTotalUsers(apiUsers.total);
+      setTotalPages(Math.ceil(apiUsers.total / itemsPerPage));
+    } else {
+      // Fallback to mock data logic
+      const allUsers = mockData.getDetailedUsers();
+      
+      const filteredUsers = allUsers.map(user => {
+        // Get user trades for the selected period and category
+        const userTrades = MOCK_TRADES.filter(trade => trade.userId === `user_${user.id.toString().padStart(3, '0')}`);
+        const tradesInPeriod = userTrades.filter(trade => {
+          const tradeDate = new Date(trade.date);
+          return tradeDate >= range.start && tradeDate <= range.end;
+        });
+        
+        // Apply category filter
+        let tradesInCategory = tradesInPeriod;
+        if (category !== 'total') {
+          tradesInCategory = tradesInPeriod.filter(trade => {
+            if (category === 'stock') return trade.assetClass === 'stock';
+            if (category === 'crypto') return trade.assetClass === 'crypto';
+            return true;
+          });
+        }
+        
+        // Check if user has recent activity (last 2 weeks)
+        const twoWeeksAgo = new Date();
+        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+        const recentTrades = userTrades.filter(trade => new Date(trade.date) >= twoWeeksAgo);
+        const hasRecentActivity = recentTrades.length > 0;
+        
+        // For new users (26-30), they should always be inactive regardless of trades
+        const isNewUser = user.id >= 26;
+        const finalStatus = isNewUser ? 'inactive' : (hasRecentActivity ? 'active' : 'inactive');
+        
+        // Calculate statistics - for new users (inactive), always return 0
+        let totalTrades, pnl, winRate;
+        if (isNewUser) {
+          totalTrades = 0;
+          pnl = 0;
+          winRate = 0;
+        } else {
+          totalTrades = tradesInCategory.length;
+          pnl = tradesInCategory.reduce((sum, trade) => sum + trade.pnl, 0);
+          const winTrades = tradesInCategory.filter(trade => trade.pnl > 0).length;
+          winRate = totalTrades > 0 ? (winTrades / totalTrades) * 100 : 0;
+        }
+        
+        return {
+          ...user,
+          totalTrades,
+          pnl: Math.round(pnl * 100) / 100,
+          winRate: Math.round(winRate * 10) / 10,
+          status: finalStatus,
+          lastActive: hasRecentActivity 
+            ? recentTrades[recentTrades.length - 1].date
+            : userTrades.length > 0 
+              ? userTrades[userTrades.length - 1].date
+              : user.lastActive
+        };
+      }).filter(user => {
+        // Apply search filter
+        if (searchQuery) {
+          const query = searchQuery.toLowerCase();
+          if (!user.name.toLowerCase().includes(query) && !user.email.toLowerCase().includes(query)) return false;
+        }
+        
+        // Apply status filter
+        if (statusFilter === 'recent') {
+          // Check if user is in recent users list
+          const isRecentUser = recentUsers.some(recentUser => recentUser.id === user.id);
+          if (!isRecentUser) return false;
+        } else if (statusFilter !== 'all' && user.status !== statusFilter) {
+          return false;
+        }
+        
+        return true;
       });
       
-      // Apply category filter
-      let tradesInCategory = tradesInPeriod;
-      if (category !== 'total') {
-        tradesInCategory = tradesInPeriod.filter(trade => {
-          if (category === 'stock') return trade.assetClass === 'stock';
-          if (category === 'crypto') return trade.assetClass === 'crypto';
-          return true;
-        });
+      // Calculate pagination
+      const total = filteredUsers.length;
+      const totalPagesCount = Math.ceil(total / itemsPerPage);
+      
+      setTotalUsers(total);
+      setTotalPages(totalPagesCount);
+      
+      // Reset to first page if current page is greater than total pages
+      if (currentPage > totalPagesCount) {
+        setCurrentPage(1);
       }
       
-      // Check if user has recent activity (last 2 weeks)
-      const twoWeeksAgo = new Date();
-      twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-      const recentTrades = userTrades.filter(trade => new Date(trade.date) >= twoWeeksAgo);
-      const hasRecentActivity = recentTrades.length > 0;
+      // Get paginated users
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
       
-      // For new users (26-30), they should always be inactive regardless of trades
-      const isNewUser = user.id >= 26;
-      const finalStatus = isNewUser ? 'inactive' : (hasRecentActivity ? 'active' : 'inactive');
-      
-      // Calculate statistics - for new users (inactive), always return 0
-      let totalTrades, pnl, winRate;
-      if (isNewUser) {
-        totalTrades = 0;
-        pnl = 0;
-        winRate = 0;
-      } else {
-        totalTrades = tradesInCategory.length;
-        pnl = tradesInCategory.reduce((sum, trade) => sum + trade.pnl, 0);
-        const winTrades = tradesInCategory.filter(trade => trade.pnl > 0).length;
-        winRate = totalTrades > 0 ? (winTrades / totalTrades) * 100 : 0;
-      }
-      
+      setUsers(paginatedUsers);
+    }
+  }, [apiUsers, period, category, range, searchQuery, statusFilter, currentPage, itemsPerPage, recentUsers]);
+
+  // Calculate statistics - use API data when available, fallback to mock calculation
+  const stats = useMemo(() => {
+    // If we have API summary data, use it
+    if (apiSummary) {
       return {
-        ...user,
-        totalTrades,
-        pnl: Math.round(pnl * 100) / 100,
-        winRate: Math.round(winRate * 10) / 10,
-        status: finalStatus,
-        lastActive: hasRecentActivity 
-          ? recentTrades[recentTrades.length - 1].date
-          : userTrades.length > 0 
-            ? userTrades[userTrades.length - 1].date
-            : user.lastActive
+        totalUsers: apiSummary.total_users,
+        activeUsers: apiSummary.active_users,
+        inactiveUsers: apiSummary.inactive_users,
+        totalPnL: apiSummary.total_pnl,
+        avgWinRate: apiSummary.avg_win_rate
       };
-    }).filter(user => {
-      // Apply search filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        if (!user.name.toLowerCase().includes(query) && !user.email.toLowerCase().includes(query)) return false;
-      }
-      
-      // Apply status filter
-      if (statusFilter === 'recent') {
-        // Check if user is in recent users list
-        const isRecentUser = recentUsers.some(recentUser => recentUser.id === user.id);
-        if (!isRecentUser) return false;
-      } else if (statusFilter !== 'all' && user.status !== statusFilter) {
-        return false;
-      }
-      
-      return true;
-    });
-    
-    // Calculate pagination
-    const total = filteredUsers.length;
-    const totalPagesCount = Math.ceil(total / itemsPerPage);
-    
-    setTotalUsers(total);
-    setTotalPages(totalPagesCount);
-    
-    // Reset to first page if current page is greater than total pages
-    if (currentPage > totalPagesCount) {
-      setCurrentPage(1);
     }
     
-    // Get paginated users
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
-    
-    setUsers(paginatedUsers);
-  }, [period, category, range, searchQuery, statusFilter, currentPage, itemsPerPage]);
-
-  // Calculate statistics for ALL users, not just current page
-  const stats = useMemo(() => {
-    // Get all users data (not just current page)
+    // Fallback to mock calculation
     const allUsers = mockData.getDetailedUsers();
     
     const processedUsers = allUsers.map(user => {
@@ -229,7 +328,7 @@ export default function UsersPage() {
       totalPnL,
       avgWinRate
     };
-  }, [period, category, range]);
+  }, [period, category, range, apiSummary]);
 
   const columns = [
     {
@@ -388,7 +487,9 @@ export default function UsersPage() {
             <div className="p-3 bg-blue-600 rounded-xl shadow-lg shadow-blue-500/50 transition-all duration-300 hover:shadow-xl">
               <Users className="h-6 w-6 text-white" />
             </div>
-            <span className="text-2xl font-bold text-white">{stats.totalUsers}</span>
+            <span className="text-2xl font-bold text-white">
+              {summaryLoading ? '...' : stats.totalUsers}
+            </span>
           </div>
           <h3 className="text-sm font-medium text-neutral-400">Total Users</h3>
           <p className="text-xs text-neutral-500 mt-1">All registered users</p>
@@ -399,7 +500,9 @@ export default function UsersPage() {
             <div className="p-3 bg-green-600 rounded-xl shadow-lg shadow-green-500/50 transition-all duration-300 hover:shadow-xl">
               <UserCheck className="h-6 w-6 text-white" />
             </div>
-            <span className="text-2xl font-bold text-white">{stats.activeUsers}</span>
+            <span className="text-2xl font-bold text-white">
+              {summaryLoading ? '...' : stats.activeUsers}
+            </span>
           </div>
           <h3 className="text-sm font-medium text-neutral-400">Active Users</h3>
           <p className="text-xs text-neutral-500 mt-1">Users with recent activity</p>
@@ -410,7 +513,9 @@ export default function UsersPage() {
             <div className="p-3 bg-red-600 rounded-xl shadow-lg shadow-red-500/50 transition-all duration-300 hover:shadow-xl">
               <UserX className="h-6 w-6 text-white" />
             </div>
-            <span className="text-2xl font-bold text-white">{stats.inactiveUsers}</span>
+            <span className="text-2xl font-bold text-white">
+              {summaryLoading ? '...' : stats.inactiveUsers}
+            </span>
           </div>
           <h3 className="text-sm font-medium text-neutral-400">Inactive Users</h3>
           <p className="text-xs text-neutral-500 mt-1">No recent activity</p>
@@ -422,7 +527,7 @@ export default function UsersPage() {
               <DollarSign className="h-6 w-6 text-white" />
             </div>
             <span className={`text-2xl font-bold ${stats.totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {formatCurrency(stats.totalPnL)}
+              {summaryLoading ? '...' : formatCurrency(stats.totalPnL)}
             </span>
           </div>
           <h3 className="text-sm font-medium text-neutral-400">Total P&L</h3>
@@ -434,7 +539,9 @@ export default function UsersPage() {
             <div className="p-3 bg-orange-600 rounded-xl shadow-lg shadow-orange-500/50 transition-all duration-300 hover:shadow-xl">
               <Target className="h-6 w-6 text-white" />
             </div>
-            <span className="text-2xl font-bold text-white">{formatPercent(stats.avgWinRate)}</span>
+            <span className="text-2xl font-bold text-white">
+              {summaryLoading ? '...' : formatPercent(stats.avgWinRate)}
+            </span>
           </div>
           <h3 className="text-sm font-medium text-neutral-400">Avg Win Rate</h3>
           <p className="text-xs text-neutral-500 mt-1">Average across active users</p>
@@ -452,20 +559,28 @@ export default function UsersPage() {
 
 
       {/* Users Table */}
-      <DataTable
-        data={users}
-        columns={columns}
-        searchable={false}
-        exportable={true}
-        exportFilename="users"
-        onRowClick={handleRowClick}
-        highlightRowId={highlightUserId}
-        periodInfo={{
-          period,
-          category,
-          range
-        }}
-      />
+      {usersLoading ? (
+        <div className="bg-[#1A1A1F] border border-neutral-700/50 rounded-lg p-8">
+          <div className="flex items-center justify-center">
+            <div className="text-white text-lg">Loading users...</div>
+          </div>
+        </div>
+      ) : (
+        <DataTable
+          data={users}
+          columns={columns}
+          searchable={false}
+          exportable={true}
+          exportFilename="users"
+          onRowClick={handleRowClick}
+          highlightRowId={highlightUserId}
+          periodInfo={{
+            period,
+            category,
+            range
+          }}
+        />
+      )}
 
       {/* Pagination */}
       {totalPages > 1 && (

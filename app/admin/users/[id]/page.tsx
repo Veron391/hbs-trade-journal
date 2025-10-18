@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, TrendingUp, TrendingDown, DollarSign, Target, Calendar, BarChart3, AlertTriangle, ChevronUp, ChevronDown } from 'lucide-react';
 import { mockData, formatCurrency, formatPercent } from '../../../../lib/mock';
 import { useFilters } from '../../../../lib/filters';
+import { getUserDetail, getUserTrades, type UserDetailResponse, type UserTradesResponse, type UserTrade } from '../../../../lib/services/admin';
 import StatCard from '../../../components/ui/StatCard';
 import SectionCard from '../../../components/ui/SectionCard';
 import DataTable from '../../../components/ui/DataTable';
@@ -14,11 +15,17 @@ import RiskAlerts from '../../../components/admin/RiskAlerts';
 export default function UserDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { period, category, range } = useFilters();
+  const { period, category, tradeType, range } = useFilters();
   const [user, setUser] = useState<any>(null);
   const [userTrades, setUserTrades] = useState<any[]>([]);
   const [filteredTrades, setFilteredTrades] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [apiUserDetail, setApiUserDetail] = useState<UserDetailResponse | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [apiUserTrades, setApiUserTrades] = useState<UserTradesResponse | null>(null);
+  const [tradesLoading, setTradesLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [riskSettings, setRiskSettings] = useState({
     assetType: 'stock', // 'stock' or 'crypto'
     capitalAmount: '',
@@ -28,80 +35,192 @@ export default function UserDetailPage() {
   const [riskAlerts, setRiskAlerts] = useState<any[]>([]);
   const [userRiskAlerts, setUserRiskAlerts] = useState<any[]>([]);
 
+  // Load user detail from API
   useEffect(() => {
-    const userId = params.id as string;
-    const userData = mockData.getDetailedUsers().find(u => u.id === parseInt(userId));
-    
-    if (userData) {
-      setUser(userData);
-      // Get user's trades from mock data (simulating real student panel data)
-      const mockTrades = mockData.getTradesLog().filter(trade => trade.userId === `user_${userId.padStart(3, '0')}`);
-      setUserTrades(mockTrades);
-      
-      // Generate mock risk alerts for this user
-      const mockUserRiskAlerts = [
-        {
-          id: 1,
-          studentName: userData.name,
-          message: 'Total loss exceeded maximum limit',
-          severity: 'red' as const,
-          value: 85.5,
-          threshold: 80,
-          timestamp: new Date().toISOString(),
-          type: 'total_loss'
-        },
-        {
-          id: 2,
-          studentName: userData.name,
-          message: 'Single trade loss approaching limit',
-          severity: 'amber' as const,
-          value: 15.2,
-          threshold: 20,
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          type: 'single_trade_loss'
+    const loadUserDetail = async () => {
+      const userId = params.id as string;
+      if (!userId) return;
+
+      try {
+        setDetailLoading(true);
+        console.log('UserDetailPage: Loading user detail for ID:', userId);
+        
+        const userDetail = await getUserDetail({ 
+          userId,
+          period, 
+          category,
+          tradeType: tradeType
+        });
+        
+        console.log('UserDetailPage: Received user detail:', userDetail);
+        setApiUserDetail(userDetail);
+        
+        if (userDetail) {
+          // Transform API data to match component format
+          const transformedUser = {
+            id: userId,
+            name: userDetail.user_detail_info.full_name,
+            email: userDetail.user_detail_info.email,
+            status: userDetail.user_detail_info.status,
+            joinedDate: userDetail.user_detail_info.joined_at
+          };
+          setUser(transformedUser);
         }
-      ];
-      setUserRiskAlerts(mockUserRiskAlerts);
-    }
-    setLoading(false);
-  }, [params.id]);
-
-  // Filter trades based on period and category
-  useEffect(() => {
-    if (!userTrades.length) return;
-
-    let filtered = userTrades;
-
-    // Apply period filter using the same logic as student panel
-    const periodMapping = {
-      '1week': { days: 7 },
-      '1month': { days: 30 },
-      '3months': { days: 90 },
-      '6months': { days: 180 },
-      '1year': { days: 365 },
-      'all': { days: 3650 } // 10 years
+      } catch (error) {
+        console.error('UserDetailPage: Error loading user detail:', error);
+        setApiUserDetail(null);
+      } finally {
+        setDetailLoading(false);
+      }
     };
+    
+    loadUserDetail();
+  }, [params.id, period, category, tradeType]);
 
-    const periodConfig = periodMapping[period as keyof typeof periodMapping] || periodMapping['all'];
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - periodConfig.days);
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500); // 500ms delay
 
-    filtered = filtered.filter(trade => {
-      const tradeDate = new Date(trade.date);
-      return tradeDate >= cutoffDate;
-    });
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-    // Apply category filter
-    if (category !== 'total') {
-      filtered = filtered.filter(trade => {
-        if (category === 'stock') return trade.assetClass === 'stock';
-        if (category === 'crypto') return trade.assetClass === 'crypto';
-        return true;
-      });
+  // Load user trades from API
+  useEffect(() => {
+    const loadUserTrades = async () => {
+      const userId = params.id as string;
+      if (!userId) return;
+
+      try {
+        setTradesLoading(true);
+        console.log('UserDetailPage: Loading user trades for ID:', userId);
+        
+        const userTrades = await getUserTrades({ 
+          userId,
+          period, 
+          category,
+          tradeType: tradeType,
+          search: debouncedSearchQuery || undefined,
+          limit: 20,
+          offset: 0
+        });
+        
+        console.log('UserDetailPage: Received user trades:', userTrades);
+        setApiUserTrades(userTrades);
+      } catch (error) {
+        console.error('UserDetailPage: Error loading user trades:', error);
+        setApiUserTrades(null);
+      } finally {
+        setTradesLoading(false);
+      }
+    };
+    
+    loadUserTrades();
+  }, [params.id, period, category, tradeType, debouncedSearchQuery]);
+
+  // Fallback to mock data if API fails
+  useEffect(() => {
+    if (!apiUserDetail && !detailLoading) {
+      const userId = params.id as string;
+      const userData = mockData.getDetailedUsers().find(u => u.id === parseInt(userId));
+      
+      if (userData) {
+        setUser(userData);
+        // Get user's trades from mock data (simulating real student panel data)
+        const mockTrades = mockData.getTradesLog().filter(trade => trade.userId === `user_${userId.padStart(3, '0')}`);
+        setUserTrades(mockTrades);
+        
+        // Generate mock risk alerts for this user
+        const mockUserRiskAlerts = [
+          {
+            id: 1,
+            studentName: userData.name,
+            message: 'Total loss exceeded maximum limit',
+            severity: 'red' as const,
+            value: 85.5,
+            threshold: 80,
+            timestamp: new Date().toISOString(),
+            type: 'total_loss'
+          },
+          {
+            id: 2,
+            studentName: userData.name,
+            message: 'Single trade loss approaching limit',
+            severity: 'amber' as const,
+            value: 15.2,
+            threshold: 20,
+            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+            type: 'single_trade_loss'
+          }
+        ];
+        setUserRiskAlerts(mockUserRiskAlerts);
+      }
+      setLoading(false);
     }
+  }, [apiUserDetail, detailLoading, params.id]);
 
-    setFilteredTrades(filtered);
-  }, [userTrades, period, category, range]);
+  // Update filtered trades when API data changes
+  useEffect(() => {
+    if (apiUserTrades) {
+      // Transform API trades to match the expected format
+      const transformedTrades = apiUserTrades.items.map((trade: UserTrade) => ({
+        id: trade.id,
+        symbol: trade.symbol,
+        assetClass: trade.trade_type.toLowerCase(),
+        type: trade.direction === 'long' ? 'BUY' : 'SELL',
+        entryDate: trade.entry_date,
+        exitDate: trade.exit_date,
+        entryPrice: trade.entry_price,
+        exitPrice: trade.exit_price,
+        quantity: trade.quantity,
+        pnl: trade.pnl,
+        date: trade.entry_date, // For compatibility with existing logic
+        link: trade.trade_link,
+        setupNotes: trade.trade_setup_notes,
+        mlNotes: trade.ml_notes,
+        tags: trade.tags,
+        holdTimeDays: trade.hold_time_days
+      }));
+      
+      setFilteredTrades(transformedTrades);
+    } else {
+      // Fallback to mock data logic
+      if (!userTrades.length) return;
+
+      let filtered = userTrades;
+
+      // Apply period filter using the same logic as student panel
+      const periodMapping = {
+        '1week': { days: 7 },
+        '1month': { days: 30 },
+        '3months': { days: 90 },
+        '6months': { days: 180 },
+        '1year': { days: 365 },
+        'all': { days: 3650 } // 10 years
+      };
+
+      const periodConfig = periodMapping[period as keyof typeof periodMapping] || periodMapping['all'];
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - periodConfig.days);
+
+      filtered = filtered.filter(trade => {
+        const tradeDate = new Date(trade.date);
+        return tradeDate >= cutoffDate;
+      });
+
+      // Apply category filter
+      if (category !== 'total') {
+        filtered = filtered.filter(trade => {
+          if (category === 'stock') return trade.assetClass === 'stock';
+          if (category === 'crypto') return trade.assetClass === 'crypto';
+          return true;
+        });
+      }
+
+      setFilteredTrades(filtered);
+    }
+  }, [apiUserTrades, userTrades, period, category, range]);
 
   if (loading) {
     return (
@@ -236,8 +355,24 @@ export default function UserDetailPage() {
     console.log('Trade clicked:', row);
   };
 
-  // Calculate statistics based on filtered trades
+  // Calculate statistics based on API data or filtered trades
   const calculateStats = () => {
+    // If we have API data, use it
+    if (apiUserDetail) {
+      const profitability = apiUserDetail.stats.profitability;
+      const tradeAnalysis = apiUserDetail.stats.trade_analysis;
+      
+      return {
+        totalPnL: profitability.total_profit_loss,
+        totalTrades: tradeAnalysis.total_trades,
+        winRate: profitability.win_rate,
+        bestTrade: profitability.largest_profit,
+        worstTrade: profitability.largest_loss,
+        avgTrade: profitability.average_profit_loss
+      };
+    }
+    
+    // Fallback to mock calculation
     if (!filteredTrades.length) {
       return {
         totalPnL: 0,
@@ -454,25 +589,70 @@ export default function UserDetailPage() {
         title="Trade Journal"
         icon={TrendingUp}
       >
-        <DataTable
-          data={filteredTrades}
-          columns={tradeColumns}
-          searchable={true}
-          exportable={true}
-          exportFilename={`${user.name.replace(/\s+/g, '_')}_trades`}
-          onRowClick={handleRowClick}
-          periodInfo={{
-            period,
-            category,
-            range
-          }}
-          paginated={true}
-          pageSize={10}
-        />
+        {/* Search Bar */}
+        <div className="mb-4">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search trades by symbol, setup notes, or ML notes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-4 py-2 bg-neutral-800/50 border border-neutral-600 rounded-lg text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/30"
+            />
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <svg className="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Trade Count */}
+        <div className="mb-4 text-sm text-neutral-400">
+          {apiUserTrades ? `${apiUserTrades.items.length} of ${apiUserTrades.total} trades` : `${filteredTrades.length} trades`}
+        </div>
+
+        {/* Data Table */}
+        {tradesLoading ? (
+          <div className="bg-[#1A1A1F] border border-neutral-700/50 rounded-lg p-8">
+            <div className="flex items-center justify-center">
+              <div className="text-white text-lg">Loading trades...</div>
+            </div>
+          </div>
+        ) : (
+          <DataTable
+            data={filteredTrades}
+            columns={tradeColumns}
+            searchable={false} // We handle search via API
+            exportable={true}
+            exportFilename={`${user.name.replace(/\s+/g, '_')}_trades`}
+            onRowClick={handleRowClick}
+            periodInfo={{
+              period,
+              category,
+              range
+            }}
+            paginated={false} // We handle pagination via API
+          />
+        )}
       </SectionCard>
 
       {/* Detailed Statistics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {detailLoading ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-[#1A1A1F] border border-neutral-700/50 rounded-lg p-8">
+            <div className="flex items-center justify-center">
+              <div className="text-white text-lg">Loading profitability data...</div>
+            </div>
+          </div>
+          <div className="bg-[#1A1A1F] border border-neutral-700/50 rounded-lg p-8">
+            <div className="flex items-center justify-center">
+              <div className="text-white text-lg">Loading trade analysis data...</div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Profitability Section */}
         <SectionCard
           title="Profitability"
@@ -494,7 +674,7 @@ export default function UserDetailPage() {
             <div className="flex justify-between items-center">
               <span className="text-neutral-400">Average Winning Trade</span>
               <span className="text-green-400 font-semibold">
-                {formatCurrency((() => {
+                {apiUserDetail ? formatCurrency(apiUserDetail.stats.profitability.average_winning_trade) : formatCurrency((() => {
                   const winningTrades = filteredTrades.filter(t => t.pnl > 0);
                   return winningTrades.length > 0 ? winningTrades.reduce((sum, t) => sum + t.pnl, 0) / winningTrades.length : 0;
                 })())}
@@ -503,7 +683,7 @@ export default function UserDetailPage() {
             <div className="flex justify-between items-center">
               <span className="text-neutral-400">Average Losing Trade</span>
               <span className="text-red-400 font-semibold">
-                {formatCurrency((() => {
+                {apiUserDetail ? formatCurrency(apiUserDetail.stats.profitability.average_losing_trade) : formatCurrency((() => {
                   const losingTrades = filteredTrades.filter(t => t.pnl < 0);
                   return losingTrades.length > 0 ? losingTrades.reduce((sum, t) => sum + t.pnl, 0) / losingTrades.length : 0;
                 })())}
@@ -524,7 +704,7 @@ export default function UserDetailPage() {
             <div className="flex justify-between items-center">
               <span className="text-neutral-400">Risk/Reward Ratio</span>
               <span className="text-white font-semibold">
-                {(() => {
+                {apiUserDetail ? (apiUserDetail.stats.profitability.risk_reward_ratio?.toFixed(2) || 'N/A') : (() => {
                   const wins = filteredTrades.filter(t => t.pnl > 0).reduce((sum, t) => sum + t.pnl, 0);
                   const losses = Math.abs(filteredTrades.filter(t => t.pnl < 0).reduce((sum, t) => sum + t.pnl, 0));
                   return losses > 0 ? (wins / losses).toFixed(2) : 'N/A';
@@ -540,7 +720,7 @@ export default function UserDetailPage() {
             <div className="flex justify-between items-center">
               <span className="text-neutral-400">Sortino Ratio</span>
               <span className="text-white font-semibold">
-                {(() => {
+                {apiUserDetail ? (apiUserDetail.stats.profitability.sortino_ratio?.toFixed(2) || 'N/A') : (() => {
                   const returns = filteredTrades.map(t => t.pnl);
                   const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
                   const downsideReturns = returns.filter(r => r < 0);
@@ -552,7 +732,7 @@ export default function UserDetailPage() {
             <div className="flex justify-between items-center">
               <span className="text-neutral-400">Sharpe Ratio</span>
               <span className="text-white font-semibold">
-                {(() => {
+                {apiUserDetail ? (apiUserDetail.stats.profitability.sharpe_ratio?.toFixed(2) || 'N/A') : (() => {
                   const returns = filteredTrades.map(t => t.pnl);
                   const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
                   const variance = returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length;
@@ -564,7 +744,7 @@ export default function UserDetailPage() {
             <div className="flex justify-between items-center">
               <span className="text-neutral-400">Avg Risk/Reward Ratio</span>
               <span className="text-white font-semibold">
-                {(() => {
+                {apiUserDetail ? (apiUserDetail.stats.profitability.avg_risk_reward_ratio?.toFixed(2) || 'N/A') : (() => {
                   const riskRewardRatios = filteredTrades.map(t => {
                     const entryValue = t.entryPrice * t.quantity;
                     const exitValue = t.exitPrice * t.quantity;
@@ -594,25 +774,25 @@ export default function UserDetailPage() {
             <div className="flex justify-between items-center">
               <span className="text-neutral-400">Winning Trades</span>
               <span className="text-green-400 font-semibold">
-                {filteredTrades.filter(t => t.pnl > 0).length}
+                {apiUserDetail ? apiUserDetail.stats.trade_analysis.winning_trades : filteredTrades.filter(t => t.pnl > 0).length}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-neutral-400">Losing Trades</span>
               <span className="text-red-400 font-semibold">
-                {filteredTrades.filter(t => t.pnl < 0).length}
+                {apiUserDetail ? apiUserDetail.stats.trade_analysis.losing_trades : filteredTrades.filter(t => t.pnl < 0).length}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-neutral-400">Break Even Trades</span>
               <span className="text-neutral-300 font-semibold">
-                {filteredTrades.filter(t => Math.abs(t.pnl) < 0.01).length}
+                {apiUserDetail ? apiUserDetail.stats.trade_analysis.break_even_trades : filteredTrades.filter(t => Math.abs(t.pnl) < 0.01).length}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-neutral-400">Max Consecutive Wins</span>
               <span className="text-green-400 font-semibold">
-                {(() => {
+                {apiUserDetail ? apiUserDetail.stats.trade_analysis.max_consecutive_wins : (() => {
                   let maxWins = 0;
                   let currentWins = 0;
                   const sortedTrades = [...filteredTrades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -631,7 +811,7 @@ export default function UserDetailPage() {
             <div className="flex justify-between items-center">
               <span className="text-neutral-400">Max Consecutive Losses</span>
               <span className="text-red-400 font-semibold">
-                {(() => {
+                {apiUserDetail ? apiUserDetail.stats.trade_analysis.max_consecutive_losses : (() => {
                   let maxLosses = 0;
                   let currentLosses = 0;
                   const sortedTrades = [...filteredTrades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -650,7 +830,7 @@ export default function UserDetailPage() {
             <div className="flex justify-between items-center">
               <span className="text-neutral-400">Avg Hold Time (All)</span>
               <span className="text-white font-semibold">
-                {(() => {
+                {apiUserDetail ? (apiUserDetail.stats.trade_analysis.avg_hold_time_all || 'N/A') : (() => {
                   const holdTimes = filteredTrades.map(t => {
                     const entry = new Date(t.entryDate);
                     const exit = new Date(t.exitDate);
@@ -663,7 +843,7 @@ export default function UserDetailPage() {
             <div className="flex justify-between items-center">
               <span className="text-neutral-400">Avg Hold Time (Winners)</span>
               <span className="text-green-400 font-semibold">
-                {(() => {
+                {apiUserDetail ? (apiUserDetail.stats.trade_analysis.avg_hold_time_winners || 'N/A') : (() => {
                   const winningTrades = filteredTrades.filter(t => t.pnl > 0);
                   const holdTimes = winningTrades.map(t => {
                     const entry = new Date(t.entryDate);
@@ -677,7 +857,7 @@ export default function UserDetailPage() {
             <div className="flex justify-between items-center">
               <span className="text-neutral-400">Avg Hold Time (Losers)</span>
               <span className="text-red-400 font-semibold">
-                {(() => {
+                {apiUserDetail ? (apiUserDetail.stats.trade_analysis.avg_hold_time_losers || 'N/A') : (() => {
                   const losingTrades = filteredTrades.filter(t => t.pnl < 0);
                   const holdTimes = losingTrades.map(t => {
                     const entry = new Date(t.entryDate);
@@ -690,7 +870,8 @@ export default function UserDetailPage() {
             </div>
           </div>
         </SectionCard>
-      </div>
+        </div>
+      )}
 
       {/* Risk Monitoring */}
       <div className="panel bg-[#1A1A1F] border-neutral-700/50 p-8 rounded-2xl">

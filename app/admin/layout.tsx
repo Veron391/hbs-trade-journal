@@ -9,20 +9,23 @@ import AdminSidebar from '../components/admin/AdminSidebar';
 import AdminTopbar from '../components/admin/AdminTopbar';
 
 function AdminContent({ children }: { children: React.ReactNode }) {
-  const { isAdminAuthenticated } = useAdmin();
+  const { isAdminAuthenticated, isAuthChecking } = useAdmin();
   const pathname = usePathname();
   const router = useRouter();
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   
   // Check authentication status on mount and when pathname changes
   useEffect(() => {
     const checkAuthAndRedirect = async () => {
+      // Don't do anything while auth is still being checked
+      if (isAuthChecking) {
+        return;
+      }
+      
       console.log('Admin layout - checking auth for pathname:', pathname, 'isAdminAuthenticated:', isAdminAuthenticated);
       
       // Don't redirect if already on login page
       if (pathname.endsWith('/admin/login')) {
         console.log('Admin layout - on login page, not redirecting');
-        setIsCheckingAuth(false);
         return;
       }
       
@@ -30,20 +33,18 @@ function AdminContent({ children }: { children: React.ReactNode }) {
       if (!isAdminAuthenticated) {
         console.log('Admin layout - not authenticated, redirecting to login');
         router.push('/admin/login');
-        setIsCheckingAuth(false);
         return;
       }
       
       // If authenticated, allow access
       console.log('Admin layout - authenticated, allowing access to:', pathname);
-      setIsCheckingAuth(false);
     };
     
     checkAuthAndRedirect();
-  }, [isAdminAuthenticated, pathname, router]);
+  }, [isAdminAuthenticated, isAuthChecking, pathname, router]);
   
   // Show loading while checking authentication
-  if (isCheckingAuth) {
+  if (isAuthChecking) {
     return (
       <div className="min-h-screen bg-[#111114] flex items-center justify-center">
         <div className="text-white text-lg">Checking authentication...</div>

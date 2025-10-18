@@ -45,9 +45,8 @@ const TopPerformers = memo(({ data }: TopPerformersProps) => {
   };
 
   const handleUserClick = (userId: string) => {
-    // Extract numeric ID from user ID (e.g., "user_7101" -> "7101")
-    const numericId = userId.replace('user_', '');
-    router.push(`/admin/users/${numericId}`);
+    // Use the full user ID for navigation
+    router.push(`/admin/users/${userId}`);
   };
 
   return (
