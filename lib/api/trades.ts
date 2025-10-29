@@ -13,7 +13,7 @@ export type Trade = {
   pnlAmount?: number | null
   pnlPercentage?: number | null
   entryDate: string
-  exitDate: string
+  exitDate?: string | null
   occurredAt?: string
   setupNotes?: string | null
   link?: string | null
@@ -35,25 +35,49 @@ const json = async (res: Response) => {
 
 // No localStorage coupling
 
+// Pagination response type
+export interface TradesListResponse {
+  trades: Trade[];
+  count: number;
+  next: string | null;
+  previous: string | null;
+}
+
 // API functions (named exports)
-export async function listTrades(): Promise<Trade[]> {
+export async function listTrades(limit: number = 10, offset: number = 0): Promise<TradesListResponse> {
   try {
-    const res = await fetch(`/api/journal/trades?t=${Date.now()}`, { 
+    const res = await fetch(`/api/journal/trades?limit=${limit}&offset=${offset}&t=${Date.now()}`, { 
       cache: 'no-store' // Disable caching
     })
     
     // Handle authentication errors gracefully
     if (res.status === 403 || res.status === 401) {
       console.log('User not authenticated, returning empty trades list')
-      return []
+      return {
+        trades: [],
+        count: 0,
+        next: null,
+        previous: null
+      }
     }
     
     const data = await json(res)
     const results = Array.isArray(data.results) ? data.results : []
-    return results.map(mapBackendToTrade)
+    
+    return {
+      trades: results.map(mapBackendToTrade),
+      count: typeof data.count === 'number' ? data.count : results.length,
+      next: data.next || null,
+      previous: data.previous || null
+    }
   } catch (error) {
     console.error('Error fetching trades:', error)
-    return [] // Return empty array on error
+    return {
+      trades: [],
+      count: 0,
+      next: null,
+      previous: null
+    }
   }
 }
 
@@ -176,7 +200,7 @@ function createPayloadToBackend(p: CreateTradeData) {
     direction: p.direction,
     quantity: Number(p.qty),
     entry_date: p.entryDate.slice(0,10),
-    exit_date: p.exitDate.slice(0,10),
+    exit_date: p.exitDate ? p.exitDate.slice(0,10) : null,
     buy_price: String(Number(p.entryPrice).toFixed(2)),
     sell_price: String(Number(p.exitPrice ?? 0).toFixed(2)),
     risk_percent: p.riskPercent ?? null,

@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       exitPrice: body.exitPrice || null,
       pnl,
       entryDate: body.entryDate || body.occurredAt || new Date().toISOString(),
-      exitDate: body.exitDate || body.occurredAt || new Date().toISOString(),
+      exitDate: body.exitDate || null,
       occurredAt: body.occurredAt || new Date().toISOString(), // Keep for backward compatibility
       setupNotes: body.setupNotes || null,
       tags: body.tags ? (Array.isArray(body.tags) ? body.tags.join(',') : body.tags) : null,

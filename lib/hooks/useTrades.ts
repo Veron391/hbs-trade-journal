@@ -1,13 +1,13 @@
 import useSWR from 'swr'
-import { listTrades, createTrade, updateTrade, deleteTrade, Trade, CreateTradeData, UpdateTradeData } from '@/lib/api/trades'
+import { listTrades, createTrade, updateTrade, deleteTrade, Trade, CreateTradeData, UpdateTradeData, TradesListResponse } from '@/lib/api/trades'
 import { useAuth } from '@/app/context/AuthContext'
 
-export function useTrades() {
+export function useTrades(limit: number = 10, offset: number = 0) {
   const { user, loading } = useAuth()
   
-  const { data, error, isLoading, mutate } = useSWR<Trade[]>(
-    user ? '/api/journal/trades' : null, // Only fetch when user is authenticated
-    async () => listTrades(), 
+  const { data, error, isLoading, mutate } = useSWR<TradesListResponse>(
+    user ? `/api/journal/trades?limit=${limit}&offset=${offset}` : null, // Only fetch when user is authenticated
+    async () => listTrades(limit, offset), 
     {
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
@@ -37,7 +37,10 @@ export function useTrades() {
   }
 
   return {
-    trades: data || [],
+    trades: data?.trades || [],
+    count: data?.count || 0,
+    next: data?.next || null,
+    previous: data?.previous || null,
     isLoading: loading || isLoading, // Show loading while auth is loading or data is loading
     error,
     addTrade,

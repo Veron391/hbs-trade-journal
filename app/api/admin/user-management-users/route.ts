@@ -73,6 +73,11 @@ export async function GET(request: NextRequest) {
     if (!usersRes.ok) {
       const errorText = await usersRes.text();
       console.error('User Management Users API error:', usersRes.status, errorText);
+      console.error('Request URL:', apiUrl);
+      console.error('Request headers:', {
+        'Authorization': `Bearer ${adminAccessToken?.substring(0, 20)}...`,
+        'Content-Type': 'application/json',
+      });
       return NextResponse.json(
         { error: `User Management Users API error: ${usersRes.status} - ${errorText}` },
         { status: usersRes.status }

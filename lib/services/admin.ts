@@ -353,7 +353,9 @@ async function realGetUserManagementSummary(params: any): Promise<UserManagement
     
     // Add status filter
     if (params.status) {
-      queryParams.append('status', params.status);
+      // Map 'recent' to 'all' since the API doesn't support 'recent' filter
+      const statusValue = params.status === 'recent' ? 'all' : params.status;
+      queryParams.append('status', statusValue);
     }
     
     // Add date range
@@ -402,7 +404,9 @@ async function realGetUserManagementUsers(params: any): Promise<UserManagementUs
     
     // Add status filter
     if (params.status) {
-      queryParams.append('status', params.status);
+      // Map 'recent' to 'all' since the API doesn't support 'recent' filter
+      const statusValue = params.status === 'recent' ? 'all' : params.status;
+      queryParams.append('status', statusValue);
     }
     
     // Add search filter
@@ -436,7 +440,9 @@ async function realGetUserManagementUsers(params: any): Promise<UserManagementUs
     const response = await fetch(`/api/admin/user-management-users?${queryParams.toString()}`);
     
     if (!response.ok) {
-      console.error('User Management Users API error:', response.status);
+      const errorText = await response.text();
+      console.error('User Management Users API error:', response.status, errorText);
+      console.error('Request URL:', `/api/admin/user-management-users?${queryParams.toString()}`);
       return null;
     }
     

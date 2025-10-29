@@ -574,7 +574,7 @@ export default function TradeCalendar() {
       {selectedDateForDetails && (
         <div
           data-dropdown="trade-details"
-          className={`fixed z-[9999] bg-[#1C1719] border border-white/20 rounded-lg shadow-2xl p-4 pb-8 w-96 max-w-[90vw] max-h-[calc(100vh-40px)] overflow-y-auto transition-all duration-300 ease-out ${
+          className={`fixed z-[9999] bg-[#1C1719] border border-white/20 rounded-lg shadow-2xl w-96 max-w-[90vw] overflow-hidden flex flex-col transition-all duration-300 ease-out ${
             isDropdownVisible 
               ? 'opacity-100 scale-100 backdrop-blur-sm' 
               : 'opacity-0 scale-95 backdrop-blur-none'
@@ -583,8 +583,8 @@ export default function TradeCalendar() {
             left: `${dropdownPosition.x}px`,
             top: `${dropdownPosition.y}px`,
             transform: 'translateX(0)',
-            maxHeight: 'calc(100vh - 40px)',
-            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)'
+            maxHeight: '600px',
+            height: 'auto',
           }}
         >
           {/* Arrow pointer */}
@@ -592,15 +592,14 @@ export default function TradeCalendar() {
             className={`absolute top-1/2 -translate-y-1/2 ${dropdownSide === 'left' ? 'right-[-8px]' : 'left-[-8px]'} w-0 h-0 border-t-8 border-b-8 ${dropdownSide === 'left' ? 'border-l-8 border-l-[#1C1719]' : 'border-r-8 border-r-[#1C1719]'} border-t-transparent border-b-transparent`}
             style={{ filter: 'drop-shadow(0 0 2px rgba(255,255,255,0.15))' }}
           />
-          {console.log('Rendering dropdown for:', selectedDateForDetails, 'visible:', isDropdownVisible, 'position:', dropdownPosition)}
           {(() => {
+            console.log('Rendering dropdown for:', selectedDateForDetails, 'visible:', isDropdownVisible, 'position:', dropdownPosition);
             if (isLoadingDayDetails) {
               return (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                <div className="flex flex-col h-full overflow-hidden">
+                  <div className="flex items-center justify-between p-4 pb-3 flex-shrink-0">
                     <h3 className="text-lg font-semibold text-white">{t('loading')}</h3>
                     <button
-                      className="spin-on-hover"
                       onClick={(e) => {
                         e.stopPropagation();
                         closeDropdown();
@@ -610,7 +609,7 @@ export default function TradeCalendar() {
                       <X size={20} />
                     </button>
                   </div>
-                  <div className="flex justify-center items-center py-8">
+                  <div className="flex justify-center items-center py-8 flex-1">
                     <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
                   </div>
                 </div>
@@ -624,8 +623,8 @@ export default function TradeCalendar() {
             // Show loading state if no data is available yet
             if (!dayData && !backendData && !apiData && !isLoadingDayDetails) {
               return (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                <div className="flex flex-col h-full overflow-hidden">
+                  <div className="flex items-center justify-between p-4 pb-3 flex-shrink-0">
                     <h3 className="text-lg font-semibold text-white">{t('noData')}</h3>
                     <button
                       onClick={(e) => {
@@ -637,7 +636,7 @@ export default function TradeCalendar() {
                       <X size={20} />
                     </button>
                   </div>
-                  <div className="text-center text-gray-400 py-4">
+                  <div className="text-center text-gray-400 py-4 flex-1 flex items-center justify-center">
                     {t('noTradesFound')}
                   </div>
                 </div>
@@ -647,11 +646,21 @@ export default function TradeCalendar() {
             const selectedDate = new Date(selectedDateForDetails);
             
             // Prioritize API day details data (most accurate) over calendar list data
-            const totalPnL = apiData?.summary?.total_pnl ?? apiData?.totalPnL ?? (dayData?.totalPnL ?? 0);
-            const tradesCount = apiData?.summary?.trade_count ?? apiData?.trades ?? (dayData?.trades.length ?? 0);
-            const assets = apiData?.summary?.assets_traded ?? apiData?.assets ?? (dayData ? [...new Set(dayData.trades.map((trade: any) => trade.symbol))] as string[] : []);
+            const totalPnL = apiData?.summary?.total_pnl ?? (dayData?.totalPnL ?? 0);
+            const tradesCount = apiData?.summary?.trade_count ?? (dayData?.trades.length ?? 0);
+            const assets = apiData?.summary?.assets_traded ?? (dayData ? [...new Set(dayData.trades.map((trade: any) => trade.symbol))] as string[] : []);
             // Use local trade data for detailed information (includes notes) but API data for summary
-            const tradeDetails = dayData?.trades ?? (apiData?.trades ?? apiData?.tradeDetails ?? []);
+            const rawTradeDetails = dayData?.trades ?? (apiData?.trades ?? []);
+            
+            // Normalize API trade data to match expected format
+            // API uses: trade_setup_notes, trade_link
+            // Component expects: setupNotes, link
+            // DO NOT touch profit_amount - use it directly from API
+            const tradeDetails = rawTradeDetails.map((trade: any) => ({
+              ...trade,
+              setupNotes: trade.setupNotes || trade.trade_setup_notes || '',
+              link: trade.link || trade.trade_link || '',
+            }));
             
             // Note: We intentionally exclude backendData (calendar list) as it may have incorrect calculations
             // The day details API provides the accurate per-day totals
@@ -667,7 +676,7 @@ export default function TradeCalendar() {
             // Ensure assets is an array of strings - handle both string arrays and object arrays
             let safeAssets: string[] = [];
             if (Array.isArray(assets)) {
-              safeAssets = assets.map(asset => {
+              safeAssets = assets.map((asset: any) => {
                 if (typeof asset === 'string') {
                   return asset;
                 } else if (typeof asset === 'object' && asset !== null) {
@@ -675,7 +684,7 @@ export default function TradeCalendar() {
                   return asset.symbol || asset.name || asset.id || String(asset);
                 }
                 return String(asset);
-              }).filter(asset => asset && asset.trim() !== '');
+              }).filter((asset: string) => asset && asset.trim() !== '');
             }
             
             // Ensure tradeDetails is an array
@@ -685,9 +694,9 @@ export default function TradeCalendar() {
             const isBreakEven = totalPnL === 0;
             
             return (
-              <div className="space-y-4">
-                {/* Header */}
-                <div className="flex items-center justify-between">
+              <div className="flex flex-col h-full overflow-hidden">
+                {/* Header - Fixed */}
+                <div className="flex items-center justify-between p-4 pb-3 flex-shrink-0">
                   <h3 className="text-lg font-semibold text-white">
                     {format(selectedDate, 'MMM d, yyyy')}
                   </h3>
@@ -701,6 +710,10 @@ export default function TradeCalendar() {
                     <X size={20} />
                   </button>
                 </div>
+
+                {/* Scrollable Content */}
+                <div className="overflow-y-auto flex-1 min-h-0 px-4 pb-4">
+                <div className="space-y-4">
 
                 {/* Summary Stats */}
                 <div className="grid grid-cols-2 gap-3">
@@ -758,40 +771,38 @@ export default function TradeCalendar() {
                       return null;
                     }
                     
-                    // Use API data structure if available, otherwise fall back to local calculation
+                    // Use API data structure - prefer profit_amount from API, otherwise calculate
                     let pnl = 0;
-                    let entryPrice = 0;
-                    let exitPrice = 0;
-                    let quantity = 0;
                     let symbol = trade.symbol || 'Unknown';
                     let direction = trade.direction || 'long';
                     let tradeId = trade.id || `trade-${index}`;
                     
-                    // Always use local calculation for accurate PnL
-                    entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : parseFloat(String(trade.entryPrice)) || 0;
-                    exitPrice = typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice)) || 0;
-                    quantity = typeof trade.quantity === 'number' ? trade.quantity : parseFloat(String(trade.quantity)) || 0;
-                    
-                    const entryValue = entryPrice * quantity;
-                    const exitValue = exitPrice * quantity;
-                    
-                    if (direction === 'long') {
-                      pnl = exitValue - entryValue;
+                    // Use profit_amount from API if available, otherwise calculate
+                    if (trade.profit_amount !== undefined && trade.profit_amount !== null) {
+                      pnl = trade.profit_amount;
                     } else {
-                      pnl = entryValue - exitValue;
+                      // Fallback to calculation if profit_amount not available
+                      const entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : parseFloat(String(trade.entryPrice)) || 0;
+                      const exitPrice = typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice)) || 0;
+                      const quantity = typeof trade.quantity === 'number' ? trade.quantity : parseFloat(String(trade.quantity)) || 0;
+                      
+                      const entryValue = entryPrice * quantity;
+                      const exitValue = exitPrice * quantity;
+                      
+                      if (direction === 'long') {
+                        pnl = exitValue - entryValue;
+                      } else {
+                        pnl = entryValue - exitValue;
+                      }
                     }
                     
                     // Debug: Log the trade data to verify calculations
                     console.log('Trade PnL calculation:', {
                       id: trade.id,
                       symbol: trade.symbol,
-                      entryPrice,
-                      exitPrice,
-                      quantity,
-                      direction,
-                      entryValue,
-                      exitValue,
-                      calculatedPnL: pnl
+                      profit_amount: trade.profit_amount,
+                      calculatedPnL: pnl,
+                      direction
                     });
                     
                     const isTradeProfitable = pnl > 0;
@@ -906,6 +917,8 @@ export default function TradeCalendar() {
                     })}
                   </div>
                 )}
+                </div>
+                </div>
               </div>
             );
           })()}

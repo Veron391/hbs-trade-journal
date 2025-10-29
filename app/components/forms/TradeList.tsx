@@ -1,16 +1,28 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useTrades } from '../../context/TradeContext';
+import { useTrades as useTradesContext } from '../../context/TradeContext';
+import { useTrades } from '@/lib/hooks/useTrades';
 import { Trade } from '../../types';
 import { format } from 'date-fns';
-import { Pencil, Trash2, ArrowUp, ArrowDown, AlertTriangle, ExternalLink, FileText, AlertCircle } from 'lucide-react';
+import { Pencil, Trash2, ArrowUp, ArrowDown, AlertTriangle, ExternalLink, FileText, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import TradeForm from './TradeForm';
 import { useI18n } from '../../context/I18nContext';
 
 export default function TradeList() {
   const { t } = useI18n();
-  const { trades, deleteTrade, clearAllTrades } = useTrades();
+  const { deleteTrade: deleteTradeContext, clearAllTrades } = useTradesContext();
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const tradesPerPage = 10; // Backend default limit
+  
+  // Calculate offset from current page
+  const offset = (currentPage - 1) * tradesPerPage;
+  
+  // Fetch trades with pagination
+  const { trades, count, next, previous, isLoading: tradesLoading, mutate } = useTrades(tradesPerPage, offset);
+  
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
   const [isAddingTrade, setIsAddingTrade] = useState(false);
   const [sortBy, setSortBy] = useState<keyof Trade>(() => {
@@ -32,10 +44,28 @@ export default function TradeList() {
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [selectedTradeDetails, setSelectedTradeDetails] = useState<Trade | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const tradesPerPage = 20;
-
-
+  
+  // Calculate total pages from API count
+  const totalPages = count > 0 ? Math.ceil(count / tradesPerPage) : 1;
+  
+  // Delete trade handler
+  const deleteTrade = async (id: string) => {
+    await deleteTradeContext(id);
+    
+    // If this was the last trade on the page, go to previous page
+    if (trades.length === 1 && currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+    
+    await mutate(); // Refresh the list
+  };
+  
+  // Reset to page 1 if current page exceeds total pages
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
 
   const handleSort = (column: keyof Trade) => {
     let newSortDirection: 'asc' | 'desc';
@@ -110,18 +140,8 @@ export default function TradeList() {
       : valB.localeCompare(valA);
   });
 
-  // Pagination calculations
-  const totalPages = Math.ceil(sortedTrades.length / tradesPerPage);
-  const startIndex = (currentPage - 1) * tradesPerPage;
-  const endIndex = startIndex + tradesPerPage;
-  const paginatedTrades = sortedTrades.slice(startIndex, endIndex);
-
-  // Reset to page 1 if current page exceeds total pages
-  useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(1);
-    }
-  }, [currentPage, totalPages]);
+  // Use trades directly from API (already paginated server-side)
+  // Apply client-side sorting to the paginated results
 
   const calculatePnL = (trade: Trade) => {
     const entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : 0;
@@ -454,7 +474,7 @@ export default function TradeList() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#2b2b2b]">
-                {paginatedTrades.map((trade) => {
+                {sortedTrades.map((trade) => {
                   const pnl = trade.pnlAmount != null ? Number(trade.pnlAmount) : calculatePnL(trade);
                   const pnlPercent = trade.pnlPercentage != null ? Number(trade.pnlPercentage) : calculatePnLPercentage(trade);
                   const isProfitable = pnl > 0;
@@ -499,11 +519,11 @@ export default function TradeList() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-300 text-center whitespace-nowrap">
-                        {typeof trade.entryPrice === 'number' ? trade.entryPrice.toFixed(2) : trade.entryPrice}
+                        {typeof trade.entryPrice === 'number' ? trade.entryPrice.toString() : trade.entryPrice}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-300 text-center whitespace-nowrap">
                         {trade.exitPrice && trade.exitPrice !== 0 ? (
-                          typeof trade.exitPrice === 'number' ? trade.exitPrice.toFixed(2) : trade.exitPrice
+                          typeof trade.exitPrice === 'number' ? trade.exitPrice.toString() : trade.exitPrice
                         ) : (
                           <span className="text-yellow-400 text-xs">-</span>
                         )}
@@ -610,19 +630,20 @@ export default function TradeList() {
           {totalPages > 1 && (
             <div className="mt-6 flex items-center justify-between">
               <div className="text-sm text-gray-400">
-                Showing {startIndex + 1}-{Math.min(endIndex, sortedTrades.length)} of {sortedTrades.length} trades
+                Showing {offset + 1}-{Math.min(offset + trades.length, count)} of {count} trades
               </div>
               
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                    currentPage === 1
+                  disabled={currentPage === 1 || tradesLoading}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1 ${
+                    currentPage === 1 || tradesLoading
                       ? 'bg-[#1C1719]/50 border border-white/10 text-gray-400 cursor-not-allowed'
                       : 'bg-[#1C1719] border border-white/20 text-white hover:bg-blue-600/20'
                   }`}
                 >
+                  <ChevronLeft size={16} />
                   Previous
                 </button>
 
@@ -709,14 +730,15 @@ export default function TradeList() {
 
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                    currentPage === totalPages
+                  disabled={currentPage === totalPages || tradesLoading}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1 ${
+                    currentPage === totalPages || tradesLoading
                       ? 'bg-[#1C1719]/50 border border-white/10 text-gray-400 cursor-not-allowed'
                       : 'bg-[#1C1719] border border-white/20 text-white hover:bg-blue-600/20'
                   }`}
                 >
                   Next
+                  <ChevronRight size={16} />
                 </button>
               </div>
             </div>
@@ -790,24 +812,18 @@ export default function TradeList() {
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">{t('entryPrice')}</label>
                     <div className="text-white font-medium">
-                      ${(() => {
-                        const price = typeof selectedTradeDetails.entryPrice === 'number' 
-                          ? selectedTradeDetails.entryPrice 
-                          : parseFloat(String(selectedTradeDetails.entryPrice) || '0');
-                        return price % 1 === 0 ? price.toString() : price.toFixed(4).replace(/\.?0+$/, '');
-                      })()}
+                      ${typeof selectedTradeDetails.entryPrice === 'number' 
+                        ? selectedTradeDetails.entryPrice.toString() 
+                        : String(selectedTradeDetails.entryPrice || '0')}
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">{t('exitPrice')}</label>
                     <div className="text-white font-medium">
-                      ${(() => {
-                        const price = typeof selectedTradeDetails.exitPrice === 'number' 
-                          ? selectedTradeDetails.exitPrice 
-                          : parseFloat(String(selectedTradeDetails.exitPrice) || '0');
-                        return price % 1 === 0 ? price.toString() : price.toFixed(4).replace(/\.?0+$/, '');
-                      })()}
+                      ${typeof selectedTradeDetails.exitPrice === 'number' 
+                        ? selectedTradeDetails.exitPrice.toString() 
+                        : String(selectedTradeDetails.exitPrice || '0')}
                     </div>
                   </div>
 

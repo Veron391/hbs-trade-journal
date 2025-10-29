@@ -286,7 +286,7 @@ const dictionaries: Record<Lang, Dict> = {
     profitLoss: 'Foyda va zarar',
     amount: 'Miqdor',
     percentage: 'Foiz',
-    pending: 'Kutilmoqda',
+    pending: 'Jarayonda',
     deleteAll: 'HAMMASINI O\'CHIRISH',
     deleteAllTradesTitle: 'Barcha savdolarni o\'chirish',
     deleteAllConfirm: 'Haqiqatdan ham {count} ta savdolarni o\'chirmoqchimisiz?',

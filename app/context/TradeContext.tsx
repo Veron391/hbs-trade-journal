@@ -73,9 +73,9 @@ function convertInternalTradeToApi(trade: Omit<Trade, 'id'>): any {
     direction: trade.direction, // Use direction directly
     qty: Number(trade.quantity), // Ensure it's a number
     entryPrice: Number(trade.entryPrice), // Use entryPrice field
-    exitPrice: Number(trade.exitPrice), // Include exitPrice
+    exitPrice: trade.exitPrice ? Number(trade.exitPrice) : null, // Include exitPrice or null
     entryDate: new Date(trade.entryDate).toISOString(), // Entry date
-    exitDate: new Date(trade.exitDate).toISOString(), // Exit date
+    exitDate: trade.exitDate ? new Date(trade.exitDate).toISOString() : null, // Exit date or null
     occurredAt: new Date(trade.entryDate).toISOString(), // Keep for backward compatibility
     // Pass through descriptive fields so backend mapper can forward them
     setupNotes: trade.setupNotes || '',
@@ -184,10 +184,10 @@ export function TradeProvider({ children }: { children: ReactNode }) {
         profitLoss = entryTotal - exitTotal;
       }
       
-      const holdTime = differenceInDays(
+      const holdTime = trade.exitDate ? differenceInDays(
         new Date(trade.exitDate),
         new Date(trade.entryDate)
-      );
+      ) : 0;
       
       return {
         ...trade,
@@ -210,9 +210,13 @@ export function TradeProvider({ children }: { children: ReactNode }) {
     let currentConsecutiveWins = 0;
     let currentConsecutiveLosses = 0;
     
-    const sortedTrades = [...processedTrades].sort((a, b) => 
-      new Date(a.exitDate).getTime() - new Date(b.exitDate).getTime()
-    );
+    const sortedTrades = [...processedTrades].sort((a, b) => {
+      // Handle pending trades (no exit date) by putting them at the end
+      if (!a.exitDate && !b.exitDate) return 0;
+      if (!a.exitDate) return 1;
+      if (!b.exitDate) return -1;
+      return new Date(a.exitDate).getTime() - new Date(b.exitDate).getTime();
+    });
     
     sortedTrades.forEach(trade => {
       if (trade.isWinner) {

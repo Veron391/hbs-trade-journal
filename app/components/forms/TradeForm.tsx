@@ -252,7 +252,6 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
             name="exitDate"
             control={control}
             rules={{ 
-              required: 'Exit date is required',
               validate: (value) => {
                 if (!entryDate || !value) return true;
                 const entry = new Date(entryDate);
@@ -304,7 +303,6 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
           <input
             type="number"
             {...register('exitPrice', { 
-              required: 'Exit price is required',
               min: { value: 0.00000001, message: 'Exit price must be positive' }
             })}
             step="any"
