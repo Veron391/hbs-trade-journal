@@ -19,30 +19,35 @@ export async function GET(request: NextRequest) {
   queryParams.append('limit', limit);
   queryParams.append('offset', offset);
 
-  const backendRes = await fetch(`https://journal.saraftech.com/api/v1/journal/trades/?${queryParams.toString()}`, {
-    method: 'GET',
-    headers,
-    cache: 'no-store' // Disable caching
-  });
-
-  const bodyText = await backendRes.text();
-  const contentType = backendRes.headers.get('content-type') || 'application/json';
-  const cacheHeaders = {
-    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-    'Pragma': 'no-cache',
-    'Expires': '0'
-  };
   try {
-    const json = bodyText ? JSON.parse(bodyText) : {};
-    return NextResponse.json(json, { 
-      status: backendRes.status, 
-      headers: { 'content-type': contentType, ...cacheHeaders } 
+    const backendRes = await fetch(`https://journal.saraftech.com/api/v1/journal/trades/?${queryParams.toString()}`, {
+      method: 'GET',
+      headers,
+      cache: 'no-store' // Disable caching
     });
-  } catch {
-    return new NextResponse(bodyText, { 
-      status: backendRes.status, 
-      headers: { 'content-type': contentType, ...cacheHeaders } 
-    });
+
+    const bodyText = await backendRes.text();
+    const contentType = backendRes.headers.get('content-type') || 'application/json';
+    const cacheHeaders = {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    };
+    try {
+      const json = bodyText ? JSON.parse(bodyText) : {};
+      return NextResponse.json(json, { 
+        status: backendRes.status, 
+        headers: { 'content-type': contentType, ...cacheHeaders } 
+      });
+    } catch {
+      return new NextResponse(bodyText, { 
+        status: backendRes.status, 
+        headers: { 'content-type': contentType, ...cacheHeaders } 
+      });
+    }
+  } catch (err) {
+    // Network/DNS/timeout error talking to upstream
+    return NextResponse.json({ error: 'Upstream unavailable' }, { status: 502 });
   }
 }
 
@@ -52,30 +57,34 @@ export async function POST(req: NextRequest) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (access) headers['Authorization'] = `Bearer ${access}`;
 
-  const backendRes = await fetch('https://journal.saraftech.com/api/v1/journal/trades/', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
-  });
-
-  const bodyText = await backendRes.text();
-  const contentType = backendRes.headers.get('content-type') || 'application/json';
-  const cacheHeaders = {
-    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-    'Pragma': 'no-cache',
-    'Expires': '0'
-  };
   try {
-    const json = bodyText ? JSON.parse(bodyText) : {};
-    return NextResponse.json(json, { 
-      status: backendRes.status, 
-      headers: { 'content-type': contentType, ...cacheHeaders } 
+    const backendRes = await fetch('https://journal.saraftech.com/api/v1/journal/trades/', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
     });
-  } catch {
-    return new NextResponse(bodyText, { 
-      status: backendRes.status, 
-      headers: { 'content-type': contentType, ...cacheHeaders } 
-    });
+
+    const bodyText = await backendRes.text();
+    const contentType = backendRes.headers.get('content-type') || 'application/json';
+    const cacheHeaders = {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    };
+    try {
+      const json = bodyText ? JSON.parse(bodyText) : {};
+      return NextResponse.json(json, { 
+        status: backendRes.status, 
+        headers: { 'content-type': contentType, ...cacheHeaders } 
+      });
+    } catch {
+      return new NextResponse(bodyText, { 
+        status: backendRes.status, 
+        headers: { 'content-type': contentType, ...cacheHeaders } 
+      });
+    }
+  } catch (err) {
+    return NextResponse.json({ error: 'Upstream unavailable' }, { status: 502 });
   }
 }
 

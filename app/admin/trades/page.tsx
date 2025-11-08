@@ -88,13 +88,13 @@ export default function TradesPage() {
     },
     {
       key: 'entryPrice',
-      label: 'Buy Price',
+      label: 'Entry Price',
       sortable: true,
       render: (value: number) => formatCurrency(value)
     },
     {
       key: 'exitPrice',
-      label: 'Sell Price',
+      label: 'Exit Price',
       sortable: true,
       render: (value: number) => formatCurrency(value)
     },
@@ -155,7 +155,7 @@ export default function TradesPage() {
 
   const handleExport = (data: any[]) => {
     const csvContent = [
-      'ID,User,Symbol,Type,Quantity,Buy Price,Sell Price,P&L,Status,Date',
+      'ID,User,Symbol,Type,Quantity,Entry Price,Exit Price,P&L,Status,Date',
       ...data.map(trade => [
         trade.id,
         trade.userName,

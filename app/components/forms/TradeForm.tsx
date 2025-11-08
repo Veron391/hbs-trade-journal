@@ -302,8 +302,15 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
         <label className="block text-sm font-medium mb-1 text-gray-200">{t('exitPrice')}</label>
           <input
             type="number"
-            {...register('exitPrice', { 
-              min: { value: 0.00000001, message: 'Exit price must be positive' }
+            inputMode="decimal"
+            {...register('exitPrice', {
+              setValueAs: (v) => (v === '' || v === null ? undefined : Number(v)),
+              validate: (v) => {
+                // Allow empty for pending trades; if provided, must be > 0
+                if (v === '' || v == null) return true;
+                const num = typeof v === 'number' ? v : Number(v);
+                return num >= 0 || 'Exit price must be zero or positive';
+              }
             })}
             step="any"
             placeholder="0.00"

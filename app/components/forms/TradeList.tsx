@@ -514,19 +514,35 @@ export default function TradeList() {
                         {format(new Date(trade.entryDate), 'MMM dd, yyyy')}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-300 text-center whitespace-nowrap">
-                        {trade.exitDate ? format(new Date(trade.exitDate), 'MMM dd, yyyy') : (
-                          <span className="text-yellow-400 text-xs">-</span>
-                        )}
+                        {(() => {
+                          const isPending = !trade.exitDate 
+                            || trade.exitPrice == null 
+                            || Number(trade.exitPrice) === 0 
+                            || (trade.exitDate && trade.entryDate && trade.exitDate === trade.entryDate && (trade.exitPrice == null || Number(trade.exitPrice) === 0));
+                          if (isPending) {
+                            return (
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400">{t('pending')}</span>
+                            );
+                          }
+                          return format(new Date(trade.exitDate!), 'MMM dd, yyyy');
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-300 text-center whitespace-nowrap">
                         {typeof trade.entryPrice === 'number' ? trade.entryPrice.toString() : trade.entryPrice}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-300 text-center whitespace-nowrap">
-                        {trade.exitPrice && trade.exitPrice !== 0 ? (
-                          typeof trade.exitPrice === 'number' ? trade.exitPrice.toString() : trade.exitPrice
-                        ) : (
-                          <span className="text-yellow-400 text-xs">-</span>
-                        )}
+                        {(() => {
+                          const isPending = !trade.exitDate 
+                            || trade.exitPrice == null 
+                            || Number(trade.exitPrice) === 0 
+                            || (trade.exitDate && trade.entryDate && trade.exitDate === trade.entryDate && (trade.exitPrice == null || Number(trade.exitPrice) === 0));
+                          if (isPending) {
+                            return (
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400">{t('pending')}</span>
+                            );
+                          }
+                          return typeof trade.exitPrice === 'number' ? trade.exitPrice.toString() : trade.exitPrice;
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-300 text-center whitespace-nowrap">
                         {trade.quantity}
@@ -534,12 +550,15 @@ export default function TradeList() {
                         <td className="px-4 py-3 text-center whitespace-nowrap">
                         {(() => {
                           // Check if trade is pending (missing exit date or exit price)
-                          const isPending = !trade.exitDate || !trade.exitPrice || trade.exitPrice === 0;
+                          const isPending = !trade.exitDate 
+                            || trade.exitPrice == null 
+                            || Number(trade.exitPrice) === 0 
+                            || (trade.exitDate && trade.entryDate && trade.exitDate === trade.entryDate && (trade.exitPrice == null || Number(trade.exitPrice) === 0));
                           
                           if (isPending) {
                             return (
                               <div className="flex flex-col items-center">
-                                <span className="text-sm font-medium text-yellow-400 bg-yellow-400/20 px-2 py-1 rounded-full">
+                                <span className="text-sm font-medium text-blue-400 bg-blue-500/20 px-2 py-1 rounded-full">
                                   {t('pending')}
                                 </span>
                               </div>
@@ -830,14 +849,14 @@ export default function TradeList() {
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">{t('entryDate')}</label>
                     <div className="text-white font-medium">
-                      {format(new Date(selectedTradeDetails.entryDate), 'MMM dd, yyyy HH:mm')}
+                      {format(new Date(selectedTradeDetails.entryDate), 'MMM dd, yyyy')}
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">{t('exitDate')}</label>
                     <div className="text-white font-medium">
-                      {format(new Date(selectedTradeDetails.exitDate), 'MMM dd, yyyy HH:mm')}
+                      {format(new Date(selectedTradeDetails.exitDate), 'MMM dd, yyyy')}
                     </div>
                   </div>
                 </div>

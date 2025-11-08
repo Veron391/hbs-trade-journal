@@ -6,6 +6,7 @@ export type Trade = {
   symbol: string
   direction: 'long' | 'short'
   qty: number
+  quantity?: number // compatibility for UI components expecting `quantity`
   entryPrice: number
   exitPrice?: number | null
   riskPercent?: number | null
@@ -171,20 +172,39 @@ export async function getCalendarDayDetails(date: string): Promise<CalendarDayDe
 
 function mapBackendToTrade(b: any): Trade {
   const assetType = b.trade_type === 2 ? 'stock' : 'crypto'
+  
+  // Extract only date portion (YYYY-MM-DD) from datetime strings
+  const extractDate = (dateStr: string | null | undefined): string | null => {
+    if (!dateStr) return null;
+    // If it includes time (YYYY-MM-DDTHH:mm or YYYY-MM-DD HH:mm), extract just the date part
+    if (dateStr.includes('T')) {
+      return dateStr.slice(0, 10); // Extract YYYY-MM-DD
+    }
+    if (dateStr.includes(' ')) {
+      return dateStr.slice(0, 10); // Extract YYYY-MM-DD from space-separated format
+    }
+    // If it's already just a date (YYYY-MM-DD), use it as-is
+    if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return dateStr;
+    }
+    return dateStr;
+  };
+  
   return {
     id: String(b.id),
     assetType,
     symbol: b.symbol,
     direction: b.direction,
     qty: Number(b.quantity),
+    quantity: Number(b.quantity),
     entryPrice: Number(b.buy_price),
     exitPrice: b.sell_price != null ? Number(b.sell_price) : null,
     riskPercent: b.risk_percent != null ? Number(b.risk_percent) : null,
     pnl: null,
     pnlAmount: b.pnl_amount ?? null,
     pnlPercentage: b.pnl_percentage ?? null,
-    entryDate: b.entry_date,
-    exitDate: b.exit_date,
+    entryDate: extractDate(b.entry_date) || '',
+    exitDate: extractDate(b.exit_date),
     setupNotes: b.trade_setup_notes ?? '',
     link: b.trade_link ?? '',
     createdAt: b.created_at,
@@ -200,9 +220,11 @@ function createPayloadToBackend(p: CreateTradeData) {
     direction: p.direction,
     quantity: Number(p.qty),
     entry_date: p.entryDate.slice(0,10),
-    exit_date: p.exitDate ? p.exitDate.slice(0,10) : null,
-    buy_price: String(Number(p.entryPrice).toFixed(2)),
-    sell_price: String(Number(p.exitPrice ?? 0).toFixed(2)),
+    // Backend requires non-null exit_date; for pending, mirror entry_date
+    exit_date: (p.exitDate && p.exitDate.trim() !== '') ? p.exitDate.slice(0,10) : p.entryDate.slice(0,10),
+    buy_price: String(p.entryPrice),
+    // Backend requires non-null sell_price; for pending, send 0
+    sell_price: p.exitPrice != null ? String(p.exitPrice) : '0',
     risk_percent: p.riskPercent ?? null,
     trade_link: p.link ?? '',
     trade_setup_notes: p.setupNotes ?? '',
@@ -217,8 +239,8 @@ function updatePayloadToBackend(p: UpdateTradeData) {
   if (p.qty != null) obj.quantity = Number(p.qty)
   if (p.entryDate) obj.entry_date = p.entryDate.slice(0,10)
   if (p.exitDate) obj.exit_date = p.exitDate.slice(0,10)
-  if (p.entryPrice != null) obj.buy_price = String(Number(p.entryPrice).toFixed(2))
-  if (p.exitPrice != null) obj.sell_price = String(Number(p.exitPrice).toFixed(2))
+  if (p.entryPrice != null) obj.buy_price = String(p.entryPrice)
+  if (p.exitPrice != null) obj.sell_price = String(p.exitPrice)
   if (p.riskPercent != null) obj.risk_percent = p.riskPercent
   if (p.link != null) obj.trade_link = p.link
   if (p.setupNotes != null) obj.trade_setup_notes = p.setupNotes
