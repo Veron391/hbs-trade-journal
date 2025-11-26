@@ -82,6 +82,38 @@ export async function listTrades(limit: number = 10, offset: number = 0): Promis
   }
 }
 
+// Fetch all trades using pagination
+export async function listAllTrades(): Promise<Trade[]> {
+  const allTrades: Trade[] = []
+  let offset = 0
+  const limit = 100 // Fetch 100 at a time
+  let hasMore = true
+
+  try {
+    while (hasMore) {
+      const response = await listTrades(limit, offset)
+      allTrades.push(...response.trades)
+      
+      // Check if there are more trades to fetch
+      // Continue if we got a full page (limit trades) or if next URL exists
+      if (response.trades.length === limit || response.next) {
+        offset += limit
+        // If we got fewer trades than the limit, we're done
+        if (response.trades.length < limit) {
+          hasMore = false
+        }
+      } else {
+        hasMore = false
+      }
+    }
+    
+    return allTrades
+  } catch (error) {
+    console.error('Error fetching all trades:', error)
+    return allTrades // Return whatever we've fetched so far
+  }
+}
+
 export async function createTrade(payload: CreateTradeData): Promise<Trade> {
   const body = createPayloadToBackend(payload)
   const res = await json(await fetch('/api/journal/trades', {

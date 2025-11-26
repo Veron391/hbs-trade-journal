@@ -4,7 +4,9 @@ import { createContext, useContext, ReactNode, useCallback, useMemo, useState, u
 import { Trade, TradeStats } from '../types';
 import { differenceInDays } from 'date-fns';
 import { useTrades as useTradesHook } from '@/lib/hooks/useTrades';
-import { Trade as ApiTrade } from '@/lib/api/trades';
+import { Trade as ApiTrade, listAllTrades } from '@/lib/api/trades';
+import useSWR from 'swr';
+import { useAuth } from './AuthContext';
 
 interface TradeContextType {
   trades: Trade[];
@@ -84,8 +86,24 @@ function convertInternalTradeToApi(trade: Omit<Trade, 'id'>): any {
 }
 
 export function TradeProvider({ children }: { children: ReactNode }) {
+  const { user, loading: authLoading } = useAuth();
   const tradesHookResult = useTradesHook();
   
+  // Fetch all trades for statistics using SWR
+  const { data: allApiTrades, error: allTradesError, isLoading: allTradesLoading, mutate: mutateAllTrades } = useSWR<ApiTrade[]>(
+    user ? 'all-trades' : null,
+    async () => {
+      if (!user) return [];
+      return await listAllTrades();
+    },
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      refreshInterval: 0,
+      dedupingInterval: 0
+    }
+  );
+
   // Add safety check for undefined result
   if (!tradesHookResult) {
     console.error('useTradesHook returned undefined');
@@ -130,7 +148,12 @@ export function TradeProvider({ children }: { children: ReactNode }) {
     );
   }
 
-  const { trades: apiTrades, addTrade: apiAddTrade, editTrade: apiEditTrade, removeTrade: apiRemoveTrade, isLoading, error } = tradesHookResult;
+  const { addTrade: apiAddTrade, editTrade: apiEditTrade, removeTrade: apiRemoveTrade } = tradesHookResult;
+  
+  // Use all trades for statistics, fallback to empty array
+  const apiTrades = allApiTrades || [];
+  const isLoading = authLoading || allTradesLoading;
+  const error = allTradesError;
   
   console.log('TradeProvider - apiTrades:', apiTrades);
   const [isImporting, setIsImporting] = useState(false);
@@ -320,30 +343,36 @@ export function TradeProvider({ children }: { children: ReactNode }) {
     try {
       const apiTrade = convertInternalTradeToApi(trade);
       await apiAddTrade(apiTrade);
+      // Refresh all trades after adding
+      await mutateAllTrades();
     } catch (error) {
       console.error('Error adding trade:', error);
       throw error;
     }
-  }, [apiAddTrade]);
+  }, [apiAddTrade, mutateAllTrades]);
 
   const updateTrade = useCallback(async (id: string, tradeData: Omit<Trade, 'id'>) => {
     try {
       const apiTrade = convertInternalTradeToApi(tradeData);
       await apiEditTrade(id, apiTrade);
+      // Refresh all trades after updating
+      await mutateAllTrades();
     } catch (error) {
       console.error('Error updating trade:', error);
       throw error;
     }
-  }, [apiEditTrade]);
+  }, [apiEditTrade, mutateAllTrades]);
 
   const deleteTrade = useCallback(async (id: string) => {
     try {
       await apiRemoveTrade(id);
+      // Refresh all trades after deleting
+      await mutateAllTrades();
     } catch (error) {
       console.error('Error deleting trade:', error);
       throw error;
     }
-  }, [apiRemoveTrade]);
+  }, [apiRemoveTrade, mutateAllTrades]);
 
   const clearAllTrades = useCallback(async () => {
     try {
@@ -351,11 +380,13 @@ export function TradeProvider({ children }: { children: ReactNode }) {
       for (const trade of trades) {
         await apiRemoveTrade(trade.id);
       }
+      // Refresh all trades after clearing
+      await mutateAllTrades();
     } catch (error) {
       console.error('Error clearing trades:', error);
       throw error;
     }
-  }, [trades, apiRemoveTrade]);
+  }, [trades, apiRemoveTrade, mutateAllTrades]);
 
 
   return (
