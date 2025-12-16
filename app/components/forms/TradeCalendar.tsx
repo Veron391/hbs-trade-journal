@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, Calendar, X, TrendingUp, DollarSign, BarChar
 import MonthSummary from '../dashboard/MonthSummary';
 import { useI18n } from '../../context/I18nContext';
 import { getCalendarDayDetails, CalendarDayDetails } from '../../../lib/api/trades';
+import { filterCompletedTrades } from '@/lib/utils/tradeUtils';
 
 export default function TradeCalendar() {
   const { t } = useI18n();
@@ -280,11 +281,14 @@ export default function TradeCalendar() {
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
   // Group trades by date via backend calendar API for accurate per-day totals
+  // Filter out pending trades - only show completed trades in calendar
   const tradesByDate = useMemo(() => {
     const grouped = new Map();
+    // Filter out pending trades before grouping
+    const completedTrades = filterCompletedTrades(trades);
     // Seed grouped map with current trades for details (local list)
-    trades.forEach(trade => {
-      const exitDate = format(new Date(trade.exitDate), 'yyyy-MM-dd');
+    completedTrades.forEach(trade => {
+      const exitDate = format(new Date(trade.exitDate!), 'yyyy-MM-dd');
       if (!grouped.has(exitDate)) grouped.set(exitDate, { trades: [], totalPnL: 0 });
       grouped.get(exitDate).trades.push(trade);
     });

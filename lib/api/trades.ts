@@ -3,6 +3,7 @@ export type Trade = {
   id: string
   userId?: string
   assetType: 'stock' | 'crypto'
+  type?: 'stock' | 'crypto' // compatibility field for UI components
   symbol: string
   direction: 'long' | 'short'
   qty: number
@@ -45,9 +46,10 @@ export interface TradesListResponse {
 }
 
 // API functions (named exports)
-export async function listTrades(limit: number = 10, offset: number = 0): Promise<TradesListResponse> {
+export async function listTrades(limit: number = 10, offset: number = 0, ordering?: string): Promise<TradesListResponse> {
   try {
-    const res = await fetch(`/api/journal/trades?limit=${limit}&offset=${offset}&t=${Date.now()}`, { 
+    const orderingParam = ordering ? `&ordering=${encodeURIComponent(ordering)}` : '';
+    const res = await fetch(`/api/journal/trades?limit=${limit}&offset=${offset}${orderingParam}&t=${Date.now()}`, { 
       cache: 'no-store' // Disable caching
     })
     
@@ -83,7 +85,7 @@ export async function listTrades(limit: number = 10, offset: number = 0): Promis
 }
 
 // Fetch all trades using pagination
-export async function listAllTrades(): Promise<Trade[]> {
+export async function listAllTrades(ordering?: string): Promise<Trade[]> {
   const allTrades: Trade[] = []
   let offset = 0
   const limit = 100 // Fetch 100 at a time
@@ -91,7 +93,7 @@ export async function listAllTrades(): Promise<Trade[]> {
 
   try {
     while (hasMore) {
-      const response = await listTrades(limit, offset)
+      const response = await listTrades(limit, offset, ordering)
       allTrades.push(...response.trades)
       
       // Check if there are more trades to fetch
@@ -225,6 +227,7 @@ function mapBackendToTrade(b: any): Trade {
   return {
     id: String(b.id),
     assetType,
+    type: assetType, // Add type field for compatibility with TradeList component
     symbol: b.symbol,
     direction: b.direction,
     qty: Number(b.quantity),

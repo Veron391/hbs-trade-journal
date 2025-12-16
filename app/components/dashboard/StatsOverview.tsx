@@ -7,6 +7,7 @@ import { ArrowUpCircle, ArrowDownCircle, DollarSign, Calendar, BarChart3, Percen
 import { differenceInDays } from 'date-fns';
 import { TradeType } from '../../types';
 import { useI18n } from '../../context/I18nContext';
+import { filterCompletedTrades } from '@/lib/utils/tradeUtils';
 
 interface StatsOverviewProps {
   selectedPeriod: TimePeriod;
@@ -25,6 +26,9 @@ export default function StatsOverview({ selectedPeriod, tradeType }: StatsOvervi
     if (tradeType && tradeType !== 'total') {
       filteredTrades = filteredTrades.filter(trade => trade.type === tradeType);
     }
+    
+    // Filter out pending trades - only calculate stats for completed trades
+    filteredTrades = filterCompletedTrades(filteredTrades);
     
     if (filteredTrades.length === 0) {
       return {

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTrades as useTradesContext } from '../../context/TradeContext';
 import { useTrades } from '@/lib/hooks/useTrades';
+import { listAllTrades } from '@/lib/api/trades';
 import { Trade } from '../../types';
 import { format } from 'date-fns';
 import { Pencil, Trash2, ArrowUp, ArrowDown, AlertTriangle, ExternalLink, FileText, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -20,9 +21,6 @@ export default function TradeList() {
   // Calculate offset from current page
   const offset = (currentPage - 1) * tradesPerPage;
   
-  // Fetch trades with pagination
-  const { trades, count, next, previous, isLoading: tradesLoading, mutate } = useTrades(tradesPerPage, offset);
-  
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
   const [isAddingTrade, setIsAddingTrade] = useState(false);
   const [sortBy, setSortBy] = useState<keyof Trade>(() => {
@@ -39,25 +37,134 @@ export default function TradeList() {
     }
     return 'desc';
   });
+
+  // Map frontend field names to backend field names for sorting
+  const mapFieldToBackend = (field: keyof Trade): string => {
+    const fieldMap: Record<string, string> = {
+      'entryDate': 'entry_date',
+      'exitDate': 'exit_date',
+      'entryPrice': 'buy_price',
+      'exitPrice': 'sell_price',
+      'quantity': 'quantity',
+      'symbol': 'symbol',
+      'direction': 'direction',
+      'type': 'trade_type',
+    };
+    return fieldMap[field] || 'exit_date';
+  };
+
+  // Build ordering parameter for backend API
+  const ordering = sortBy ? `${sortDirection === 'desc' ? '-' : ''}${mapFieldToBackend(sortBy)}` : undefined;
+  
+  // State for all trades (for sorting across all pages)
+  const [allTrades, setAllTrades] = useState<Trade[]>([]);
+  const [isLoadingAllTrades, setIsLoadingAllTrades] = useState(false);
+  
+  // Fetch trades with pagination and sorting (for count and mutate)
+  const { trades, count, next, previous, isLoading: tradesLoading, mutate } = useTrades(tradesPerPage, offset, ordering);
   const [apiMessage, setApiMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [showScriptModal, setShowScriptModal] = useState(false);
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [selectedTradeDetails, setSelectedTradeDetails] = useState<Trade | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   
-  // Calculate total pages from API count
-  const totalPages = count > 0 ? Math.ceil(count / tradesPerPage) : 1;
+  // Load all trades when sort changes
+  useEffect(() => {
+    const loadAllTrades = async () => {
+      setIsLoadingAllTrades(true);
+      try {
+        const trades = await listAllTrades(ordering);
+        setAllTrades(trades);
+      } catch (error) {
+        console.error('Error loading all trades:', error);
+        setAllTrades([]);
+      } finally {
+        setIsLoadingAllTrades(false);
+      }
+    };
+    
+    loadAllTrades();
+  }, [ordering, sortBy, sortDirection]);
+  
+  // Refresh all trades after delete or update
+  const refreshAllTrades = async () => {
+    try {
+      const trades = await listAllTrades(ordering);
+      setAllTrades(trades);
+    } catch (error) {
+      console.error('Error refreshing all trades:', error);
+    }
+  };
+  
+  // Sort all trades on frontend
+  const sortTrades = (trades: Trade[]): Trade[] => {
+    if (!sortBy) return trades;
+    
+    return [...trades].sort((a, b) => {
+      let aValue: any = a[sortBy];
+      let bValue: any = b[sortBy];
+      
+      // Handle type field (may be assetType in some cases)
+      if (sortBy === 'type') {
+        aValue = (a as any).type || (a as any).assetType || '';
+        bValue = (b as any).type || (b as any).assetType || '';
+      }
+      
+      // Handle null/undefined values
+      if (aValue == null) aValue = '';
+      if (bValue == null) bValue = '';
+      
+      // Handle dates
+      if (sortBy === 'entryDate' || sortBy === 'exitDate') {
+        aValue = aValue ? new Date(aValue).getTime() : 0;
+        bValue = bValue ? new Date(bValue).getTime() : 0;
+      }
+      
+      // Handle numbers
+      if (sortBy === 'entryPrice' || sortBy === 'exitPrice' || sortBy === 'quantity') {
+        aValue = typeof aValue === 'number' ? aValue : parseFloat(aValue) || 0;
+        bValue = typeof bValue === 'number' ? bValue : parseFloat(bValue) || 0;
+      }
+      
+      // Handle strings (case-insensitive)
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+      
+      // Compare values
+      if (aValue < bValue) {
+        return sortDirection === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortDirection === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  };
+  
+  // Get sorted trades
+  const sortedAllTrades = sortTrades(allTrades);
+  
+  // Paginate sorted trades
+  const startIndex = (currentPage - 1) * tradesPerPage;
+  const endIndex = startIndex + tradesPerPage;
+  const paginatedTrades = sortedAllTrades.slice(startIndex, endIndex);
+  
+  // Calculate total pages from sorted trades count
+  const totalPages = sortedAllTrades.length > 0 ? Math.ceil(sortedAllTrades.length / tradesPerPage) : 1;
   
   // Delete trade handler
   const deleteTrade = async (id: string) => {
     await deleteTradeContext(id);
     
     // If this was the last trade on the page, go to previous page
-    if (trades.length === 1 && currentPage > 1) {
+    if (sortedTrades.length === 1 && currentPage > 1) {
       setCurrentPage(prev => prev - 1);
     }
     
     await mutate(); // Refresh the list
+    await refreshAllTrades(); // Refresh all trades
   };
   
   // Reset to page 1 if current page exceeds total pages
@@ -82,6 +189,9 @@ export default function TradeList() {
     // Save sorting options to localStorage
     localStorage.setItem('tradeList_sortBy', column);
     localStorage.setItem('tradeList_sortDirection', newSortDirection);
+    
+    // Reset to page 1 when sorting changes
+    setCurrentPage(1);
   };
 
   // Fetch a single trade detail from backend and map to internal structure
@@ -117,31 +227,8 @@ export default function TradeList() {
     }
   };
 
-  const sortedTrades = [...trades].sort((a, b) => {
-    if (sortBy === 'entryDate' || sortBy === 'exitDate') {
-      const dateA = new Date(a[sortBy]);
-      const dateB = new Date(b[sortBy]);
-      return sortDirection === 'asc' 
-        ? dateA.getTime() - dateB.getTime() 
-        : dateB.getTime() - dateA.getTime();
-    }
-
-    if (sortBy === 'entryPrice' || sortBy === 'exitPrice' || sortBy === 'quantity') {
-      return sortDirection === 'asc' 
-        ? a[sortBy] - b[sortBy] 
-        : b[sortBy] - a[sortBy];
-    }
-
-    const valA = String(a[sortBy]).toLowerCase();
-    const valB = String(b[sortBy]).toLowerCase();
-    
-    return sortDirection === 'asc'
-      ? valA.localeCompare(valB)
-      : valB.localeCompare(valA);
-  });
-
-  // Use trades directly from API (already paginated server-side)
-  // Apply client-side sorting to the paginated results
+  // Use paginated sorted trades
+  const sortedTrades = paginatedTrades;
 
   const calculatePnL = (trade: Trade) => {
     const entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : 0;
@@ -199,7 +286,7 @@ export default function TradeList() {
           >
             {t('addNewTrade')}
           </button>
-          {trades.length > 0 && (
+          {sortedAllTrades.length > 0 && (
             <button
               onClick={() => setShowDeleteAllModal(true)}
               className="flex items-center px-2.5 py-1.5 bg-red-700 text-white rounded-md hover:bg-red-800 text-sm"
@@ -294,7 +381,7 @@ export default function TradeList() {
                   return (
                     <>
                       {parts[0]}
-                      <strong className="text-red-400">{trades.length}</strong>
+                      <strong className="text-red-400">{sortedAllTrades.length}</strong>
                       {parts[1]}
                     </>
                   );
@@ -310,9 +397,10 @@ export default function TradeList() {
                 onClick={async () => {
                   try {
                     await clearAllTrades();
+                    setAllTrades([]); // Clear all trades
                     setApiMessage({ 
                       type: 'success', 
-                      text: `Successfully deleted all ${trades.length} trade${trades.length !== 1 ? 's' : ''}!` 
+                      text: `Successfully deleted all ${sortedAllTrades.length} trade${sortedAllTrades.length !== 1 ? 's' : ''}!` 
                     });
                     
                     // Clear message after 5 seconds
@@ -321,6 +409,7 @@ export default function TradeList() {
                     }, 5000);
                     
                     setShowDeleteAllModal(false);
+                    await refreshAllTrades(); // Refresh all trades
                   } catch (error) {
                     setApiMessage({ 
                       type: 'error', 
@@ -356,7 +445,11 @@ export default function TradeList() {
         </div>
       )}
 
-      {trades.length === 0 ? (
+      {isLoadingAllTrades ? (
+        <div className="text-center py-12 bg-[#1C1719] rounded-lg">
+          <p className="text-gray-300">Loading trades...</p>
+        </div>
+      ) : sortedTrades.length === 0 ? (
         <div className="text-center py-12 bg-[#1C1719] rounded-lg">
           <p className="text-gray-300">{t('emptyTradesHint')}</p>
         </div>
@@ -492,11 +585,11 @@ export default function TradeList() {
                         <span 
                           className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-md"
                           style={{
-                            backgroundColor: trade.type === 'stock' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 165, 0, 0.2)', // Blue for stock, orange for crypto
-                            color: trade.type === 'stock' ? '#3B82F6' : '#FFA500' // Blue text for stock, orange for crypto
+                            backgroundColor: (trade.type || (trade as any).assetType) === 'stock' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 165, 0, 0.2)', // Blue for stock, orange for crypto
+                            color: (trade.type || (trade as any).assetType) === 'stock' ? '#3B82F6' : '#FFA500' // Blue text for stock, orange for crypto
                           }}
                         >
-                          {trade.type === 'stock' ? 'Stock' : 'Crypto'}
+                          {(trade.type || (trade as any).assetType) === 'stock' ? 'Stock' : 'Crypto'}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-300 text-center whitespace-nowrap">
@@ -649,15 +742,15 @@ export default function TradeList() {
           {totalPages > 1 && (
             <div className="mt-6 flex items-center justify-between">
               <div className="text-sm text-gray-400">
-                Showing {offset + 1}-{Math.min(offset + trades.length, count)} of {count} trades
+                Showing {startIndex + 1}-{Math.min(endIndex, sortedAllTrades.length)} of {sortedAllTrades.length} trades
               </div>
               
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1 || tradesLoading}
+                  disabled={currentPage === 1 || isLoadingAllTrades}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1 ${
-                    currentPage === 1 || tradesLoading
+                    currentPage === 1 || isLoadingAllTrades
                       ? 'bg-[#1C1719]/50 border border-white/10 text-gray-400 cursor-not-allowed'
                       : 'bg-[#1C1719] border border-white/20 text-white hover:bg-blue-600/20'
                   }`}
@@ -749,9 +842,9 @@ export default function TradeList() {
 
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages || tradesLoading}
+                  disabled={currentPage === totalPages || isLoadingAllTrades}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1 ${
-                    currentPage === totalPages || tradesLoading
+                    currentPage === totalPages || isLoadingAllTrades
                       ? 'bg-[#1C1719]/50 border border-white/10 text-gray-400 cursor-not-allowed'
                       : 'bg-[#1C1719] border border-white/20 text-white hover:bg-blue-600/20'
                   }`}

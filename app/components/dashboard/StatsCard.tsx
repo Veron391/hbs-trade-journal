@@ -3,6 +3,7 @@
 import React, { useMemo } from 'react';
 import { useTrades } from "../../context/TradeContext";
 import { ArrowUpIcon, ArrowDownIcon } from "@heroicons/react/24/outline";
+import { filterCompletedTrades } from '@/lib/utils/tradeUtils';
 
 export default function StatsCard() {
   const { trades } = useTrades();
@@ -33,8 +34,11 @@ export default function StatsCard() {
     let largestWin = 0;
     let largestLoss = 0;
 
+    // Filter out pending trades - only calculate stats for completed trades
+    const completedTrades = filterCompletedTrades(trades);
+
     // Process each trade
-    trades.forEach((trade) => {
+    completedTrades.forEach((trade) => {
       const entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : parseFloat(String(trade.entryPrice)) || 0;
       const exitPrice = typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice)) || 0;
       const quantity = typeof trade.quantity === 'number' ? trade.quantity : parseFloat(String(trade.quantity)) || 0;
@@ -64,7 +68,7 @@ export default function StatsCard() {
       }
     });
 
-    const winRate = (winningTrades / trades.length) * 100;
+    const winRate = (completedTrades.length > 0) ? (winningTrades / completedTrades.length) * 100 : 0;
     const averageWin = winningTrades > 0 ? totalWinAmount / winningTrades : 0;
     const averageLoss = losingTrades > 0 ? totalLossAmount / losingTrades : 0;
     // Calculate average risk/reward ratio

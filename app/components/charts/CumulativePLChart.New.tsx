@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import { filterTradesByPeriod, TimePeriod } from '../dashboard/TimePeriodSelector';
 import { TradeType } from '../../types';
+import { filterCompletedTrades } from '@/lib/utils/tradeUtils';
 
 interface CumulativePLChartNewProps {
   selectedPeriod: TimePeriod;
@@ -26,6 +27,9 @@ export default function CumulativePLChartNew({ selectedPeriod, tradeType }: Cumu
   if (tradeType && tradeType !== 'total') {
     filteredTrades = filteredTrades.filter(trade => trade.type === tradeType);
   }
+  
+  // Filter out pending trades - only show completed trades in chart
+  filteredTrades = filterCompletedTrades(filteredTrades);
   const sortedTrades = [...filteredTrades].sort((a, b) => 
     new Date(a.exitDate).getTime() - new Date(b.exitDate).getTime()
   );

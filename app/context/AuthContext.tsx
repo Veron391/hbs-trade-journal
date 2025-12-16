@@ -93,6 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     if (!res.ok) {
       const errText = await res.text();
+      // Parse and return the error message (will be humanized in the component)
       throw new Error(errText || 'Login failed');
     }
     const profile = await fetch('/api/users/profile', { credentials: 'include' });

@@ -7,6 +7,7 @@ import { useTrades as useTradesHook } from '@/lib/hooks/useTrades';
 import { Trade as ApiTrade, listAllTrades } from '@/lib/api/trades';
 import useSWR from 'swr';
 import { useAuth } from './AuthContext';
+import { filterCompletedTrades } from '@/lib/utils/tradeUtils';
 
 interface TradeContextType {
   trades: Trade[];
@@ -190,8 +191,11 @@ export function TradeProvider({ children }: { children: ReactNode }) {
       };
     }
 
+    // Filter out pending trades - only calculate stats for completed trades
+    const completedTrades = filterCompletedTrades(trades);
+
     // Process each trade and categorize them
-    const processedTrades = trades.map(trade => {
+    const processedTrades = completedTrades.map(trade => {
       const entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : parseFloat(String(trade.entryPrice)) || 0;
       const exitPrice = typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice)) || 0;
       const quantity = typeof trade.quantity === 'number' ? trade.quantity : parseFloat(String(trade.quantity)) || 0;

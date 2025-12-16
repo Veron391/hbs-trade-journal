@@ -6,13 +6,17 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import FormInput from '../../components/ui/FormInput';
 import Button from '../../components/ui/Button';
+import { useI18n } from '../../context/I18nContext';
+import { parseApiError, getErrorTranslationKey } from '@/lib/utils/errorUtils';
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [identifierError, setIdentifierError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, user, loading: authLoading } = useAuth();
+  const { t } = useI18n();
   const router = useRouter();
   useEffect(() => {
     if (!authLoading && user) {
@@ -26,14 +30,26 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setIdentifierError('');
+    setPasswordError('');
     setLoading(true);
 
     try {
       await login(identifier, password);
       router.push('/');
     } catch (err: any) {
-      setError(err.message || 'Invalid email or password');
+      // Parse the error message from API response
+      const rawError = err.message || '';
+      const parsedError = parseApiError(rawError);
+      
+      // Get translation key based on error message
+      const translationKey = getErrorTranslationKey(parsedError);
+      
+      // Get humanized error message in user's language
+      const errorMessage = t(translationKey);
+      
+      setIdentifierError(errorMessage);
+      setPasswordError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -51,21 +67,19 @@ export default function LoginPage() {
       </div>
       <h1 className="text-2xl font-bold text-white mb-6 text-center">Log In</h1>
       
-      {error && (
-        <div className="bg-red-900/50 border border-red-500 text-white px-4 py-3 rounded-md mb-4">
-          {error}
-        </div>
-      )}
-      
       <form onSubmit={handleSubmit}>
         <FormInput
           id="identifier"
           label="Email or Username"
           type="text"
           value={identifier}
-          onChange={(e) => setIdentifier(e.target.value)}
+          onChange={(e) => {
+            setIdentifier(e.target.value);
+            if (identifierError) setIdentifierError('');
+          }}
           required
           placeholder="email or username"
+          error={identifierError}
         />
         
         <FormInput
@@ -73,8 +87,12 @@ export default function LoginPage() {
           label="Password"
           type="password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            if (passwordError) setPasswordError('');
+          }}
           required
+          error={passwordError}
         />
         
         <div className="flex justify-between items-center mb-6">

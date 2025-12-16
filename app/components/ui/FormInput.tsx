@@ -41,8 +41,8 @@ export default function FormInput({
           required={required}
           placeholder={placeholder}
           className={`w-full px-3 py-2 bg-[#342F31] text-white border rounded-md 
-            focus:outline-none focus:ring-1 focus:ring-blue-500 
-            ${error ? 'border-danger' : 'border-[#534E50]'}
+            focus:outline-none focus:ring-1 
+            ${error ? 'border-danger focus:ring-red-500' : 'border-[#534E50] focus:ring-blue-500'}
             ${isPassword ? 'pr-10' : ''}`}
           style={{
             WebkitBoxShadow: '0 0 0 1000px #342F31 inset',

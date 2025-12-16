@@ -22,6 +22,7 @@ import { useI18n } from '../../context/I18nContext';
 import CumulativePLChartNew from '../charts/CumulativePLChart.New';
 import { filterTradesByPeriod, TimePeriod } from './TimePeriodSelector';
 import { TradeType } from '../../types';
+import { filterCompletedTrades } from '@/lib/utils/tradeUtils';
 
 ChartJS.register(
   CategoryScale, 
@@ -57,6 +58,9 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
     if (tradeType && tradeType !== 'total') {
       filtered = filtered.filter(trade => trade.type === tradeType);
     }
+    
+    // Filter out pending trades - only calculate stats for completed trades
+    filtered = filterCompletedTrades(filtered);
     
     if (filtered.length === 0) {
       return {

@@ -121,7 +121,17 @@ const dictionaries: Record<Lang, Dict> = {
     maxConsecutiveLosses: 'Max Consecutive Losses',
     averageHoldTimeAll: 'Average Hold Time (All)',
     averageHoldTimeWinners: 'Average Hold Time (Winners)',
-    averageHoldTimeLosers: 'Average Hold Time (Losers)'
+    averageHoldTimeLosers: 'Average Hold Time (Losers)',
+    errorInvalidCredentials: 'Invalid email or password',
+    errorUserNotFound: 'User not found',
+    errorIncorrectPassword: 'Incorrect password',
+    errorInvalidEmail: 'Invalid email address',
+    errorInvalidUsername: 'Invalid username',
+    errorAccountDisabled: 'Account is disabled',
+    errorAccountLocked: 'Account is locked',
+    errorNetwork: 'Network error. Please check your connection.',
+    errorServer: 'Server error. Please try again later.',
+    errorGeneric: 'An error occurred. Please try again.'
   },
   ru: {
     calendar: 'Календарь',
@@ -237,7 +247,17 @@ const dictionaries: Record<Lang, Dict> = {
     maxConsecutiveLosses: 'Макс. подряд проигрышей',
     averageHoldTimeAll: 'Среднее время удержания (все)',
     averageHoldTimeWinners: 'Среднее время удержания (выигрыши)',
-    averageHoldTimeLosers: 'Среднее время удержания (проигрыши)'
+    averageHoldTimeLosers: 'Среднее время удержания (проигрыши)',
+    errorInvalidCredentials: 'Неверный email или пароль',
+    errorUserNotFound: 'Пользователь не найден',
+    errorIncorrectPassword: 'Неверный пароль',
+    errorInvalidEmail: 'Неверный email адрес',
+    errorInvalidUsername: 'Неверное имя пользователя',
+    errorAccountDisabled: 'Аккаунт отключен',
+    errorAccountLocked: 'Аккаунт заблокирован',
+    errorNetwork: 'Ошибка сети. Проверьте подключение.',
+    errorServer: 'Ошибка сервера. Попробуйте позже.',
+    errorGeneric: 'Произошла ошибка. Попробуйте еще раз.'
   },
   uz: {
     calendar: 'Kalendar',
@@ -353,7 +373,17 @@ const dictionaries: Record<Lang, Dict> = {
     maxConsecutiveLosses: 'Maks. ketma-ket zararlar',
     averageHoldTimeAll: 'O\'rtacha ushlab turish vaqti (barchasi)',
     averageHoldTimeWinners: 'O\'rtacha ushlab turish vaqti (g\'alabalar)',
-    averageHoldTimeLosers: 'O\'rtacha ushlab turish vaqti (zararlar)'
+    averageHoldTimeLosers: 'O\'rtacha ushlab turish vaqti (zararlar)',
+    errorInvalidCredentials: 'Noto\'g\'ri email yoki parol',
+    errorUserNotFound: 'Foydalanuvchi topilmadi',
+    errorIncorrectPassword: 'Noto\'g\'ri parol',
+    errorInvalidEmail: 'Noto\'g\'ri email manzil',
+    errorInvalidUsername: 'Noto\'g\'ri foydalanuvchi nomi',
+    errorAccountDisabled: 'Hisob o\'chirilgan',
+    errorAccountLocked: 'Hisob bloklangan',
+    errorNetwork: 'Tarmoq xatosi. Ulanishni tekshiring.',
+    errorServer: 'Server xatosi. Keyinroq qayta urinib ko\'ring.',
+    errorGeneric: 'Xatolik yuz berdi. Qayta urinib ko\'ring.'
   }
 };
 

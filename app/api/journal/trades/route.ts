@@ -9,15 +9,19 @@ export async function GET(request: NextRequest) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (access) headers['Authorization'] = `Bearer ${access}`;
 
-  // Get query parameters for pagination
+  // Get query parameters for pagination and sorting
   const { searchParams } = new URL(request.url);
   const limit = searchParams.get('limit') || '100'; // Default to 100 trades
   const offset = searchParams.get('offset') || '0';
+  const ordering = searchParams.get('ordering');
   
   // Build query string
   const queryParams = new URLSearchParams();
   queryParams.append('limit', limit);
   queryParams.append('offset', offset);
+  if (ordering) {
+    queryParams.append('ordering', ordering);
+  }
 
   try {
     const backendRes = await fetch(`https://journal.saraftech.com/api/v1/journal/trades/?${queryParams.toString()}`, {

@@ -2,12 +2,12 @@ import useSWR from 'swr'
 import { listTrades, createTrade, updateTrade, deleteTrade, Trade, CreateTradeData, UpdateTradeData, TradesListResponse } from '@/lib/api/trades'
 import { useAuth } from '@/app/context/AuthContext'
 
-export function useTrades(limit: number = 10, offset: number = 0) {
+export function useTrades(limit: number = 10, offset: number = 0, ordering?: string) {
   const { user, loading } = useAuth()
   
   const { data, error, isLoading, mutate } = useSWR<TradesListResponse>(
-    user ? `/api/journal/trades?limit=${limit}&offset=${offset}` : null, // Only fetch when user is authenticated
-    async () => listTrades(limit, offset), 
+    user ? `/api/journal/trades?limit=${limit}&offset=${offset}${ordering ? `&ordering=${ordering}` : ''}` : null, // Only fetch when user is authenticated
+    async () => listTrades(limit, offset, ordering), 
     {
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
