@@ -8,7 +8,7 @@ import Button from '../../components/ui/Button';
 
 
 export default function ProfilePage() {
-  const { user, logout, updateUser, changePassword } = useAuth();
+  const { user, updateUser, changePassword } = useAuth();
   const router = useRouter();
   
   // All hooks must be called before any conditional returns
