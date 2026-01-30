@@ -336,12 +336,6 @@ export default function TradeCalendar() {
       
       {/* Calendar */}
       <div className="bg-[#1C1719] rounded-lg shadow p-6">
-        {!isBackendDataLoaded && (
-          <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
-            <span className="ml-3 text-gray-400">{t('loadingCalendarData')}</span>
-          </div>
-        )}
         {/* Calendar header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-white">
@@ -614,7 +608,7 @@ export default function TradeCalendar() {
                     </button>
                   </div>
                   <div className="flex justify-center items-center py-8 flex-1">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+                    <div className="loader"></div>
                   </div>
                 </div>
               );

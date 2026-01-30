@@ -6,8 +6,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import FormInput from '../../components/ui/FormInput';
 import Button from '../../components/ui/Button';
-import { useI18n } from '../../context/I18nContext';
-import { parseApiError, getErrorTranslationKey } from '@/lib/utils/errorUtils';
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState('');
@@ -16,7 +14,6 @@ export default function LoginPage() {
   const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, user, loading: authLoading } = useAuth();
-  const { t } = useI18n();
   const router = useRouter();
   useEffect(() => {
     if (!authLoading && user) {
@@ -38,16 +35,7 @@ export default function LoginPage() {
       await login(identifier, password);
       router.push('/');
     } catch (err: any) {
-      // Parse the error message from API response
-      const rawError = err.message || '';
-      const parsedError = parseApiError(rawError);
-      
-      // Get translation key based on error message
-      const translationKey = getErrorTranslationKey(parsedError);
-      
-      // Get humanized error message in user's language
-      const errorMessage = t(translationKey);
-      
+      const errorMessage = err.message || 'Kirish muvaffaqiyatsiz. Qayta urinib ko\'ring.';
       setIdentifierError(errorMessage);
       setPasswordError(errorMessage);
     } finally {
@@ -56,21 +44,21 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#110D0F] px-4">
-      <div className="max-w-md w-full p-6 bg-[#1C1719] rounded-lg shadow-lg">
-      <div className="flex items-center justify-center mb-6">
+    <div className="min-h-screen flex items-center justify-center bg-[#110D0F] px-2 sm:px-4 py-4 sm:py-8">
+      <div className="max-w-md w-full p-4 sm:p-6 bg-[#1C1719] rounded-lg shadow-lg">
+      <div className="flex items-center justify-center mb-4 sm:mb-6">
                     <img 
               src="https://online.hbsakademiya.uz/images/svg/logo.svg" 
               alt="HBS Academy" 
-              className="h-8 w-auto logo-partial-white"
+              className="h-7 sm:h-8 w-auto logo-partial-white"
             />
       </div>
-      <h1 className="text-2xl font-bold text-white mb-6 text-center">Log In</h1>
+      <h1 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6 text-center">Kirish</h1>
       
       <form onSubmit={handleSubmit}>
         <FormInput
           id="identifier"
-          label="Email or Username"
+          label="Email"
           type="text"
           value={identifier}
           onChange={(e) => {
@@ -78,13 +66,13 @@ export default function LoginPage() {
             if (identifierError) setIdentifierError('');
           }}
           required
-          placeholder="email or username"
           error={identifierError}
+          autoComplete="off"
         />
         
         <FormInput
           id="password"
-          label="Password"
+          label="Parol"
           type="password"
           value={password}
           onChange={(e) => {
@@ -93,22 +81,23 @@ export default function LoginPage() {
           }}
           required
           error={passwordError}
+          autoComplete="current-password"
         />
         
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
           <div className="flex items-center">
             <input 
               type="checkbox" 
               id="remember" 
               className="w-4 h-4 text-blue-600 bg-[#342F31] border-[#534E50] rounded focus:ring-blue-500"
             />
-            <label htmlFor="remember" className="ml-2 text-sm text-gray-400">
-              Remember me
+            <label htmlFor="remember" className="ml-2 text-xs sm:text-sm text-gray-400">
+              Meni eslab qol
             </label>
           </div>
           
-          <Link href="/auth/forgot-password" className="text-sm text-blue-500 hover:underline">
-            Forgot password?
+          <Link href="/auth/forgot-password" className="text-xs sm:text-sm text-blue-500 hover:underline">
+            Parolni unutdingizmi?
           </Link>
         </div>
         
@@ -117,14 +106,14 @@ export default function LoginPage() {
           fullWidth 
           disabled={loading}
         >
-          {loading ? 'Logging in...' : 'Log In'}
+          {loading ? 'Kirilmoqda...' : 'Kirish'}
         </Button>
       </form>
       
-        <div className="mt-6 text-center text-gray-400">
-          <span>Don't have an account? </span>
+        <div className="mt-4 sm:mt-6 text-center text-gray-400 text-xs sm:text-sm">
+          <span>Hisobingiz yo'qmi? </span>
           <Link href="/auth/register" className="text-blue-500 hover:underline">
-            Register
+            Ro'yxatdan o'tish
           </Link>
         </div>
       </div>

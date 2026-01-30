@@ -89,12 +89,7 @@ export default function MonthSummary({ currentMonth }: MonthSummaryProps) {
         {getMonthName(currentMonth)} {currentMonth.getFullYear()} {t('tradingStatistics').toLowerCase()}
       </h2>
       
-      {isLoading ? (
-        <div className="flex justify-center items-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
-          <span className="ml-3 text-gray-400">{t('loadingSummary')}</span>
-        </div>
-      ) : (
+      {!isLoading && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 justify-center">
         <div className="bg-[#1C1719] p-4 rounded-lg text-center">
           <div className="text-gray-400 text-sm">{t('totalTrades')}</div>

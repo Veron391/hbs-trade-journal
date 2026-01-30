@@ -677,7 +677,19 @@ export default function TradeList() {
                               href={trade.link}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="hover:bg-gray-700/30 rounded p-1 transition-colors"
+                              className="inline-flex items-center justify-center rounded p-1.5 transition-all duration-200 hover:scale-110"
+                              style={{
+                                backgroundColor: 'rgba(244, 233, 215, 0.1)',
+                                border: '1px solid rgba(244, 233, 215, 0.3)'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = 'rgba(244, 233, 215, 0.2)';
+                                e.currentTarget.style.borderColor = 'rgba(244, 233, 215, 0.5)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = 'rgba(244, 233, 215, 0.1)';
+                                e.currentTarget.style.borderColor = 'rgba(244, 233, 215, 0.3)';
+                              }}
                               title="Open trade link"
                               onClick={(e) => e.stopPropagation()}
                             >
@@ -689,47 +701,75 @@ export default function TradeList() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center text-sm font-medium whitespace-nowrap">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingTrade(trade);
-                          }}
-                          className="text-blue-600 hover:text-blue-900 mr-3"
-                        >
-                          <Pencil size={18} />
-                        </button>
-                        <button
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (window.confirm(t('confirmDeleteOne'))) {
-                              try {
-                                await deleteTrade(trade.id);
-                                setApiMessage({ 
-                                  type: 'success', 
-                                  text: `Trade ${trade.symbol} deleted successfully!` 
-                                });
-                                
-                                // Clear message after 3 seconds
-                                setTimeout(() => {
-                                  setApiMessage(null);
-                                }, 3000);
-                              } catch (error) {
-                                setApiMessage({ 
-                                  type: 'error', 
-                                  text: `Failed to delete trade ${trade.symbol}. Please try again.` 
-                                });
-                                
-                                // Clear error message after 5 seconds
-                                setTimeout(() => {
-                                  setApiMessage(null);
-                                }, 5000);
+                        <div className="flex justify-center items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingTrade(trade);
+                            }}
+                            className="inline-flex items-center justify-center rounded p-1.5 transition-all duration-200 hover:scale-110"
+                            style={{
+                              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                              border: '1px solid rgba(59, 130, 246, 0.3)',
+                              color: '#ffffff'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
+                              e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+                              e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+                            }}
+                          >
+                            <Pencil size={18} />
+                          </button>
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (window.confirm(t('confirmDeleteOne'))) {
+                                try {
+                                  await deleteTrade(trade.id);
+                                  setApiMessage({ 
+                                    type: 'success', 
+                                    text: `Trade ${trade.symbol} deleted successfully!` 
+                                  });
+                                  
+                                  // Clear message after 3 seconds
+                                  setTimeout(() => {
+                                    setApiMessage(null);
+                                  }, 3000);
+                                } catch (error) {
+                                  setApiMessage({ 
+                                    type: 'error', 
+                                    text: `Failed to delete trade ${trade.symbol}. Please try again.` 
+                                  });
+                                  
+                                  // Clear error message after 5 seconds
+                                  setTimeout(() => {
+                                    setApiMessage(null);
+                                  }, 5000);
+                                }
                               }
-                            }
-                          }}
-                          className="text-danger hover:text-red-800"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                            }}
+                            className="inline-flex items-center justify-center rounded p-1.5 transition-all duration-200 hover:scale-110"
+                            style={{
+                              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              color: '#EF4444'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+                              e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+                              e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                            }}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

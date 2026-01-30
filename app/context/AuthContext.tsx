@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const res = await fetch('/api/users/profile', {
           credentials: 'include',
-          cache: 'no-store' // Don't cache to ensure fresh data
+          next: { revalidate: 60 } // Cache for 60 seconds (user profile doesn't change often)
         });
         if (res.ok) {
           const data = await res.json();
@@ -85,6 +85,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Real login using backend API
   const login = async (identifier: string, password: string) => {
+    setLoading(true);
+    try {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -110,6 +112,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       phone_number: data.phone_number,
     };
     setUser(mapped);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Real register using backend API
@@ -121,6 +126,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password: string,
     password_confirm: string
   ) => {
+    setLoading(true);
+    try {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -144,11 +151,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         phone_number: data.phone_number,
       };
       setUser(mapped);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   // Logout function
   const logout = async () => {
+    setLoading(true);
     try {
       await fetch('/api/auth/logout', { 
         method: 'POST',
@@ -158,8 +169,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Logout error:', error);
     } finally {
       setUser(null);
-      setLoading(false);
       // Force a page reload to clear any cached data
+      // Loading will be reset after page reload
       window.location.href = '/';
     }
   };

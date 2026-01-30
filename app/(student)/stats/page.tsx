@@ -29,9 +29,9 @@ export default function StatsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="py-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <h1 className="text-xl font-bold text-white">{t('tradingStatistics')}</h1>
+      <div className="py-4 sm:py-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-8">
+          <h1 className="text-xl sm:text-2xl font-bold text-white">{t('tradingStatistics')}</h1>
           <TimePeriodSelector
             selectedPeriod={selectedPeriod}
             onPeriodChange={setSelectedPeriod}
@@ -39,11 +39,11 @@ export default function StatsPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="mb-8">
-          <div className="flex space-x-1 bg-[#1C1719] p-1 rounded-lg border border-white/20 w-fit">
+        <div className="mb-4 sm:mb-8">
+          <div className="flex space-x-1 bg-[#1C1719] p-1 rounded-lg border border-white/20 w-full sm:w-fit overflow-x-auto">
             <button
               onClick={() => setActiveTab('total')}
-              className={`px-6 py-3 rounded-lg text-sm font-medium transition-colors duration-200 ${
+              className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-xs sm:text-sm font-medium transition-colors duration-200 whitespace-nowrap min-h-[44px] ${
                 activeTab === 'total'
                   ? 'bg-[#A8BBA3] text-gray-800'
                   : 'text-gray-300 hover:text-white hover:bg-white/10'
@@ -53,7 +53,7 @@ export default function StatsPage() {
             </button>
             <button
               onClick={() => setActiveTab('stock')}
-              className={`px-6 py-3 rounded-lg text-sm font-medium transition-colors duration-200 ${
+              className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-xs sm:text-sm font-medium transition-colors duration-200 whitespace-nowrap min-h-[44px] ${
                 activeTab === 'stock'
                   ? 'bg-[#EBD9D1] text-gray-800'
                   : 'text-gray-300 hover:text-white hover:bg-white/10'
@@ -63,7 +63,7 @@ export default function StatsPage() {
             </button>
             <button
               onClick={() => setActiveTab('crypto')}
-              className={`px-6 py-3 rounded-lg text-sm font-medium transition-colors duration-200 ${
+              className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-xs sm:text-sm font-medium transition-colors duration-200 whitespace-nowrap min-h-[44px] ${
                 activeTab === 'crypto'
                   ? 'bg-[#D97706] text-white'
                   : 'text-gray-300 hover:text-white hover:bg-white/10'
@@ -81,4 +81,4 @@ export default function StatsPage() {
       </div>
     </ProtectedRoute>
   );
-} 
+}

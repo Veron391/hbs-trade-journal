@@ -32,32 +32,32 @@ export default function RegisterPage() {
     const newErrors: {[key: string]: string} = {};
     
     if (!fullName.trim()) {
-      newErrors.fullName = 'Full name is required';
+      newErrors.fullName = 'To\'liq ism majburiy';
     }
     if (!username.trim()) {
-      newErrors.username = 'Username is required';
+      newErrors.username = 'Foydalanuvchi nomi majburiy';
     }
 
     if (!phoneNumber.trim()) {
-      newErrors.phoneNumber = 'Phone number is required';
+      newErrors.phoneNumber = 'Telefon raqami majburiy';
     }
     
     if (!email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = 'Email majburiy';
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Email is invalid';
+      newErrors.email = 'Email noto\'g\'ri';
     }
     
     if (!password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = 'Parol majburiy';
     } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password = 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak';
     }
     
     if (!confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
+      newErrors.confirmPassword = 'Iltimos, parolni tasdiqlang';
     } else if (password !== confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match. Please enter the same password.';
+      newErrors.confirmPassword = 'Parollar mos kelmaydi. Xuddi shu parolni kiriting.';
     }
     
     setErrors(newErrors);
@@ -78,7 +78,7 @@ export default function RegisterPage() {
       router.push('/');
     } catch (err: any) {
       setErrors({
-        form: err.message || 'Registration failed. Please try again.'
+        form: err.message || 'Ro\'yxatdan o\'tish muvaffaqiyatsiz. Qayta urinib ko\'ring.'
       });
     } finally {
       setLoading(false);
@@ -101,54 +101,54 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#110D0F] px-4">
-      <div className="max-w-md w-full p-6 bg-[#1C1719] rounded-lg shadow-lg">
-             <div className="flex items-center justify-center mb-6">
+    <div className="min-h-screen flex items-center justify-center bg-[#110D0F] px-2 sm:px-4 py-4 sm:py-8">
+      <div className="max-w-md w-full p-4 sm:p-6 bg-[#1C1719] rounded-lg shadow-lg">
+             <div className="flex items-center justify-center mb-4 sm:mb-6">
                     <img 
               src="https://online.hbsakademiya.uz/images/svg/logo.svg" 
               alt="HBS Academy" 
-              className="h-8 w-auto logo-partial-white"
+              className="h-7 sm:h-8 w-auto logo-partial-white"
             />
        </div>
-       <h1 className="text-2xl font-bold text-white mb-6 text-center">Create Account</h1>
+       <h1 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6 text-center">Hisob yaratish</h1>
       
       {errors.form && (
-        <div className="bg-red-900/50 border border-red-500 text-white px-4 py-3 rounded-md mb-4">
+        <div className="bg-red-900/50 border border-red-500 text-white px-3 sm:px-4 py-2 sm:py-3 rounded-md mb-4 text-xs sm:text-sm">
           {errors.form}
         </div>
       )}
       
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} autoComplete="off">
         <FormInput
           id="fullName"
-          label="Full Name"
+          label="To'liq ism-familiyangiz"
           type="text"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
           required
-          placeholder="John Doe"
           error={errors.fullName}
+          autoComplete="off"
         />
         <FormInput
           id="username"
-          label="Username"
+          label="Foydalanuvchi nomi"
           type="text"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           required
-          placeholder="johndoe"
           error={errors.username}
+          autoComplete="off"
         />
 
         <FormInput
           id="phone"
-          label="Phone Number"
+          label="Telefon raqami"
           type="text"
           value={phoneNumber}
           onChange={(e) => setPhoneNumber(e.target.value)}
           required
-          placeholder="+1 555 555 5555"
           error={errors.phoneNumber}
+          autoComplete="off"
         />
         
         <FormInput
@@ -158,46 +158,48 @@ export default function RegisterPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          placeholder="john@example.com"
           error={errors.email}
+          autoComplete="off"
         />
         
         <FormInput
           id="password"
-          label="Password"
+          label="Parol"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
           error={errors.password}
+          autoComplete="new-password"
         />
         
         <FormInput
           id="confirmPassword"
-          label="Confirm Password"
+          label="Parolni tasdiqlash"
           type="password"
           value={confirmPassword}
           onChange={handleConfirmPasswordChange}
           required
           error={errors.confirmPassword}
+          autoComplete="new-password"
         />
         
-        <div className="mt-6">
+        <div className="mt-4 sm:mt-6">
           <Button
             type="submit"
             fullWidth
             disabled={loading}
             variant="success"
           >
-            {loading ? 'Creating account...' : 'Create Account'}
+            {loading ? 'Hisob yaratilmoqda...' : 'Hisob yaratish'}
           </Button>
         </div>
       </form>
       
-        <div className="mt-6 text-center text-gray-400">
-          <span>Already have an account? </span>
+        <div className="mt-4 sm:mt-6 text-center text-gray-400 text-xs sm:text-sm">
+          <span>Allaqachon hisobingiz bormi? </span>
           <Link href="/auth/login" className="text-green-500 hover:underline">
-            Log In
+            Kirish
           </Link>
         </div>
       </div>

@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
 import { useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { User, Settings, LogOut, House, CalendarDays, TrendingUp, Newspaper } from "lucide-react";
+import { User, Settings, LogOut, House, CalendarDays, TrendingUp, Newspaper, Menu, X } from "lucide-react";
 import { useI18n } from "../../context/I18nContext";
 import { useFormContext } from "../../context/FormContext";
 import LanguageSelector from "./LanguageSelector";
@@ -44,9 +44,20 @@ export default function NavMenu() {
   const linkClass = "hover:text-green-400 transition-colors font-semibold";
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+
+  // Refs for menu items to calculate sliding indicator position
+  const journalRef = useRef<HTMLLIElement | null>(null);
+  const calendarRef = useRef<HTMLLIElement | null>(null);
+  const statsRef = useRef<HTMLLIElement | null>(null);
+  const [indicatorStyle, setIndicatorStyle] = useState<{ width: number; left: number; opacity: number }>({
+    width: 0,
+    left: 0,
+    opacity: 0,
+  });
 
   const updateMenuPosition = () => {
     if (!buttonRef.current) return;
@@ -92,14 +103,53 @@ export default function NavMenu() {
     };
   }, [isMenuOpen]);
 
-  // Show loading state while checking authentication
+  // Update sliding indicator position based on active link
+  useEffect(() => {
+    const updateIndicator = () => {
+      let activeRef: HTMLLIElement | null = null;
+      
+      if (isActive("/") && journalRef.current) {
+        activeRef = journalRef.current;
+      } else if (isActive("/calendar") && calendarRef.current) {
+        activeRef = calendarRef.current;
+      } else if (isActive("/stats") && statsRef.current) {
+        activeRef = statsRef.current;
+      }
+
+      if (activeRef && journalRef.current) {
+        const container = journalRef.current.parentElement;
+        if (container) {
+          const containerRect = container.getBoundingClientRect();
+          const activeRect = activeRef.getBoundingClientRect();
+          const left = activeRect.left - containerRect.left;
+          const width = activeRect.width;
+          
+          setIndicatorStyle({
+            width,
+            left,
+            opacity: 1,
+          });
+        }
+      } else {
+        setIndicatorStyle({ width: 0, left: 0, opacity: 0 });
+      }
+    };
+
+    // Update on mount and pathname change
+    updateIndicator();
+    
+    // Update on resize
+    window.addEventListener("resize", updateIndicator);
+    return () => window.removeEventListener("resize", updateIndicator);
+  }, [pathname, current]);
+
+  // Don't show loading in nav - let ProtectedRoute handle it
+  // This prevents duplicate loading animations
+  // Also hide guest menu during loading to prevent flash of login/register buttons
   if (loading) {
     return (
       <nav className="flex items-center justify-between w-full" role="navigation" aria-label="Main navigation">
         <div className="flex-1"></div>
-        <div className="flex items-center space-x-8">
-          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-green-500"></div>
-        </div>
         <div className="flex-1"></div>
       </nav>
     );
@@ -107,12 +157,23 @@ export default function NavMenu() {
 
   return (
     <nav className="flex items-center justify-between w-full" role="navigation" aria-label="Main navigation">
-      {user ? (
+      {user && !loading ? (
         // Authenticated user menu
         <>
           <div className="flex-1"></div>
-          <ul className="flex items-center space-x-8" role="menubar">
-            <li role="none">
+          {/* Desktop Menu */}
+          <ul className="hidden md:flex items-center space-x-4 lg:space-x-8 relative" role="menubar">
+            {/* Sliding indicator background - toggle switch style */}
+            <div 
+              className="absolute h-10 bg-[rgba(34,197,94,0.15)] rounded-20 transition-all duration-300 ease-in-out pointer-events-none"
+              style={{
+                width: `${indicatorStyle.width}px`,
+                left: `${indicatorStyle.left}px`,
+                opacity: indicatorStyle.opacity,
+              }}
+            />
+            
+            <li role="none" className="relative z-10" ref={journalRef}>
               {isTradeFormOpen ? (
                 <span
                   className={`${linkClass} px-3 py-1 rounded-20 flex items-center gap-2 opacity-50 cursor-not-allowed`}
@@ -124,7 +185,12 @@ export default function NavMenu() {
               ) : (
                 <Link
                   href="/"
-                  className={`${isActive("/") ? "text-green-300 bg-[rgba(34,197,94,0.15)] px-4 py-2" : `${linkClass} px-3 py-1`} rounded-20 flex items-center gap-2`}
+                  prefetch={true}
+                  className={`relative z-10 px-4 py-2 rounded-20 flex items-center gap-2 transition-all duration-300 ${
+                    isActive("/") 
+                      ? "text-green-300 font-semibold" 
+                      : `${linkClass} px-3 py-1`
+                  }`}
                   role="menuitem"
                   aria-current={isActive("/") ? "page" : undefined}
                 >
@@ -133,10 +199,10 @@ export default function NavMenu() {
                 </Link>
               )}
             </li>
-            <li>
+            <li className="relative z-10" ref={calendarRef}>
               {isTradeFormOpen ? (
                 <span
-                  className={`${linkClass} px-3 py-1 rounded-20 flex items-center gap-2 opacity-50 cursor-not-allowed`}
+                  className={`${linkClass} px-3 py-1 rounded-20 flex items-center gap-2 opacity-50 cursor-not-allowed relative z-10`}
                   title="Complete or cancel the trade form first"
                 >
                   <CalendarDays size={18} />
@@ -145,17 +211,22 @@ export default function NavMenu() {
               ) : (
                 <Link
                   href="/calendar"
-                  className={`${isActive("/calendar") ? "text-green-300 bg-[rgba(34,197,94,0.15)] px-4 py-2" : `${linkClass} px-3 py-1`} rounded-20 flex items-center gap-2`}
+                  prefetch={true}
+                  className={`relative z-10 px-4 py-2 rounded-20 flex items-center gap-2 transition-all duration-300 ${
+                    isActive("/calendar") 
+                      ? "text-green-300 font-semibold" 
+                      : `${linkClass} px-3 py-1`
+                  }`}
                 >
                   <CalendarDays size={18} />
                   {t('calendar')}
                 </Link>
               )}
             </li>
-            <li>
+            <li className="relative z-10" ref={statsRef}>
               {isTradeFormOpen ? (
                 <span
-                  className={`${linkClass} px-3 py-1 rounded-20 flex items-center gap-2 opacity-50 cursor-not-allowed`}
+                  className={`${linkClass} px-3 py-1 rounded-20 flex items-center gap-2 opacity-50 cursor-not-allowed relative z-10`}
                   title="Complete or cancel the trade form first"
                 >
                   <TrendingUp size={18} />
@@ -164,7 +235,12 @@ export default function NavMenu() {
               ) : (
                 <Link
                   href="/stats"
-                  className={`${isActive("/stats") ? "text-green-300 bg-[rgba(34,197,94,0.15)] px-4 py-2" : `${linkClass} px-3 py-1`} rounded-20 flex items-center gap-2`}
+                  prefetch={true}
+                  className={`relative z-10 px-4 py-2 rounded-20 flex items-center gap-2 transition-all duration-300 ${
+                    isActive("/stats") 
+                      ? "text-green-300 font-semibold" 
+                      : `${linkClass} px-3 py-1`
+                  }`}
                 >
                   <TrendingUp size={18} />
                   {t('stats')}
@@ -196,98 +272,185 @@ export default function NavMenu() {
               </a>
             </li>
           </ul>
+          
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden p-2 text-gray-400 hover:text-white rounded-md min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label="Toggle menu"
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+          
+          {/* Mobile Menu Dropdown */}
+          {isMobileMenuOpen && (
+            <div className="md:hidden absolute top-full left-0 right-0 mt-2 mx-2 bg-[#1C1719] border border-white/10 rounded-lg shadow-lg z-50">
+              <div className="py-2">
+                <Link
+                  href="/"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 text-sm ${
+                    isActive("/") ? "text-green-300 font-semibold bg-green-500/10" : "text-gray-300 hover:bg-white/5"
+                  }`}
+                >
+                  <House size={18} />
+                  {t('journal')}
+                </Link>
+                <Link
+                  href="/calendar"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 text-sm ${
+                    isActive("/calendar") ? "text-green-300 font-semibold bg-green-500/10" : "text-gray-300 hover:bg-white/5"
+                  }`}
+                >
+                  <CalendarDays size={18} />
+                  {t('calendar')}
+                </Link>
+                <Link
+                  href="/stats"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 text-sm ${
+                    isActive("/stats") ? "text-green-300 font-semibold bg-green-500/10" : "text-gray-300 hover:bg-white/5"
+                  }`}
+                >
+                  <TrendingUp size={18} />
+                  {t('stats')}
+                </Link>
+                <a
+                  href="https://www.investing.com/economic-calendar/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-white/5"
+                >
+                  <Newspaper size={18} />
+                  {t('macroNews')}
+                </a>
+                <div className="border-t border-white/10 my-2"></div>
+                <Link
+                  href="/profile"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-white/5"
+                >
+                  <User size={18} />
+                  Profile
+                </Link>
+                <Link
+                  href="/profile?tab=settings"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-white/5"
+                >
+                  <Settings size={18} />
+                  Settings
+                </Link>
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    logout();
+                  }}
+                  className="w-full text-left flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-white/5"
+                >
+                  <LogOut size={18} />
+                  Logout
+                </button>
+              </div>
+            </div>
+          )}
+          
           <div className="flex-1"></div>
           
-          <LanguageSelector />
-          <div
-            className="relative flex items-center isolation-auto"
-            onMouseEnter={handleOpen}
-            onMouseLeave={handleCloseWithDelay}
-          >
-            <button
-              onClick={handleToggleClick}
-              className="flex items-center space-x-2 text-gray-200 hover:text-white px-4 py-2 rounded-20 bg-[rgba(34,197,94,0.15)] hover:bg-[rgba(34,197,94,0.23)]"
-              ref={buttonRef}
+          <div className="hidden md:flex items-center gap-2">
+            <LanguageSelector />
+            <div
+              className="relative flex items-center isolation-auto"
+              onMouseEnter={handleOpen}
+              onMouseLeave={handleCloseWithDelay}
             >
-              <User size={16} />
-              <span className="whitespace-nowrap">{user.name}</span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+              <button
+                onClick={handleToggleClick}
+                className="flex items-center space-x-2 text-gray-200 hover:text-white px-3 lg:px-4 py-2 rounded-20 bg-[rgba(34,197,94,0.15)] hover:bg-[rgba(34,197,94,0.23)] min-h-[44px]"
+                ref={buttonRef}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </button>
-
-            {isMenuOpen && typeof document !== "undefined" &&
-              createPortal(
-                <div
-                  className="fixed z-[9999] will-change-transform"
-                  style={{ top: menuPos.top, left: menuPos.left, transform: "translateX(-50%)", minWidth: "200px" }}
-                  onMouseEnter={handleOpen}
-                  onMouseLeave={handleCloseWithDelay}
+                <User size={16} />
+                <span className="whitespace-nowrap text-sm lg:text-base">{user.name}</span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
                 >
-                  <div className="relative rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.22),0_8px_20px_rgba(0,0,0,0.18)]">
-                    {/* Blur + translucent background (bottom layer) */}
-                    <div className="absolute inset-0 rounded-2xl backdrop-blur-2xl bg-[rgba(30, 24, 27, 0.28)] z-0" />
-                    {/* Subtle 3D depth with a single inner shadow */}
-                    <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_-1px_2px_rgba(0,0,0,0.35)] z-10" />
-                    {/* 2px uniform outline */}
-                    <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_0_0_0.3px_rgba(255,255,255,0.5)] z-20" />
-                    <div className="relative py-1 z-30">
-                      <div className="px-4 py-2 text-sm text-gray-300/90 border-b border-white/5 whitespace-nowrap">
-                        {user.email}
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+
+              {isMenuOpen && typeof document !== "undefined" &&
+                createPortal(
+                  <div
+                    className="fixed z-[9999] will-change-transform"
+                    style={{ top: menuPos.top, left: menuPos.left, transform: "translateX(-50%)", minWidth: "200px" }}
+                    onMouseEnter={handleOpen}
+                    onMouseLeave={handleCloseWithDelay}
+                  >
+                    <div className="relative rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.22),0_8px_20px_rgba(0,0,0,0.18)]">
+                      {/* Blur + translucent background (bottom layer) */}
+                      <div className="absolute inset-0 rounded-2xl backdrop-blur-2xl bg-[rgba(30, 24, 27, 0.28)] z-0" />
+                      {/* Subtle 3D depth with a single inner shadow */}
+                      <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_-1px_2px_rgba(0,0,0,0.35)] z-10" />
+                      {/* 2px uniform outline */}
+                      <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_0_0_0.3px_rgba(255,255,255,0.5)] z-20" />
+                      <div className="relative py-1 z-30">
+                        <div className="px-4 py-2 text-sm text-gray-300/90 border-b border-white/5 whitespace-nowrap">
+                          {user.email}
+                        </div>
+                        <Link
+                          href="/profile"
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-white hover:bg-white/10 whitespace-nowrap"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          <User size={18} className="text-gray-300" />
+                          Profile
+                        </Link>
+                        <Link
+                          href="/profile?tab=settings"
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-white hover:bg-white/5 whitespace-nowrap border-t border-white/8"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          <Settings size={18} className="text-gray-300" />
+                          Settings
+                        </Link>
+                        <button
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            logout();
+                          }}
+                          className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-400 hover:bg-white/5 whitespace-nowrap border-t border-white/8"
+                        >
+                          <LogOut size={18} className="text-red-400" />
+                          Logout
+                        </button>
                       </div>
-                      <Link
-                        href="/profile"
-                        className="flex items-center gap-3 px-4 py-2 text-sm text-white hover:bg-white/10 whitespace-nowrap"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <User size={18} className="text-gray-300" />
-                        Profile
-                      </Link>
-                      <Link
-                        href="/profile?tab=settings"
-                        className="flex items-center gap-3 px-4 py-2 text-sm text-white hover:bg-white/5 whitespace-nowrap border-t border-white/8"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <Settings size={18} className="text-gray-300" />
-                        Settings
-                      </Link>
-                      <button
-                        onClick={() => {
-                          setIsMenuOpen(false);
-                          logout();
-                        }}
-                        className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-400 hover:bg-white/5 whitespace-nowrap border-t border-white/8"
-                      >
-                        <LogOut size={18} className="text-red-400" />
-                        Logout
-                      </button>
                     </div>
-                  </div>
-                </div>,
-                document.body
-              )}
+                  </div>,
+                  document.body
+                )}
+            </div>
           </div>
         </>
-      ) : (
-        // Guest menu
-        <ul className="flex space-x-4">
+      ) : !loading ? (
+        // Guest menu - only show when not loading
+        <ul className="flex space-x-2 sm:space-x-4">
           <li>
             <Link
               href="/auth/login"
-              className={
+              className={`text-xs sm:text-sm ${
                 isActive("/auth/login") ? activeLinkClass : linkClass
-              }
+              }`}
             >
               Login
             </Link>
@@ -295,17 +458,17 @@ export default function NavMenu() {
           <li>
             <Link
               href="/auth/register"
-              className={
+              className={`text-xs sm:text-sm ${
                 isActive("/auth/register")
                   ? activeLinkClass
-                  : "bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md"
-              }
+                  : "bg-green-600 hover:bg-green-700 text-white px-2 sm:px-3 py-1 rounded-md"
+              }`}
             >
               Register
             </Link>
           </li>
         </ul>
-      )}
+      ) : null}
     </nav>
   );
 } 

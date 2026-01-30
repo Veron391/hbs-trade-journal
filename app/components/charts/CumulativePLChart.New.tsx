@@ -122,7 +122,7 @@ export default function CumulativePLChartNew({ selectedPeriod, tradeType }: Cumu
   };
 
   return (
-    <div className="rounded-xl p-4 bg-[#1C1719] relative overflow-hidden">
+    <div className="rounded-xl p-4 bg-[#1C1719] relative overflow-hidden outline-none focus:outline-none">
       {/* Background gradient */}
       <div 
         className="absolute inset-0 pointer-events-none"
@@ -155,9 +155,13 @@ export default function CumulativePLChartNew({ selectedPeriod, tradeType }: Cumu
         <div className="mb-4">
           <h3 className="text-lg font-medium text-gray-100">Cumulative P&L</h3>
         </div>
-        <div className="h-80" role="img" aria-label="Cumulative profit and loss chart">
+        <div className="h-80 outline-none focus:outline-none" role="img" aria-label="Cumulative profit and loss chart" tabIndex={-1}>
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 15, bottom: 20 }}>
+            <ComposedChart 
+              data={chartData} 
+              margin={{ top: 20, right: 30, left: 15, bottom: 20 }}
+              style={{ outline: 'none' }}
+            >
               <defs>
                 <linearGradient id="plGradient" x1="0%" y1="0%" x2="0%" y2="100%">
                   <stop offset="0%" stopColor="rgba(34,197,94,0.22)" />
