@@ -54,7 +54,7 @@ export default function PeriodAndCategoryBar() {
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setIsPeriodDropdownOpen(!isPeriodDropdownOpen)}
-            className="flex items-center justify-between gap-2 bg-[#1a1a1f] border border-blue-500/30 rounded-lg px-3 py-2 text-white text-sm hover:bg-blue-900/30 hover:border-blue-500/50 transition-colors min-w-[140px] focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
+            className="flex items-center justify-between gap-2 bg-[#171717] border border-blue-500/30 rounded-lg px-3 py-2 text-white text-sm hover:bg-[#D9FE43]/10 hover:border-blue-500/50 transition-colors min-w-[140px] focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
             aria-expanded={isPeriodDropdownOpen}
             aria-haspopup="listbox"
             aria-label="Select time period"
@@ -62,9 +62,9 @@ export default function PeriodAndCategoryBar() {
             <span>{selectedPeriod?.label || 'This Month'}</span>
             <ChevronDown className={`h-4 w-4 transition-transform ml-2 ${isPeriodDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
-          
+
           {isPeriodDropdownOpen && (
-            <div 
+            <div
               className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 bg-blue-900/5 backdrop-blur-md border border-blue-500/30 rounded-lg shadow-2xl z-50 min-w-[160px]"
               style={{
                 background: 'rgba(30, 58, 138, 0.05)',
@@ -85,11 +85,10 @@ export default function PeriodAndCategoryBar() {
                       setPeriod(option.value);
                       setIsPeriodDropdownOpen(false);
                     }}
-                    className={`w-full text-left px-4 py-3 text-sm transition-colors focus:outline-none focus:bg-blue-900/30 ${
-                      isSelected
-                        ? 'bg-blue-600/20 text-blue-400 border-l-2 border-blue-500'
-                        : 'text-white hover:bg-blue-900/30'
-                    }`}
+                    className={`w-full text-left px-4 py-3 text-sm transition-colors focus:outline-none focus:bg-blue-900/30 ${isSelected
+                      ? 'bg-blue-600/20 text-blue-400 border-l-2 border-blue-500'
+                      : 'text-white hover:bg-blue-900/30'
+                      }`}
                     role="option"
                     aria-selected={isSelected}
                   >
@@ -102,7 +101,7 @@ export default function PeriodAndCategoryBar() {
         </div>
 
         {/* Trade Type Filter */}
-        <div className="flex items-center gap-1 bg-[#1a1a1f] border border-blue-500/30 rounded-full p-1" role="group" aria-label="Trade type selection">
+        <div className="flex items-center gap-1 bg-[#171717] border border-blue-500/30 rounded-full p-1" role="group" aria-label="Trade type selection">
           {tradeTypeOptions.map((option) => {
             const isActive = tradeType === option.value;
             return (
@@ -112,10 +111,9 @@ export default function PeriodAndCategoryBar() {
                 className={`
                   px-4 py-2 text-sm font-medium rounded-full transition-all duration-200
                   focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none
-                  ${
-                    isActive
-                      ? 'bg-blue-600/20 text-blue-300 border border-blue-500/30'
-                      : 'text-gray-400 hover:text-gray-200 hover:bg-blue-900/30'
+                  ${isActive
+                    ? 'bg-blue-600/20 text-blue-300 border border-blue-500/30'
+                    : 'text-gray-400 hover:text-gray-200 hover:bg-blue-900/30'
                   }
                 `}
                 aria-pressed={isActive}
@@ -130,7 +128,7 @@ export default function PeriodAndCategoryBar() {
 
       {/* Custom Date Picker */}
       {period === 'custom' && (
-        <div className="flex items-center gap-3 bg-[#1a1a1f] border border-blue-500/30 rounded-lg p-3">
+        <div className="flex items-center gap-3 bg-[#171717] border border-blue-500/30 rounded-lg p-3">
           <Calendar className="h-4 w-4 text-blue-400" />
           <div className="flex items-center gap-2">
             <input

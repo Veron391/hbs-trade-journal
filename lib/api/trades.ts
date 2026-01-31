@@ -29,7 +29,7 @@ export type UpdateTradeData = Partial<Omit<CreateTradeData, 'userId'>>;
 // Fetch helpers (use built-in fetch)
 const json = async (res: Response) => {
   if (!res.ok) {
-    const body = await res.text().catch(()=>'')
+    const body = await res.text().catch(() => '')
     throw new Error(`HTTP ${res.status} ${res.statusText} ${body}`)
   }
   return res.json()
@@ -49,10 +49,10 @@ export interface TradesListResponse {
 export async function listTrades(limit: number = 10, offset: number = 0, ordering?: string): Promise<TradesListResponse> {
   try {
     const orderingParam = ordering ? `&ordering=${encodeURIComponent(ordering)}` : '';
-    const res = await fetch(`/api/journal/trades?limit=${limit}&offset=${offset}${orderingParam}&t=${Date.now()}`, { 
+    const res = await fetch(`/api/journal/trades?limit=${limit}&offset=${offset}${orderingParam}&t=${Date.now()}`, {
       cache: 'no-store' // Disable caching
     })
-    
+
     // Handle authentication errors gracefully
     if (res.status === 403 || res.status === 401) {
       console.log('User not authenticated, returning empty trades list')
@@ -63,10 +63,10 @@ export async function listTrades(limit: number = 10, offset: number = 0, orderin
         previous: null
       }
     }
-    
+
     const data = await json(res)
     const results = Array.isArray(data.results) ? data.results : []
-    
+
     return {
       trades: results.map(mapBackendToTrade),
       count: typeof data.count === 'number' ? data.count : results.length,
@@ -95,7 +95,7 @@ export async function listAllTrades(ordering?: string): Promise<Trade[]> {
     while (hasMore) {
       const response = await listTrades(limit, offset, ordering)
       allTrades.push(...response.trades)
-      
+
       // Check if there are more trades to fetch
       // Continue if we got a full page (limit trades) or if next URL exists
       if (response.trades.length === limit || response.next) {
@@ -108,7 +108,7 @@ export async function listAllTrades(ordering?: string): Promise<Trade[]> {
         hasMore = false
       }
     }
-    
+
     return allTrades
   } catch (error) {
     console.error('Error fetching all trades:', error)
@@ -179,7 +179,7 @@ export async function getCalendarDayDetails(date: string): Promise<CalendarDayDe
       credentials: 'include', // Include cookies for authentication
       cache: 'no-store' // Disable caching
     })
-    
+
     // Handle authentication errors gracefully
     if (res.status === 403 || res.status === 401) {
       console.log('User not authenticated, returning empty calendar details')
@@ -190,7 +190,7 @@ export async function getCalendarDayDetails(date: string): Promise<CalendarDayDe
         tradeDetails: []
       }
     }
-    
+
     const data = await json(res)
     return data
   } catch (error) {
@@ -206,7 +206,7 @@ export async function getCalendarDayDetails(date: string): Promise<CalendarDayDe
 
 function mapBackendToTrade(b: any): Trade {
   const assetType = b.trade_type === 2 ? 'stock' : 'crypto'
-  
+
   // Extract only date portion (YYYY-MM-DD) from datetime strings
   const extractDate = (dateStr: string | null | undefined): string | null => {
     if (!dateStr) return null;
@@ -223,7 +223,7 @@ function mapBackendToTrade(b: any): Trade {
     }
     return dateStr;
   };
-  
+
   return {
     id: String(b.id),
     assetType,
@@ -254,9 +254,9 @@ function createPayloadToBackend(p: CreateTradeData) {
     symbol: p.symbol,
     direction: p.direction,
     quantity: Number(p.qty),
-    entry_date: p.entryDate.slice(0,10),
+    entry_date: p.entryDate.slice(0, 10),
     // Backend requires non-null exit_date; for pending, mirror entry_date
-    exit_date: (p.exitDate && p.exitDate.trim() !== '') ? p.exitDate.slice(0,10) : p.entryDate.slice(0,10),
+    exit_date: (p.exitDate && p.exitDate.trim() !== '') ? p.exitDate.slice(0, 10) : p.entryDate.slice(0, 10),
     buy_price: String(p.entryPrice),
     // Backend requires non-null sell_price; for pending, send 0
     sell_price: p.exitPrice != null ? String(p.exitPrice) : '0',
@@ -272,8 +272,8 @@ function updatePayloadToBackend(p: UpdateTradeData) {
   if (p.symbol) obj.symbol = p.symbol
   if (p.direction) obj.direction = p.direction
   if (p.qty != null) obj.quantity = Number(p.qty)
-  if (p.entryDate) obj.entry_date = p.entryDate.slice(0,10)
-  if (p.exitDate) obj.exit_date = p.exitDate.slice(0,10)
+  if (p.entryDate) obj.entry_date = p.entryDate.slice(0, 10)
+  if (p.exitDate) obj.exit_date = p.exitDate.slice(0, 10)
   if (p.entryPrice != null) obj.buy_price = String(p.entryPrice)
   if (p.exitPrice != null) obj.sell_price = String(p.exitPrice)
   if (p.riskPercent != null) obj.risk_percent = p.riskPercent

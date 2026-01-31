@@ -94,7 +94,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
     // Add event listeners
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('popstate', handlePopState);
-    
+
     // Push a state to prevent back button
     if (isFormOpen) {
       window.history.pushState(null, '', window.location.href);
@@ -137,271 +137,271 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
 
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-[#1C1719] rounded-lg shadow-lg">
+    <div className="max-w-2xl mx-auto p-6 bg-[#101010] rounded-lg shadow-lg">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-        <label className="block text-sm font-medium mb-1 text-gray-200">{t('tradeType')}</label>
-          <select
-            {...register('type', { required: 'Trade type is required' })}
-            className={clsx(
-              "w-full rounded-md border px-3 py-2 bg-[#342f31] text-white",
-              errors.type ? "border-danger" : "border-white/15"
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-200">{t('tradeType')}</label>
+            <select
+              {...register('type', { required: 'Trade type is required' })}
+              className={clsx(
+                "w-full rounded-md border px-3 py-2 bg-[#171717] text-white",
+                errors.type ? "border-danger" : "border-[#553527]/40"
+              )}
+            >
+              <option value="" disabled hidden>{t('selectType')}</option>
+              {(tradeTypes.length > 0 ? tradeTypes : [
+                { id: 2, name: 'STOCK', slug: 'stock' },
+                { id: 1, name: 'CRYPTO', slug: 'crypto' },
+              ]).map(t => (
+                <option key={t.id} value={t.slug.toLowerCase()}>{t.name}</option>
+              ))}
+            </select>
+            {errors.type && (
+              <p className="text-danger text-sm mt-1">{errors.type.message}</p>
             )}
-          >
-            <option value="" disabled hidden>{t('selectType')}</option>
-            {(tradeTypes.length > 0 ? tradeTypes : [
-              { id: 2, name: 'STOCK', slug: 'stock' },
-              { id: 1, name: 'CRYPTO', slug: 'crypto' },
-            ]).map(t => (
-              <option key={t.id} value={t.slug.toLowerCase()}>{t.name}</option>
-            ))}
-          </select>
-          {errors.type && (
-            <p className="text-danger text-sm mt-1">{errors.type.message}</p>
-          )}
-        </div>
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1 text-gray-200">Symbol</label>
-          <input
-            type="text"
-            {...register('symbol', { required: 'Symbol is required' })}
-            placeholder="AAPL, BTC, etc."
-            className={clsx(
-              "w-full rounded-md border px-3 py-2 bg-[#342f31] text-white placeholder-gray-400/30",
-              errors.symbol ? "border-danger" : "border-white/15"
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-200">Symbol</label>
+            <input
+              type="text"
+              {...register('symbol', { required: 'Symbol is required' })}
+              placeholder="AAPL, BTC, etc."
+              className={clsx(
+                "w-full rounded-md border px-3 py-2 bg-[#171717] text-white placeholder-[#303030]",
+                errors.symbol ? "border-danger" : "border-[#553527]/40"
+              )}
+              style={{
+                WebkitBoxShadow: '0 0 0 1000px #171717 inset',
+                WebkitTextFillColor: 'white',
+                transition: 'background-color 5000s ease-in-out 0s'
+              }}
+            />
+            {errors.symbol && (
+              <p className="text-danger text-sm mt-1">{errors.symbol.message}</p>
             )}
-            style={{
-              WebkitBoxShadow: '0 0 0 1000px #342f31 inset',
-              WebkitTextFillColor: 'white',
-              transition: 'background-color 5000s ease-in-out 0s'
-            }}
-          />
-          {errors.symbol && (
-            <p className="text-danger text-sm mt-1">{errors.symbol.message}</p>
-          )}
-        </div>
+          </div>
 
-        <div>
-        <label className="block text-sm font-medium mb-1 text-gray-200">{t('direction')}</label>
-          <select
-            {...register('direction', { required: 'Direction is required' })}
-            className={clsx(
-              "w-full rounded-md border px-3 py-2 bg-[#342f31] text-white",
-              errors.direction ? "border-danger" : "border-white/15"
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-200">{t('direction')}</label>
+            <select
+              {...register('direction', { required: 'Direction is required' })}
+              className={clsx(
+                "w-full rounded-md border px-3 py-2 bg-[#171717] text-white",
+                errors.direction ? "border-danger" : "border-[#553527]/40"
+              )}
+            >
+              <option value="long">Long</option>
+              <option value="short">Short</option>
+            </select>
+            {errors.direction && (
+              <p className="text-danger text-sm mt-1">{errors.direction.message}</p>
             )}
-          >
-            <option value="long">Long</option>
-            <option value="short">Short</option>
-          </select>
-          {errors.direction && (
-            <p className="text-danger text-sm mt-1">{errors.direction.message}</p>
-          )}
-        </div>
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1 text-gray-200">Quantity</label>
-          <input
-            type="number"
-            {...register('quantity', { 
-              required: 'Quantity is required',
-              min: { value: 0.0001, message: 'Quantity must be positive' }
-            })}
-            step="any"
-            placeholder="0"
-            className={clsx(
-              "w-full rounded-md border px-3 py-2 bg-[#342f31] text-white placeholder-gray-500/40",
-              errors.quantity ? "border-danger" : "border-white/15"
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-200">Quantity</label>
+            <input
+              type="number"
+              {...register('quantity', {
+                required: 'Quantity is required',
+                min: { value: 0.0001, message: 'Quantity must be positive' }
+              })}
+              step="any"
+              placeholder="0"
+              className={clsx(
+                "w-full rounded-md border px-3 py-2 bg-[#171717] text-white placeholder-[#303030]",
+                errors.quantity ? "border-danger" : "border-[#553527]/40"
+              )}
+              style={{
+                WebkitBoxShadow: '0 0 0 1000px #171717 inset',
+                WebkitTextFillColor: 'white',
+                transition: 'background-color 5000s ease-in-out 0s'
+              }}
+            />
+            {errors.quantity && (
+              <p className="text-danger text-sm mt-1">{errors.quantity.message}</p>
             )}
-            style={{
-              WebkitBoxShadow: '0 0 0 1000px #342f31 inset',
-              WebkitTextFillColor: 'white',
-              transition: 'background-color 5000s ease-in-out 0s'
-            }}
-          />
-          {errors.quantity && (
-            <p className="text-danger text-sm mt-1">{errors.quantity.message}</p>
-          )}
-        </div>
+          </div>
 
 
-        <div>
-        <label className="block text-sm font-medium mb-1 text-gray-200">{t('entryDate')}</label>
-          <Controller
-            name="entryDate"
-            control={control}
-            rules={{ required: 'Entry date is required' }}
-            render={({ field }) => (
-              <DatePicker
-                value={field.value}
-                onChange={field.onChange}
-                placeholder={t('selectEntryDate')}
-                error={!!errors.entryDate}
-              />
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-200">{t('entryDate')}</label>
+            <Controller
+              name="entryDate"
+              control={control}
+              rules={{ required: 'Entry date is required' }}
+              render={({ field }) => (
+                <DatePicker
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder={t('selectEntryDate')}
+                  error={!!errors.entryDate}
+                />
+              )}
+            />
+            {errors.entryDate && (
+              <p className="text-danger text-sm mt-1">{errors.entryDate.message}</p>
             )}
-          />
-          {errors.entryDate && (
-            <p className="text-danger text-sm mt-1">{errors.entryDate.message}</p>
-          )}
-        </div>
+          </div>
 
-        <div>
-        <label className="block text-sm font-medium mb-1 text-gray-200">{t('exitDate')}</label>
-          <Controller
-            name="exitDate"
-            control={control}
-            rules={{ 
-              validate: (value) => {
-                if (!entryDate || !value) return true;
-                const entry = new Date(entryDate);
-                const exit = new Date(value);
-                return exit >= entry || 'Exit date cannot be earlier than entry date';
-              }
-            }}
-            render={({ field }) => (
-              <DatePicker
-                value={field.value}
-                onChange={field.onChange}
-                placeholder={t('selectExitDate')}
-                error={!!errors.exitDate}
-              />
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-200">{t('exitDate')}</label>
+            <Controller
+              name="exitDate"
+              control={control}
+              rules={{
+                validate: (value) => {
+                  if (!entryDate || !value) return true;
+                  const entry = new Date(entryDate);
+                  const exit = new Date(value);
+                  return exit >= entry || 'Exit date cannot be earlier than entry date';
+                }
+              }}
+              render={({ field }) => (
+                <DatePicker
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder={t('selectExitDate')}
+                  error={!!errors.exitDate}
+                />
+              )}
+            />
+            {errors.exitDate && (
+              <p className="text-red-500 text-sm mt-1">{errors.exitDate.message}</p>
             )}
-          />
-          {errors.exitDate && (
-            <p className="text-red-500 text-sm mt-1">{errors.exitDate.message}</p>
-          )}
-        </div>
+          </div>
 
-        <div>
-        <label className="block text-sm font-medium mb-1 text-gray-200">{t('entryPrice')}</label>
-          <input
-            type="number"
-            {...register('entryPrice', { 
-              required: 'Entry price is required',
-              min: { value: 0.00000001, message: 'Entry price must be positive' }
-            })}
-            step="any"
-            placeholder="0.00"
-            className={clsx(
-              "w-full rounded-md border px-3 py-2 bg-[#342f31] text-white placeholder-gray-500/40",
-              errors.entryPrice ? "border-danger" : "border-white/15"
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-200">{t('entryPrice')}</label>
+            <input
+              type="number"
+              {...register('entryPrice', {
+                required: 'Entry price is required',
+                min: { value: 0.00000001, message: 'Entry price must be positive' }
+              })}
+              step="any"
+              placeholder="0.00"
+              className={clsx(
+                "w-full rounded-md border px-3 py-2 bg-[#171717] text-white placeholder-[#303030]",
+                errors.entryPrice ? "border-danger" : "border-[#553527]/40"
+              )}
+              style={{
+                WebkitBoxShadow: '0 0 0 1000px #171717 inset',
+                WebkitTextFillColor: 'white',
+                transition: 'background-color 5000s ease-in-out 0s'
+              }}
+            />
+            {errors.entryPrice && (
+              <p className="text-danger text-sm mt-1">{errors.entryPrice.message}</p>
             )}
-            style={{
-              WebkitBoxShadow: '0 0 0 1000px #342f31 inset',
-              WebkitTextFillColor: 'white',
-              transition: 'background-color 5000s ease-in-out 0s'
-            }}
-          />
-          {errors.entryPrice && (
-            <p className="text-danger text-sm mt-1">{errors.entryPrice.message}</p>
-          )}
-        </div>
+          </div>
 
-        <div>
-        <label className="block text-sm font-medium mb-1 text-gray-200">{t('exitPrice')}</label>
-          <input
-            type="number"
-            inputMode="decimal"
-            {...register('exitPrice', {
-              setValueAs: (v) => (v === '' || v === null ? undefined : Number(v)),
-              validate: (v) => {
-                // Allow empty for pending trades; if provided, must be > 0
-                if (v === '' || v == null) return true;
-                const num = typeof v === 'number' ? v : Number(v);
-                return num >= 0 || 'Exit price must be zero or positive';
-              }
-            })}
-            step="any"
-            placeholder="0.00"
-            className={clsx(
-              "w-full rounded-md border px-3 py-2 bg-[#342f31] text-white placeholder-gray-500/40",
-              errors.exitPrice ? "border-danger" : "border-white/15"
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-200">{t('exitPrice')}</label>
+            <input
+              type="number"
+              inputMode="decimal"
+              {...register('exitPrice', {
+                setValueAs: (v) => (v === '' || v === null ? undefined : Number(v)),
+                validate: (v) => {
+                  // Allow empty for pending trades; if provided, must be > 0
+                  if (v === '' || v == null) return true;
+                  const num = typeof v === 'number' ? v : Number(v);
+                  return num >= 0 || 'Exit price must be zero or positive';
+                }
+              })}
+              step="any"
+              placeholder="0.00"
+              className={clsx(
+                "w-full rounded-md border px-3 py-2 bg-[#171717] text-white placeholder-[#303030]",
+                errors.exitPrice ? "border-danger" : "border-[#553527]/40"
+              )}
+              style={{
+                WebkitBoxShadow: '0 0 0 1000px #171717 inset',
+                WebkitTextFillColor: 'white',
+                transition: 'background-color 5000s ease-in-out 0s'
+              }}
+            />
+            {errors.exitPrice && (
+              <p className="text-danger text-sm mt-1">{errors.exitPrice.message}</p>
             )}
-            style={{
-              WebkitBoxShadow: '0 0 0 1000px #342f31 inset',
-              WebkitTextFillColor: 'white',
-              transition: 'background-color 5000s ease-in-out 0s'
-            }}
-          />
-          {errors.exitPrice && (
-            <p className="text-danger text-sm mt-1">{errors.exitPrice.message}</p>
-          )}
-        </div>
-      </div>
-
-      {/* Link field - full width */}
-      <div>
-          <label className="block text-sm font-medium mb-1 text-white" style={{ color: '#ffffff' }}>{t('tradeLink')}</label>
-        <input
-          type="url"
-          {...register('link', {
-            pattern: {
-              value: /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/,
-              message: 'Please enter a valid URL'
-            }
-          })}
-          placeholder="https://example.com/trade-screenshot"
-            className={clsx(
-              "w-full rounded-md border px-3 py-2 bg-[#342f31] text-white placeholder-gray-400/20",
-              errors.link ? "border-danger" : "border-white/15"
-            )}
-          style={{
-            WebkitBoxShadow: '0 0 0 1000px #342f31 inset',
-            WebkitTextFillColor: 'white',
-            color: 'white',
-            transition: 'background-color 5000s ease-in-out 0s'
-          }}
-        />
-        {errors.link && (
-          <p className="text-danger text-sm mt-1">{errors.link.message}</p>
-        )}
-        <p className="text-gray-400 text-xs mt-1">Add a link to trade screenshot, chart, or analysis</p>
-      </div>
-
-
-      <div>
-        <label className="block text-sm font-medium mb-1 text-gray-200">{t('setupNotes')}</label>
-        <textarea
-          {...register('setupNotes')}
-          rows={4}
-          placeholder="Describe your trade setup and strategy..."
-          className="w-full rounded-md border border-white/15 px-3 py-2 bg-[#342f31] text-white placeholder-gray-400/20"
-        ></textarea>
-      </div>
-
-
-      <div className="flex justify-end gap-4">
-        <button
-          type="button"
-          onClick={() => {
-            setIsFormOpen(false); // Allow navigation when canceling
-            onComplete();
-          }}
-          className="px-4 py-2 border border-white/15 rounded-md bg-[#342f31] text-white hover:bg-yellow-600/80 hover:text-white"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          className="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-700"
-          aria-label={existingTrade ? 'Update trade information' : 'Add new trade'}
-        >
-          {existingTrade ? 'Update Trade' : 'Add Trade'}
-        </button>
-      </div>
-      
-      {showSuccess && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div className="bg-gray-800 rounded-lg p-6 shadow-lg flex flex-col items-center">
-            <CheckCircle className="text-success h-16 w-16 mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">
-              {existingTrade ? 'Trade Updated!' : 'Trade Added!'}
-            </h3>
-            <p className="text-gray-300 mb-4">Your trade has been successfully saved.</p>
           </div>
         </div>
-      )}
+
+        {/* Link field - full width */}
+        <div>
+          <label className="block text-sm font-medium mb-1 text-white" style={{ color: '#ffffff' }}>{t('tradeLink')}</label>
+          <input
+            type="url"
+            {...register('link', {
+              pattern: {
+                value: /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/,
+                message: 'Please enter a valid URL'
+              }
+            })}
+            placeholder="https://example.com/trade-screenshot"
+            className={clsx(
+              "w-full rounded-md border px-3 py-2 bg-[#171717] text-white placeholder-[#303030]",
+              errors.link ? "border-danger" : "border-[#553527]/40"
+            )}
+            style={{
+              WebkitBoxShadow: '0 0 0 1000px #171717 inset',
+              WebkitTextFillColor: 'white',
+              color: 'white',
+              transition: 'background-color 5000s ease-in-out 0s'
+            }}
+          />
+          {errors.link && (
+            <p className="text-danger text-sm mt-1">{errors.link.message}</p>
+          )}
+          <p className="text-gray-400 text-xs mt-1">Add a link to trade screenshot, chart, or analysis</p>
+        </div>
+
+
+        <div>
+          <label className="block text-sm font-medium mb-1 text-gray-200">{t('setupNotes')}</label>
+          <textarea
+            {...register('setupNotes')}
+            rows={4}
+            placeholder="Describe your trade setup and strategy..."
+            className="w-full rounded-md border border-[#553527]/40 px-3 py-2 bg-[#171717] text-white placeholder-[#303030]"
+          ></textarea>
+        </div>
+
+
+        <div className="flex justify-end gap-4">
+          <button
+            type="button"
+            onClick={() => {
+              setIsFormOpen(false); // Allow navigation when canceling
+              onComplete();
+            }}
+            className="px-4 py-2 border border-[#553527]/40 rounded-md bg-[#171717] text-white hover:bg-yellow-600/80 hover:text-white"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-700"
+            aria-label={existingTrade ? 'Update trade information' : 'Add new trade'}
+          >
+            {existingTrade ? 'Update Trade' : 'Add Trade'}
+          </button>
+        </div>
+
+        {showSuccess && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div className="bg-gray-800 rounded-lg p-6 shadow-lg flex flex-col items-center">
+              <CheckCircle className="text-success h-16 w-16 mb-4" />
+              <h3 className="text-xl font-bold text-white mb-2">
+                {existingTrade ? 'Trade Updated!' : 'Trade Added!'}
+              </h3>
+              <p className="text-gray-300 mb-4">Your trade has been successfully saved.</p>
+            </div>
+          </div>
+        )}
       </form>
     </div>
   );

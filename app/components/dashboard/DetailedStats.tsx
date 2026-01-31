@@ -252,7 +252,7 @@ export default function DetailedStats({ selectedPeriod, tradeType }: DetailedSta
 
   if (filteredTrades.length === 0) {
     return (
-      <div className="bg-[#1C1719] shadow rounded-lg p-6 mt-8">
+      <div className="bg-[#101010] shadow rounded-lg p-6 mt-8">
         <h2 className="text-xl font-semibold mb-6 text-[#F0E4D3]">{t('detailedStatistics')}</h2>
         <div className="text-center py-12">
           <p className="text-gray-300">{t('noTradesFound')}</p>
@@ -265,7 +265,7 @@ export default function DetailedStats({ selectedPeriod, tradeType }: DetailedSta
     <div className="mt-8">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Profitability Card */}
-        <div className="bg-[#1C1719] shadow rounded-lg p-6">
+        <div className="bg-[#101010] shadow rounded-lg p-6">
           <h3 className="text-lg font-bold mb-4 text-white flex items-center gap-3">
             <div className="p-2 rounded-lg bg-green-500/20">
               <PieChart size={20} className="text-green-400" />
@@ -323,7 +323,7 @@ export default function DetailedStats({ selectedPeriod, tradeType }: DetailedSta
         </div>
         
         {/* Trade Analysis Card */}
-        <div className="bg-[#1C1719] shadow rounded-lg p-6">
+        <div className="bg-[#101010] shadow rounded-lg p-6">
           <h3 className="text-lg font-bold mb-4 text-white flex items-center gap-3">
             <div className="p-2 rounded-lg bg-blue-500/20">
               <Activity size={20} className="text-blue-400" />

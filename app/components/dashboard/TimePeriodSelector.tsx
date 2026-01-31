@@ -70,11 +70,11 @@ export function getDateRangeForPeriod(period: TimePeriod): { startDate: Date; en
 
 export function filterTradesByPeriod<T extends { exitDate: string }>(trades: T[], period: TimePeriod): T[] {
   const { startDate, endDate } = getDateRangeForPeriod(period);
-  
+
   return trades.filter(trade => {
     const tradeDate = startOfDay(new Date(trade.exitDate));
-    return (isAfter(tradeDate, startDate) || isEqual(tradeDate, startDate)) && 
-           (isAfter(endDate, tradeDate) || isEqual(endDate, tradeDate));
+    return (isAfter(tradeDate, startDate) || isEqual(tradeDate, startDate)) &&
+      (isAfter(endDate, tradeDate) || isEqual(endDate, tradeDate));
   });
 }
 
@@ -110,26 +110,25 @@ export default function TimePeriodSelector({ selectedPeriod, onPeriodChange }: T
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-2 bg-[#1C1719] border border-white/20 rounded-lg text-white hover:bg-[#2A2426] transition-colors duration-200 min-w-[200px] justify-between"
+        className="flex items-center gap-2 px-4 py-2 bg-[#171717] border border-white/20 rounded-lg text-[#D9FE43] font-bold hover:bg-[#D9FE43]/10 transition-colors duration-200 min-w-[200px] justify-between"
       >
         <span className="text-sm">{periodLabels[selectedPeriod]}</span>
-        <ChevronDown 
-          size={16} 
+        <ChevronDown
+          size={16}
           className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full mt-1 left-0 right-0 bg-[#1C1719]/80 backdrop-blur-md border border-white/20 rounded-lg shadow-lg z-50 overflow-hidden">
+        <div className="absolute top-full mt-1 left-0 right-0 bg-[#171717]/80 backdrop-blur-md border border-white/20 rounded-lg shadow-lg z-50 overflow-hidden">
           {(Object.entries(periodLabels) as [TimePeriod, string][]).map(([period, label], index, array) => (
             <div key={period}>
               <button
                 onClick={() => handlePeriodSelect(period)}
-                className={`w-full px-4 py-2 text-left text-sm transition-colors duration-150 ${
-                  selectedPeriod === period 
-                    ? 'bg-green-500/20 text-green-400' 
-                    : 'text-white hover:bg-white/10'
-                }`}
+                className={`w-full px-4 py-2 text-left text-sm transition-colors duration-150 ${selectedPeriod === period
+                  ? 'bg-[#D9FE43]/20 text-[#D9FE43] font-bold'
+                  : 'text-white hover:bg-[#D9FE43]/10 hover:text-[#D9FE43]'
+                  }`}
               >
                 {label}
               </button>

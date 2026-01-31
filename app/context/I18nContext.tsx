@@ -40,6 +40,7 @@ const dictionaries: Record<Lang, Dict> = {
     selectExitDate: 'Select exit date',
     tradingStatistics: 'Trading Statistics',
     performanceCharts: 'Performance Charts',
+    statsSummary: 'Your statistics summary',
     detailedStatistics: 'Detailed Statistics',
     noTradesForPeriod: 'No trades found for the selected period.',
     total: 'Total',
@@ -88,11 +89,11 @@ const dictionaries: Record<Lang, Dict> = {
     saturday: 'Sat',
     sunday: 'Sun',
     trade: 'trade',
-    trades: 'trades',
+
     noData: 'No Data',
     noTradesFound: 'No trades found for this date',
     loading: 'Loading...',
-    performanceCharts: 'Performance Charts',
+
     avgWinningTrade: 'Avg. Winning Trade',
     avgLosingTrade: 'Avg. Losing Trade',
     avgHoldTime: 'Avg. Hold Time',
@@ -107,7 +108,7 @@ const dictionaries: Record<Lang, Dict> = {
     breakEven: 'Break Even',
     pnlPerTrade: 'P&L per Trade (Last 10)',
     tradeTypeDistribution: 'Trade Type Distribution',
-    detailedStatistics: 'Detailed Statistics',
+
     profitability: 'Profitability',
     averageProfitLoss: 'Average Profit/Loss',
     largestProfit: 'Largest Profit',
@@ -115,7 +116,7 @@ const dictionaries: Record<Lang, Dict> = {
     sortinoRatio: 'Sortino Ratio',
     sharpeRatio: 'Sharpe Ratio',
     tradeAnalysis: 'Trade Analysis',
-    totalTrades: 'Total Trades',
+
     breakEvenTrades: 'Break Even Trades',
     maxConsecutiveWins: 'Max Consecutive Wins',
     maxConsecutiveLosses: 'Max Consecutive Losses',
@@ -186,6 +187,7 @@ const dictionaries: Record<Lang, Dict> = {
     selectExitDate: 'Выберите дату выхода',
     tradingStatistics: 'Торговая статистика',
     performanceCharts: 'Графики производительности',
+    statsSummary: 'Сводка вашей статистики',
     detailedStatistics: 'Детальная статистика',
     noTradesForPeriod: 'За выбранный период сделки не найдены.',
     total: 'Всего',
@@ -234,11 +236,11 @@ const dictionaries: Record<Lang, Dict> = {
     saturday: 'Сб',
     sunday: 'Вс',
     trade: 'сделка',
-    trades: 'сделки',
+
     noData: 'Нет данных',
     noTradesFound: 'Сделки для этой даты не найдены',
     loading: 'Загрузка...',
-    performanceCharts: 'Графики производительности',
+
     avgWinningTrade: 'Сред. прибыльная сделка',
     avgLosingTrade: 'Сред. убыточная сделка',
     avgHoldTime: 'Сред. время удержания',
@@ -253,7 +255,7 @@ const dictionaries: Record<Lang, Dict> = {
     breakEven: 'Безубыточность',
     pnlPerTrade: 'P&L за сделку (последние 10)',
     tradeTypeDistribution: 'Распределение типов сделок',
-    detailedStatistics: 'Детальная статистика',
+
     profitability: 'Прибыльность',
     averageProfitLoss: 'Средняя прибыль/убыток',
     largestProfit: 'Крупнейшая прибыль',
@@ -261,7 +263,7 @@ const dictionaries: Record<Lang, Dict> = {
     sortinoRatio: 'Коэффициент Сортино',
     sharpeRatio: 'Коэффициент Шарпа',
     tradeAnalysis: 'Анализ сделок',
-    totalTrades: 'Всего сделок',
+
     breakEvenTrades: 'Безубыточные сделки',
     maxConsecutiveWins: 'Макс. подряд выигрышей',
     maxConsecutiveLosses: 'Макс. подряд проигрышей',
@@ -331,7 +333,8 @@ const dictionaries: Record<Lang, Dict> = {
     selectEntryDate: 'Kirish sanasini tanlang',
     selectExitDate: 'Chiqish sanasini tanlang',
     tradingStatistics: 'Savdo statistikasi',
-    performanceCharts: 'Natijaning grafiklari',
+    performanceCharts: 'Natija grafiklari',
+    statsSummary: 'Sizning statistikangiz xulosasi',
     detailedStatistics: 'Batafsil statistika',
     noTradesForPeriod: 'Tanlangan davr uchun bitimlar topilmadi.',
     total: 'Barchasi',
@@ -380,11 +383,11 @@ const dictionaries: Record<Lang, Dict> = {
     saturday: 'Shan',
     sunday: 'Yak',
     trade: 'savdo',
-    trades: 'savdolar',
+
     noData: 'Ma\'lumot yo\'q',
     noTradesFound: 'Ushbu sana uchun savdolar topilmadi',
     loading: 'Yuklanmoqda...',
-    performanceCharts: 'Natija grafiklari',
+
     avgWinningTrade: 'O\'rtacha daromadli savdolar',
     avgLosingTrade: 'O\'rtacha zararli savdolar',
     avgHoldTime: 'O\'rtacha savdo vaqti',
@@ -399,7 +402,7 @@ const dictionaries: Record<Lang, Dict> = {
     breakEven: 'Zararsiz savdolar',
     pnlPerTrade: 'Savdo bo\'yicha P&L (so\'nggi 10 ta)',
     tradeTypeDistribution: 'Savdolar turi',
-    detailedStatistics: 'Batafsil statistika',
+
     profitability: 'Batafsil statistikalar',
     averageProfitLoss: 'O\'rtacha foyda/zarar',
     largestProfit: 'Eng katta foyda',
@@ -407,7 +410,7 @@ const dictionaries: Record<Lang, Dict> = {
     sortinoRatio: 'Sortino nisbati',
     sharpeRatio: 'Sharpe nisbati',
     tradeAnalysis: 'Savdo tahlili',
-    totalTrades: 'Jami savdolar',
+
     breakEvenTrades: 'Zararsiz savdolar',
     maxConsecutiveWins: 'Maks. ketma-ket g\'alabalar',
     maxConsecutiveLosses: 'Maks. ketma-ket zararlar',
@@ -460,13 +463,13 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     // Prefer the last user-chosen language saved in localStorage
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('lang') as Lang | null;
-      if (saved && ['en','ru','uz'].includes(saved)) return saved;
+      if (saved && ['en', 'ru', 'uz'].includes(saved)) return saved;
     }
     // Fall back to cookie (possibly from URL-based middleware)
     if (typeof document !== 'undefined') {
       const cookie = document.cookie.split('; ').find(v => v.startsWith('lang='));
       const cookieLang = cookie?.split('=')[1] as Lang | undefined;
-      if (cookieLang && ['en','ru','uz'].includes(cookieLang)) return cookieLang;
+      if (cookieLang && ['en', 'ru', 'uz'].includes(cookieLang)) return cookieLang;
     }
     return 'en';
   });
@@ -478,7 +481,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       if (typeof document !== 'undefined') {
         document.cookie = `lang=${lang}; path=/; max-age=31536000; samesite=lax`;
       }
-    } catch (_) {}
+    } catch (_) { }
   }, [lang]);
 
   const value = useMemo<I18nContextType>(() => ({
@@ -493,7 +496,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
         if (typeof window !== 'undefined') {
           localStorage.setItem('lang', l);
         }
-      } catch (_) {}
+      } catch (_) { }
     },
     t: (key: string) => dictionaries[lang][key] ?? key,
   }), [lang]);

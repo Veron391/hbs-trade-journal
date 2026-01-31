@@ -28,7 +28,7 @@ export default function DatePicker({ value, onChange, placeholder, className, er
   const [selectedDate, setSelectedDate] = useState<Date | null>(
     value ? new Date(value) : null
   );
-  
+
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -92,14 +92,14 @@ export default function DatePicker({ value, onChange, placeholder, className, er
   const handleDateClick = (day: number) => {
     const date = new Date(currentYear, currentMonth, day);
     setSelectedDate(date);
-    
+
     // Format date as YYYY-MM-DD for input value (use local timezone)
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const dayStr = String(date.getDate()).padStart(2, '0');
     const formattedDate = `${year}-${month}-${dayStr}`;
     onChange(formattedDate);
-    
+
     // Close with animation
     setIsAnimating(true);
     setTimeout(() => {
@@ -192,10 +192,10 @@ export default function DatePicker({ value, onChange, placeholder, className, er
           className={`
             w-8 h-8 flex items-center justify-center text-sm font-medium rounded-lg transition-colors
             ${isSelected(day)
-              ? 'bg-[#3B82F6] text-white'
+              ? 'bg-[#553527] text-white'
               : isToday(day)
-              ? 'bg-[#4A3F42] text-white'
-              : 'text-gray-200 hover:bg-[#4A3F42] hover:text-white'
+                ? 'bg-[#553527]/70 text-white ring-2 ring-[#553527]'
+                : 'text-gray-200 hover:bg-[#553527]/50 hover:text-white'
             }
           `}
         >
@@ -211,8 +211,8 @@ export default function DatePicker({ value, onChange, placeholder, className, er
     <div ref={containerRef} className="relative">
       <div
         className={`
-          relative flex items-center w-full rounded-md border px-3 py-2 bg-[#342f31] text-white cursor-pointer transition-colors
-          ${error ? 'border-red-500 focus-within:border-red-500' : 'border-white/15 focus-within:border-blue-500'}
+          relative flex items-center w-full rounded-md border px-3 py-2 bg-[#171717] text-white cursor-pointer transition-colors
+          ${error ? 'border-red-500 focus-within:border-red-500' : 'border-[#553527]/40 focus-within:border-[#553527]'}
           ${className || ''}
         `}
         onClick={handleToggle}
@@ -223,18 +223,17 @@ export default function DatePicker({ value, onChange, placeholder, className, er
           value={selectedDate ? formatDisplayDate(selectedDate) : ''}
           placeholder={placeholder}
           readOnly
-          className="flex-1 bg-transparent text-white placeholder-gray-300 outline-none cursor-pointer"
+          className="flex-1 bg-transparent text-white placeholder-[#303030] outline-none cursor-pointer"
         />
         <Calendar className="w-4 h-4 text-gray-400 ml-2" />
       </div>
 
       {(isOpen || isAnimating) && (
-        <div 
-          className={`absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-50 bg-[#1C1719]/95 backdrop-blur-md border border-white/15 rounded-lg shadow-xl p-4 w-80 transition-all duration-200 ease-out ${
-            isOpen && !isAnimating 
-              ? 'opacity-100 scale-100 translate-y-0' 
-              : 'opacity-0 scale-95 -translate-y-2'
-          }`}
+        <div
+          className={`absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-50 bg-[#101010]/95 backdrop-blur-md border border-white/15 rounded-lg shadow-xl p-4 w-80 transition-all duration-200 ease-out ${isOpen && !isAnimating
+            ? 'opacity-100 scale-100 translate-y-0'
+            : 'opacity-0 scale-95 -translate-y-2'
+            }`}
         >
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
@@ -243,52 +242,52 @@ export default function DatePicker({ value, onChange, placeholder, className, er
                 <button
                   type="button"
                   onClick={handlePreviousMonth}
-                  className="p-1 rounded-lg hover:bg-[#342f31] text-gray-300 hover:text-white transition-colors"
+                  className="p-1 rounded-lg hover:bg-[#171717] text-gray-300 hover:text-white transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                
+
                 <div className="flex items-center space-x-2">
                   <button
                     type="button"
                     onClick={() => setShowMonthSelector(true)}
-                    className="text-white font-medium hover:bg-[#342f31] py-1 px-2 rounded-lg transition-colors"
+                    className="text-white font-medium hover:bg-[#171717] py-1 px-2 rounded-lg transition-colors"
                   >
                     {MONTHS[currentMonth]}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowYearSelector(true)}
-                    className="text-white font-medium hover:bg-[#342f31] py-1 px-2 rounded-lg transition-colors"
+                    className="text-white font-medium hover:bg-[#171717] py-1 px-2 rounded-lg transition-colors"
                   >
                     {currentYear}
                   </button>
                 </div>
-                
+
                 <button
                   type="button"
                   onClick={handleNextMonth}
-                  className="p-1 rounded-lg hover:bg-[#342f31] text-gray-300 hover:text-white transition-colors"
+                  className="p-1 rounded-lg hover:bg-[#171717] text-gray-300 hover:text-white transition-colors"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </>
             )}
-            
+
             {showYearSelector && (
               <div className="flex items-center justify-between w-full">
                 <button
                   type="button"
                   onClick={() => setShowYearSelector(false)}
-                  className="p-1 rounded-lg hover:bg-[#342f31] text-gray-300 hover:text-white transition-colors"
+                  className="p-1 rounded-lg hover:bg-[#171717] text-gray-300 hover:text-white transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                
+
                 <h3 className="text-white font-medium text-center flex-1">
                   Select Year
                 </h3>
-                
+
                 <div className="w-6"></div> {/* Spacer for alignment */}
               </div>
             )}
@@ -298,15 +297,15 @@ export default function DatePicker({ value, onChange, placeholder, className, er
                 <button
                   type="button"
                   onClick={() => setShowMonthSelector(false)}
-                  className="p-1 rounded-lg hover:bg-[#342f31] text-gray-300 hover:text-white transition-colors"
+                  className="p-1 rounded-lg hover:bg-[#171717] text-gray-300 hover:text-white transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                
+
                 <h3 className="text-white font-medium text-center flex-1">
                   Select Month
                 </h3>
-                
+
                 <div className="w-6"></div> {/* Spacer for alignment */}
               </div>
             )}
@@ -344,8 +343,8 @@ export default function DatePicker({ value, onChange, placeholder, className, er
                     className={`
                       px-3 py-2 rounded-lg text-sm font-medium transition-colors
                       ${year === currentYear
-                        ? 'bg-[#3B82F6] text-white'
-                        : 'text-gray-200 hover:bg-[#4A3F42] hover:text-white'
+                        ? 'bg-[#553527] text-white'
+                        : 'text-gray-200 hover:bg-[#553527]/50 hover:text-white'
                       }
                     `}
                   >
@@ -366,8 +365,8 @@ export default function DatePicker({ value, onChange, placeholder, className, er
                   className={`
                     px-3 py-2 rounded-lg text-sm font-medium transition-colors
                     ${index === currentMonth
-                      ? 'bg-[#3B82F6] text-white'
-                      : 'text-gray-200 hover:bg-[#4A3F42] hover:text-white'
+                      ? 'bg-[#553527] text-white'
+                      : 'text-gray-200 hover:bg-[#553527]/50 hover:text-white'
                     }
                   `}
                 >

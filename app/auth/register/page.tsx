@@ -14,7 +14,7 @@ export default function RegisterPage() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(false);
   const { register, user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -29,8 +29,8 @@ export default function RegisterPage() {
   }
 
   const validateForm = () => {
-    const newErrors: {[key: string]: string} = {};
-    
+    const newErrors: { [key: string]: string } = {};
+
     if (!fullName.trim()) {
       newErrors.fullName = 'To\'liq ism majburiy';
     }
@@ -41,38 +41,38 @@ export default function RegisterPage() {
     if (!phoneNumber.trim()) {
       newErrors.phoneNumber = 'Telefon raqami majburiy';
     }
-    
+
     if (!email.trim()) {
       newErrors.email = 'Email majburiy';
     } else if (!/\S+@\S+\.\S+/.test(email)) {
       newErrors.email = 'Email noto\'g\'ri';
     }
-    
+
     if (!password) {
       newErrors.password = 'Parol majburiy';
     } else if (password.length < 6) {
       newErrors.password = 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak';
     }
-    
+
     if (!confirmPassword) {
       newErrors.confirmPassword = 'Iltimos, parolni tasdiqlang';
     } else if (password !== confirmPassword) {
       newErrors.confirmPassword = 'Parollar mos kelmaydi. Xuddi shu parolni kiriting.';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
       await register(fullName, email, username, phoneNumber, password, confirmPassword);
       router.push('/');
@@ -89,7 +89,7 @@ export default function RegisterPage() {
   const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setConfirmPassword(value);
-    
+
     // Clear confirm password error if passwords match
     if (value && password && value === password) {
       setErrors(prev => {
@@ -101,101 +101,107 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#110D0F] px-2 sm:px-4 py-4 sm:py-8">
-      <div className="max-w-md w-full p-4 sm:p-6 bg-[#1C1719] rounded-lg shadow-lg">
-             <div className="flex items-center justify-center mb-4 sm:mb-6">
-                    <img 
-              src="https://online.hbsakademiya.uz/images/svg/logo.svg" 
-              alt="HBS Academy" 
-              className="h-7 sm:h-8 w-auto logo-partial-white"
-            />
-       </div>
-       <h1 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6 text-center">Hisob yaratish</h1>
-      
-      {errors.form && (
-        <div className="bg-red-900/50 border border-red-500 text-white px-3 sm:px-4 py-2 sm:py-3 rounded-md mb-4 text-xs sm:text-sm">
-          {errors.form}
+    <div className="min-h-screen flex items-center justify-center bg-[#090909] px-2 sm:px-4 py-4 sm:py-8">
+      <div className="max-w-md w-full p-4 sm:p-6 bg-[#131313] rounded-lg shadow-lg">
+        <div className="flex items-center justify-center mb-4 sm:mb-6">
+          <img
+            src="https://online.hbsakademiya.uz/images/svg/logo.svg"
+            alt="HBS Academy"
+            className="h-7 sm:h-8 w-auto logo-partial-white"
+          />
         </div>
-      )}
-      
-      <form onSubmit={handleSubmit} autoComplete="off">
-        <FormInput
-          id="fullName"
-          label="To'liq ism-familiyangiz"
-          type="text"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          required
-          error={errors.fullName}
-          autoComplete="off"
-        />
-        <FormInput
-          id="username"
-          label="Foydalanuvchi nomi"
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          required
-          error={errors.username}
-          autoComplete="off"
-        />
+        <h1 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6 text-center">Hisob yaratish</h1>
 
-        <FormInput
-          id="phone"
-          label="Telefon raqami"
-          type="text"
-          value={phoneNumber}
-          onChange={(e) => setPhoneNumber(e.target.value)}
-          required
-          error={errors.phoneNumber}
-          autoComplete="off"
-        />
-        
-        <FormInput
-          id="email"
-          label="Email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          error={errors.email}
-          autoComplete="off"
-        />
-        
-        <FormInput
-          id="password"
-          label="Parol"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          error={errors.password}
-          autoComplete="new-password"
-        />
-        
-        <FormInput
-          id="confirmPassword"
-          label="Parolni tasdiqlash"
-          type="password"
-          value={confirmPassword}
-          onChange={handleConfirmPasswordChange}
-          required
-          error={errors.confirmPassword}
-          autoComplete="new-password"
-        />
-        
-        <div className="mt-4 sm:mt-6">
-          <Button
-            type="submit"
-            fullWidth
-            disabled={loading}
-            variant="success"
-          >
-            {loading ? 'Hisob yaratilmoqda...' : 'Hisob yaratish'}
-          </Button>
-        </div>
-      </form>
-      
+        {errors.form && (
+          <div className="bg-red-900/50 border border-red-500 text-white px-3 sm:px-4 py-2 sm:py-3 rounded-md mb-4 text-xs sm:text-sm">
+            {errors.form}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} autoComplete="off">
+          <FormInput
+            id="fullName"
+            label="To'liq ism-familiyangiz"
+            type="text"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            required
+            error={errors.fullName}
+            autoComplete="off"
+            backgroundColor="#202020"
+          />
+          <FormInput
+            id="username"
+            label="Foydalanuvchi nomi"
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+            error={errors.username}
+            autoComplete="off"
+            backgroundColor="#202020"
+          />
+
+          <FormInput
+            id="phone"
+            label="Telefon raqami"
+            type="text"
+            value={phoneNumber}
+            onChange={(e) => setPhoneNumber(e.target.value)}
+            required
+            error={errors.phoneNumber}
+            autoComplete="off"
+            backgroundColor="#202020"
+          />
+
+          <FormInput
+            id="email"
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            error={errors.email}
+            autoComplete="off"
+            backgroundColor="#202020"
+          />
+
+          <FormInput
+            id="password"
+            label="Parol"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            error={errors.password}
+            autoComplete="new-password"
+            backgroundColor="#202020"
+          />
+
+          <FormInput
+            id="confirmPassword"
+            label="Parolni tasdiqlash"
+            type="password"
+            value={confirmPassword}
+            onChange={handleConfirmPasswordChange}
+            required
+            error={errors.confirmPassword}
+            autoComplete="new-password"
+            backgroundColor="#202020"
+          />
+
+          <div className="mt-4 sm:mt-6">
+            <Button
+              type="submit"
+              fullWidth
+              disabled={loading}
+              variant="neon"
+            >
+              {loading ? 'Hisob yaratilmoqda...' : 'Hisob yaratish'}
+            </Button>
+          </div>
+        </form>
+
         <div className="mt-4 sm:mt-6 text-center text-gray-400 text-xs sm:text-sm">
           <span>Allaqachon hisobingiz bormi? </span>
           <Link href="/auth/login" className="text-green-500 hover:underline">

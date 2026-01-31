@@ -13,6 +13,7 @@ interface FormInputProps {
   placeholder?: string;
   error?: string;
   autoComplete?: string;
+  backgroundColor?: string;
 }
 
 export default function FormInput({
@@ -24,7 +25,8 @@ export default function FormInput({
   required = false,
   placeholder = '',
   error,
-  autoComplete
+  autoComplete,
+  backgroundColor = '#171717'
 }: FormInputProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -39,10 +41,10 @@ export default function FormInput({
       if (inputRef.current) {
         const inputValue = inputRef.current.value;
         // Check if input has autofilled value that's not in React state
-        const hasAutofill = inputRef.current.matches(':-webkit-autofill') || 
-                           inputRef.current.matches(':autofill') ||
-                           (inputValue && inputValue.length > 0 && !value);
-        
+        const hasAutofill = inputRef.current.matches(':-webkit-autofill') ||
+          inputRef.current.matches(':autofill') ||
+          (inputValue && inputValue.length > 0 && !value);
+
         if (hasAutofill && inputValue && inputValue !== value) {
           // Update React state to match autofilled value
           const syntheticEvent = {
@@ -65,7 +67,7 @@ export default function FormInput({
       clearTimeout(timeout2);
       clearTimeout(timeout3);
     };
-  }, [value, onChange]);
+  }, []);
 
   return (
     <div className="mb-4">
@@ -86,13 +88,15 @@ export default function FormInput({
           }}
           required={required}
           autoComplete={autoComplete}
-          className={`w-full px-2 sm:px-3 bg-[#342F31] border rounded-md text-base
+          className={`w-full px-2 sm:px-3 border-2 rounded-md text-base
             focus:outline-none focus:ring-1 
-            ${error ? 'border-danger focus:ring-red-500' : 'border-[#534E50] focus:border-white/70 focus:ring-white/70'}
-            ${isLabelFloating ? 'pt-5 pb-2.5' : 'py-2.5'}
+            ${error ? 'border-danger focus:ring-red-500' : 'border-[#534E50]/30 focus:border-white/60 focus:ring-white/60'}
+            ${isLabelFloating ? 'pt-4 pb-3' : 'py-2.5'}
             ${isPassword ? 'pr-10 sm:pr-10' : ''}`}
           style={{
-            WebkitBoxShadow: '0 0 0 1000px #342F31 inset',
+            WebkitBoxShadow: `0 0 0 1000px ${backgroundColor} inset`,
+            boxShadow: `0 0 0 1000px ${backgroundColor} inset`,
+            backgroundColor: backgroundColor,
             WebkitTextFillColor: value ? 'rgba(255, 255, 255, 1)' : 'rgba(156, 163, 175, 0.4)',
             color: value ? 'rgba(255, 255, 255, 1)' : 'rgba(156, 163, 175, 0.4)',
             caretColor: 'rgba(255, 255, 255, 1)',
@@ -102,13 +106,12 @@ export default function FormInput({
         />
         <label
           htmlFor={id}
-          className={`absolute left-2 sm:left-3 pointer-events-none transition-all duration-200 ${
-            isLabelFloating
-              ? 'top-0 -translate-y-1/2 text-xs text-gray-300 px-1 bg-[#342F31] rounded'
-              : 'top-1/2 -translate-y-1/2 text-xs sm:text-sm text-gray-400'
-          }`}
+          className={`absolute left-2 sm:left-3 pointer-events-none transition-all duration-200 ${isLabelFloating
+            ? 'top-0 -translate-y-1/2 text-xs text-gray-300 px-1 rounded'
+            : 'top-1/2 -translate-y-1/2 text-xs sm:text-sm text-gray-400'
+            }`}
           style={isLabelFloating ? {
-            background: '#342F31',
+            background: backgroundColor,
             paddingLeft: '4px',
             paddingRight: '4px'
           } : {}}

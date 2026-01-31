@@ -6,21 +6,21 @@ import { useTrades } from '@/lib/hooks/useTrades';
 import { listAllTrades } from '@/lib/api/trades';
 import { Trade } from '../../types';
 import { format } from 'date-fns';
-import { Pencil, Trash2, ArrowUp, ArrowDown, AlertTriangle, ExternalLink, FileText, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Pencil, Trash2, ArrowUp, ArrowDown, AlertTriangle, ExternalLink, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 import TradeForm from './TradeForm';
 import { useI18n } from '../../context/I18nContext';
 
 export default function TradeList() {
   const { t } = useI18n();
   const { deleteTrade: deleteTradeContext, clearAllTrades } = useTradesContext();
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const tradesPerPage = 10; // Backend default limit
-  
+
   // Calculate offset from current page
   const offset = (currentPage - 1) * tradesPerPage;
-  
+
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
   const [isAddingTrade, setIsAddingTrade] = useState(false);
   const [sortBy, setSortBy] = useState<keyof Trade>(() => {
@@ -55,26 +55,26 @@ export default function TradeList() {
 
   // Build ordering parameter for backend API
   const ordering = sortBy ? `${sortDirection === 'desc' ? '-' : ''}${mapFieldToBackend(sortBy)}` : undefined;
-  
+
   // State for all trades (for sorting across all pages)
   const [allTrades, setAllTrades] = useState<Trade[]>([]);
   const [isLoadingAllTrades, setIsLoadingAllTrades] = useState(false);
-  
-  // Fetch trades with pagination and sorting (for count and mutate)
-  const { trades, count, next, previous, isLoading: tradesLoading, mutate } = useTrades(tradesPerPage, offset, ordering);
+
+  // Fetch trades with pagination and sorting (for mutate)
+  const { mutate } = useTrades(tradesPerPage, offset, ordering);
   const [apiMessage, setApiMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [showScriptModal, setShowScriptModal] = useState(false);
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [selectedTradeDetails, setSelectedTradeDetails] = useState<Trade | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
-  
+
   // Load all trades when sort changes
   useEffect(() => {
     const loadAllTrades = async () => {
       setIsLoadingAllTrades(true);
       try {
         const trades = await listAllTrades(ordering);
-        setAllTrades(trades);
+        setAllTrades(trades as Trade[]);
       } catch (error) {
         console.error('Error loading all trades:', error);
         setAllTrades([]);
@@ -82,56 +82,56 @@ export default function TradeList() {
         setIsLoadingAllTrades(false);
       }
     };
-    
+
     loadAllTrades();
   }, [ordering, sortBy, sortDirection]);
-  
+
   // Refresh all trades after delete or update
   const refreshAllTrades = async () => {
     try {
       const trades = await listAllTrades(ordering);
-      setAllTrades(trades);
+      setAllTrades(trades as Trade[]);
     } catch (error) {
       console.error('Error refreshing all trades:', error);
     }
   };
-  
+
   // Sort all trades on frontend
   const sortTrades = (trades: Trade[]): Trade[] => {
     if (!sortBy) return trades;
-    
+
     return [...trades].sort((a, b) => {
       let aValue: any = a[sortBy];
       let bValue: any = b[sortBy];
-      
+
       // Handle type field (may be assetType in some cases)
       if (sortBy === 'type') {
         aValue = (a as any).type || (a as any).assetType || '';
         bValue = (b as any).type || (b as any).assetType || '';
       }
-      
+
       // Handle null/undefined values
       if (aValue == null) aValue = '';
       if (bValue == null) bValue = '';
-      
+
       // Handle dates
       if (sortBy === 'entryDate' || sortBy === 'exitDate') {
         aValue = aValue ? new Date(aValue).getTime() : 0;
         bValue = bValue ? new Date(bValue).getTime() : 0;
       }
-      
+
       // Handle numbers
       if (sortBy === 'entryPrice' || sortBy === 'exitPrice' || sortBy === 'quantity') {
         aValue = typeof aValue === 'number' ? aValue : parseFloat(aValue) || 0;
         bValue = typeof bValue === 'number' ? bValue : parseFloat(bValue) || 0;
       }
-      
+
       // Handle strings (case-insensitive)
       if (typeof aValue === 'string' && typeof bValue === 'string') {
         aValue = aValue.toLowerCase();
         bValue = bValue.toLowerCase();
       }
-      
+
       // Compare values
       if (aValue < bValue) {
         return sortDirection === 'asc' ? -1 : 1;
@@ -142,31 +142,31 @@ export default function TradeList() {
       return 0;
     });
   };
-  
+
   // Get sorted trades
   const sortedAllTrades = sortTrades(allTrades);
-  
+
   // Paginate sorted trades
   const startIndex = (currentPage - 1) * tradesPerPage;
   const endIndex = startIndex + tradesPerPage;
   const paginatedTrades = sortedAllTrades.slice(startIndex, endIndex);
-  
+
   // Calculate total pages from sorted trades count
   const totalPages = sortedAllTrades.length > 0 ? Math.ceil(sortedAllTrades.length / tradesPerPage) : 1;
-  
+
   // Delete trade handler
   const deleteTrade = async (id: string) => {
     await deleteTradeContext(id);
-    
+
     // If this was the last trade on the page, go to previous page
     if (sortedTrades.length === 1 && currentPage > 1) {
       setCurrentPage(prev => prev - 1);
     }
-    
+
     await mutate(); // Refresh the list
     await refreshAllTrades(); // Refresh all trades
   };
-  
+
   // Reset to page 1 if current page exceeds total pages
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
@@ -176,7 +176,7 @@ export default function TradeList() {
 
   const handleSort = (column: keyof Trade) => {
     let newSortDirection: 'asc' | 'desc';
-    
+
     if (sortBy === column) {
       newSortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
       setSortDirection(newSortDirection);
@@ -185,11 +185,11 @@ export default function TradeList() {
       newSortDirection = 'desc';
       setSortDirection(newSortDirection);
     }
-    
+
     // Save sorting options to localStorage
     localStorage.setItem('tradeList_sortBy', column);
     localStorage.setItem('tradeList_sortDirection', newSortDirection);
-    
+
     // Reset to page 1 when sorting changes
     setCurrentPage(1);
   };
@@ -234,10 +234,10 @@ export default function TradeList() {
     const entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : 0;
     const exitPrice = typeof trade.exitPrice === 'number' ? trade.exitPrice : 0;
     const quantity = typeof trade.quantity === 'number' ? trade.quantity : 0;
-    
+
     const entryValue = entryPrice * quantity;
     const exitValue = exitPrice * quantity;
-    
+
     if (trade.direction === 'long') {
       return exitValue - entryValue;
     } else {
@@ -250,7 +250,7 @@ export default function TradeList() {
     const quantity = typeof trade.quantity === 'number' ? trade.quantity : 0;
     const entryValue = entryPrice * quantity;
     const pnl = calculatePnL(trade);
-    
+
     return entryValue === 0 ? 0 : (pnl / entryValue) * 100;
   };
 
@@ -258,9 +258,9 @@ export default function TradeList() {
     return (
       <div>
         <h2 className="text-xl font-semibold mb-6 text-white">{t('addNewTrade')}</h2>
-        <TradeForm 
-          existingTrade={editingTrade} 
-          onComplete={() => setEditingTrade(null)} 
+        <TradeForm
+          existingTrade={editingTrade}
+          onComplete={() => setEditingTrade(null)}
         />
       </div>
     );
@@ -303,12 +303,12 @@ export default function TradeList() {
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
           <div className="bg-gray-800 p-6 rounded-20 shadow-lg max-w-2xl w-full max-h-[90vh] overflow-auto">
             <h3 className="text-xl font-semibold text-white mb-4">Getting Your Real Trade Data</h3>
-            
+
             <p className="text-gray-300 mb-4">
-              To fetch your real Binance trade data, you'll need to run a Python script on your computer. 
+              To fetch your real Binance trade data, you'll need to run a Python script on your computer.
               This bypasses the CORS restrictions that prevent browser access to the Binance API.
             </p>
-            
+
             <div className="space-y-6">
               <div className="bg-gray-700 p-4 rounded-20">
                 <h4 className="text-lg font-medium text-white mb-2">Step 1: Setup</h4>
@@ -322,7 +322,7 @@ export default function TradeList() {
                   </ul>
                 </ol>
               </div>
-              
+
               <div className="bg-gray-700 p-4 rounded-20">
                 <h4 className="text-lg font-medium text-white mb-2">Step 2: Get Binance API Keys</h4>
                 <ol className="list-decimal pl-5 text-gray-300 space-y-2">
@@ -332,7 +332,7 @@ export default function TradeList() {
                   <li>Save your API Key and Secret Key</li>
                 </ol>
               </div>
-              
+
               <div className="bg-gray-700 p-4 rounded-20">
                 <h4 className="text-lg font-medium text-white mb-2">Step 3: Run the Script</h4>
                 <p className="text-gray-300 mb-2">Open a terminal or command prompt and run:</p>
@@ -341,7 +341,7 @@ export default function TradeList() {
                 </pre>
                 <p className="text-gray-300 mt-2">This will create a file called <code className="bg-gray-900 px-1 rounded">binance_trades.json</code></p>
               </div>
-              
+
               <div className="bg-gray-700 p-4 rounded-20">
                 <h4 className="text-lg font-medium text-white mb-2">Step 4: Import the Data</h4>
                 <ol className="list-decimal pl-5 text-gray-300 space-y-2">
@@ -351,7 +351,7 @@ export default function TradeList() {
                 </ol>
               </div>
             </div>
-            
+
             <div className="mt-6 flex justify-end">
               <button
                 onClick={() => setShowScriptModal(false)}
@@ -372,7 +372,7 @@ export default function TradeList() {
               <AlertTriangle className="h-6 w-6 text-red-500 mr-3" />
               <h3 className="text-lg font-semibold text-white">{t('deleteAllTradesTitle')}</h3>
             </div>
-            
+
             <div className="mb-6">
               <p className="text-gray-300 mb-2">
                 {(() => {
@@ -391,31 +391,31 @@ export default function TradeList() {
                 ⚠️ {t('deleteAllWarning')}
               </p>
             </div>
-            
+
             <div className="flex space-x-3">
               <button
                 onClick={async () => {
                   try {
                     await clearAllTrades();
                     setAllTrades([]); // Clear all trades
-                    setApiMessage({ 
-                      type: 'success', 
-                      text: `Successfully deleted all ${sortedAllTrades.length} trade${sortedAllTrades.length !== 1 ? 's' : ''}!` 
+                    setApiMessage({
+                      type: 'success',
+                      text: `Successfully deleted all ${sortedAllTrades.length} trade${sortedAllTrades.length !== 1 ? 's' : ''}!`
                     });
-                    
+
                     // Clear message after 5 seconds
                     setTimeout(() => {
                       setApiMessage(null);
                     }, 5000);
-                    
+
                     setShowDeleteAllModal(false);
                     await refreshAllTrades(); // Refresh all trades
                   } catch (error) {
-                    setApiMessage({ 
-                      type: 'error', 
-                      text: 'Failed to delete all trades. Please try again.' 
+                    setApiMessage({
+                      type: 'error',
+                      text: 'Failed to delete all trades. Please try again.'
                     });
-                    
+
                     // Clear error message after 5 seconds
                     setTimeout(() => {
                       setApiMessage(null);
@@ -438,16 +438,15 @@ export default function TradeList() {
       )}
 
       {apiMessage && (
-        <div className={`${
-          apiMessage.type === 'success' ? 'bg-green-900/50 border-green-500' : 'bg-red-900/50 border-red-500'
-        } border text-white px-4 py-3 rounded-20 mb-4`}>
+        <div className={`${apiMessage.type === 'success' ? 'bg-green-900/50 border-green-500' : 'bg-red-900/50 border-red-500'
+          } border text-white px-4 py-3 rounded-20 mb-4`}>
           {apiMessage.text}
         </div>
       )}
 
       {isLoadingAllTrades ? (
-        <div className="text-center py-12 bg-[#1C1719] rounded-lg">
-          <p className="text-gray-300">Loading trades...</p>
+        <div className="flex justify-center items-center py-12">
+          <div className="loader"></div>
         </div>
       ) : sortedTrades.length === 0 ? (
         <div className="text-center py-12 bg-[#1C1719] rounded-lg">
@@ -455,113 +454,113 @@ export default function TradeList() {
         </div>
       ) : (
         <div className="relative left-1/2 -translate-x-1/2 w-[90vw] overflow-x-hidden pb-4">
-          <div className="block w-[90vw] ml-0 rounded-20 glass-70 border-2 border-[#2b2b2b] overflow-hidden">
+          <div className="block w-[90vw] ml-0 rounded-20 glass-70 border-2 border-[#D9FE43]/23 overflow-hidden">
             <table className="w-full table-auto divide-y divide-[#2b2b2b]">
-              <thead className="text-white ring-2 ring-[#2d282a] shadow-lg backdrop-blur-2xl sticky top-0 z-30" style={{ backgroundColor: 'rgba(25, 7, 15, 0.63)' }}>
+              <thead className="text-[#D9FE43] shadow-lg backdrop-blur-2xl sticky top-0 z-30 font-bold" style={{ backgroundColor: 'rgba(217, 254, 67, 0.15)', boxShadow: 'inset 0 -0.4px 0 0 #D9FE43' }}>
                 <tr>
-                  <th 
-                    scope="col" 
-                    className="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider cursor-pointer w-[11%]"
+                  <th
+                    scope="col"
+                    className="px-4 py-3 text-center text-xs font-bold text-[#D9FE43] uppercase tracking-wider cursor-pointer w-[11%]"
                     onClick={() => handleSort('symbol')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
                       {t('symbol')}
                       {sortBy === 'symbol' && (
-                        sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-green-400" /> : <ArrowDown size={12} className="ml-0.5 text-red-400" />
+                        sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-[#D9FE43]" /> : <ArrowDown size={12} className="ml-0.5 text-[#D9FE43]" />
                       )}
                     </div>
                   </th>
-                  <th 
-                    scope="col" 
-                    className="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider cursor-pointer w-[8%]"
+                  <th
+                    scope="col"
+                    className="px-4 py-3 text-center text-xs font-bold text-[#D9FE43] uppercase tracking-wider cursor-pointer w-[8%]"
                     onClick={() => handleSort('type')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
                       {t('type')}
                       {sortBy === 'type' && (
-                        sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-green-400" /> : <ArrowDown size={12} className="ml-0.5 text-red-400" />
+                        sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-[#D9FE43]" /> : <ArrowDown size={12} className="ml-0.5 text-[#D9FE43]" />
                       )}
                     </div>
                   </th>
-                  <th 
-                    scope="col" 
-                    className="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider cursor-pointer w-[10%]"
+                  <th
+                    scope="col"
+                    className="px-4 py-3 text-center text-xs font-bold text-[#D9FE43] uppercase tracking-wider cursor-pointer w-[10%]"
                     onClick={() => handleSort('direction')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
                       {t('direction')}
                       {sortBy === 'direction' && (
-                        sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-green-400" /> : <ArrowDown size={12} className="ml-0.5 text-red-400" />
+                        sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-[#D9FE43]" /> : <ArrowDown size={12} className="ml-0.5 text-[#D9FE43]" />
                       )}
                     </div>
                   </th>
-                  <th 
-                    scope="col" 
-                    className="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider cursor-pointer w-[11%]"
+                  <th
+                    scope="col"
+                    className="px-4 py-3 text-center text-xs font-bold text-[#D9FE43] uppercase tracking-wider cursor-pointer w-[11%]"
                     onClick={() => handleSort('entryDate')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
                       {t('entryDate')}
                       {sortBy === 'entryDate' && (
-                        sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-green-400" /> : <ArrowDown size={12} className="ml-0.5 text-red-400" />
+                        sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-[#D9FE43]" /> : <ArrowDown size={12} className="ml-0.5 text-[#D9FE43]" />
                       )}
                     </div>
                   </th>
-                  <th 
-                    scope="col" 
-                    className="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider cursor-pointer w-[11%]"
+                  <th
+                    scope="col"
+                    className="px-4 py-3 text-center text-xs font-bold text-[#D9FE43] uppercase tracking-wider cursor-pointer w-[11%]"
                     onClick={() => handleSort('exitDate')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
                       {t('exitDate')}
                       {sortBy === 'exitDate' && (
-                        sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-green-400" /> : <ArrowDown size={12} className="ml-0.5 text-red-400" />
+                        sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-[#D9FE43]" /> : <ArrowDown size={12} className="ml-0.5 text-[#D9FE43]" />
                       )}
                     </div>
                   </th>
-                  <th 
-                    scope="col" 
-                    className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer w-[10%]"
+                  <th
+                    scope="col"
+                    className="px-4 py-3 text-center text-xs font-bold text-[#D9FE43] uppercase tracking-wider cursor-pointer w-[10%]"
                     onClick={() => handleSort('entryPrice')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
                       {t('entryPrice')}
                       {sortBy === 'entryPrice' && (
-                        sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-green-400" /> : <ArrowDown size={12} className="ml-0.5 text-red-400" />
+                        sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-[#D9FE43]" /> : <ArrowDown size={12} className="ml-0.5 text-[#D9FE43]" />
                       )}
                     </div>
                   </th>
-                  <th 
-                    scope="col" 
-                    className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer w-[10%]"
+                  <th
+                    scope="col"
+                    className="px-4 py-3 text-center text-xs font-bold text-[#D9FE43] uppercase tracking-wider cursor-pointer w-[10%]"
                     onClick={() => handleSort('exitPrice')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
                       {t('exitPrice')}
                       {sortBy === 'exitPrice' && (
-                        sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-green-400" /> : <ArrowDown size={12} className="ml-0.5 text-red-400" />
+                        sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-[#D9FE43]" /> : <ArrowDown size={12} className="ml-0.5 text-[#D9FE43]" />
                       )}
                     </div>
                   </th>
-                  <th 
-                    scope="col" 
-                    className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer w-[8%]"
+                  <th
+                    scope="col"
+                    className="px-4 py-3 text-center text-xs font-bold text-[#D9FE43] uppercase tracking-wider cursor-pointer w-[8%]"
                     onClick={() => handleSort('quantity')}
                   >
                     <div className="flex items-center justify-center whitespace-nowrap">
                       {t('quantity')}
                       {sortBy === 'quantity' && (
-                        sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-green-400" /> : <ArrowDown size={12} className="ml-0.5 text-red-400" />
+                        sortDirection === 'asc' ? <ArrowUp size={12} className="ml-0.5 text-[#D9FE43]" /> : <ArrowDown size={12} className="ml-0.5 text-[#D9FE43]" />
                       )}
                     </div>
                   </th>
-                  <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider w-[8%]">
+                  <th scope="col" className="px-4 py-3 text-center text-xs font-bold text-[#D9FE43] uppercase tracking-wider w-[8%]">
                     P/L
                   </th>
-                  <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider w-[7%]">
+                  <th scope="col" className="px-4 py-3 text-center text-xs font-bold text-[#D9FE43] uppercase tracking-wider w-[7%]">
                     {t('link')}
                   </th>
-                  <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider w-[9%]">
+                  <th scope="col" className="px-4 py-3 text-center text-xs font-bold text-[#D9FE43] uppercase tracking-wider w-[9%]">
                     {t('actions')}
                   </th>
                 </tr>
@@ -571,18 +570,18 @@ export default function TradeList() {
                   const pnl = trade.pnlAmount != null ? Number(trade.pnlAmount) : calculatePnL(trade);
                   const pnlPercent = trade.pnlPercentage != null ? Number(trade.pnlPercentage) : calculatePnLPercentage(trade);
                   const isProfitable = pnl > 0;
-                  
+
                   return (
-                  <tr 
-                      key={trade.id} 
-                      className="hover:bg-blue-500/10 hover:border-blue-500/20 transition-none cursor-pointer border border-transparent"
+                    <tr
+                      key={trade.id}
+                      className="hover:bg-[#545353]/10 hover:border-[#545353]/20 transition-none cursor-pointer border border-transparent"
                       onClick={() => loadTradeDetail(trade.id, trade)}
                     >
                       <td className="px-4 py-3 text-sm font-medium text-gray-100 text-center whitespace-nowrap">
                         {trade.symbol.replace(/USDT$/, '')}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-300 text-center whitespace-nowrap">
-                        <span 
+                        <span
                           className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-md"
                           style={{
                             backgroundColor: (trade.type || (trade as any).assetType) === 'stock' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 165, 0, 0.2)', // Blue for stock, orange for crypto
@@ -593,12 +592,11 @@ export default function TradeList() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-300 text-center whitespace-nowrap">
-                        <span 
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            trade.direction === 'long' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${trade.direction === 'long'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                            }`}
                         >
                           {trade.direction === 'long' ? 'Long' : 'Short'}
                         </span>
@@ -608,9 +606,9 @@ export default function TradeList() {
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-300 text-center whitespace-nowrap">
                         {(() => {
-                          const isPending = !trade.exitDate 
-                            || trade.exitPrice == null 
-                            || Number(trade.exitPrice) === 0 
+                          const isPending = !trade.exitDate
+                            || trade.exitPrice == null
+                            || Number(trade.exitPrice) === 0
                             || (trade.exitDate && trade.entryDate && trade.exitDate === trade.entryDate && (trade.exitPrice == null || Number(trade.exitPrice) === 0));
                           if (isPending) {
                             return (
@@ -625,9 +623,9 @@ export default function TradeList() {
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-300 text-center whitespace-nowrap">
                         {(() => {
-                          const isPending = !trade.exitDate 
-                            || trade.exitPrice == null 
-                            || Number(trade.exitPrice) === 0 
+                          const isPending = !trade.exitDate
+                            || trade.exitPrice == null
+                            || Number(trade.exitPrice) === 0
                             || (trade.exitDate && trade.entryDate && trade.exitDate === trade.entryDate && (trade.exitPrice == null || Number(trade.exitPrice) === 0));
                           if (isPending) {
                             return (
@@ -640,14 +638,14 @@ export default function TradeList() {
                       <td className="px-4 py-3 text-sm text-gray-300 text-center whitespace-nowrap">
                         {trade.quantity}
                       </td>
-                        <td className="px-4 py-3 text-center whitespace-nowrap">
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
                         {(() => {
                           // Check if trade is pending (missing exit date or exit price)
-                          const isPending = !trade.exitDate 
-                            || trade.exitPrice == null 
-                            || Number(trade.exitPrice) === 0 
+                          const isPending = !trade.exitDate
+                            || trade.exitPrice == null
+                            || Number(trade.exitPrice) === 0
                             || (trade.exitDate && trade.entryDate && trade.exitDate === trade.entryDate && (trade.exitPrice == null || Number(trade.exitPrice) === 0));
-                          
+
                           if (isPending) {
                             return (
                               <div className="flex flex-col items-center">
@@ -657,7 +655,7 @@ export default function TradeList() {
                               </div>
                             );
                           }
-                          
+
                           return (
                             <>
                               <div className={`text-sm font-medium ${isProfitable ? 'text-green-600' : pnl < 0 ? 'text-red-500' : 'text-gray-400'}`}>
@@ -730,21 +728,21 @@ export default function TradeList() {
                               if (window.confirm(t('confirmDeleteOne'))) {
                                 try {
                                   await deleteTrade(trade.id);
-                                  setApiMessage({ 
-                                    type: 'success', 
-                                    text: `Trade ${trade.symbol} deleted successfully!` 
+                                  setApiMessage({
+                                    type: 'success',
+                                    text: `Trade ${trade.symbol} deleted successfully!`
                                   });
-                                  
+
                                   // Clear message after 3 seconds
                                   setTimeout(() => {
                                     setApiMessage(null);
                                   }, 3000);
                                 } catch (error) {
-                                  setApiMessage({ 
-                                    type: 'error', 
-                                    text: `Failed to delete trade ${trade.symbol}. Please try again.` 
+                                  setApiMessage({
+                                    type: 'error',
+                                    text: `Failed to delete trade ${trade.symbol}. Please try again.`
                                   });
-                                  
+
                                   // Clear error message after 5 seconds
                                   setTimeout(() => {
                                     setApiMessage(null);
@@ -784,16 +782,15 @@ export default function TradeList() {
               <div className="text-sm text-gray-400">
                 Showing {startIndex + 1}-{Math.min(endIndex, sortedAllTrades.length)} of {sortedAllTrades.length} trades
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1 || isLoadingAllTrades}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1 ${
-                    currentPage === 1 || isLoadingAllTrades
-                      ? 'bg-[#1C1719]/50 border border-white/10 text-gray-400 cursor-not-allowed'
-                      : 'bg-[#1C1719] border border-white/20 text-white hover:bg-blue-600/20'
-                  }`}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1 ${currentPage === 1 || isLoadingAllTrades
+                    ? 'bg-[#171717]/50 border border-white/10 text-gray-400 cursor-not-allowed'
+                    : 'bg-[#171717] border border-white/20 text-white hover:bg-[#553527]'
+                    }`}
                 >
                   <ChevronLeft size={16} />
                   Previous
@@ -805,7 +802,7 @@ export default function TradeList() {
                     const showPages = 5; // Show 5 page numbers at most
                     let startPage = Math.max(1, currentPage - Math.floor(showPages / 2));
                     let endPage = Math.min(totalPages, startPage + showPages - 1);
-                    
+
                     // Adjust start page if we're near the end
                     if (endPage - startPage + 1 < showPages) {
                       startPage = Math.max(1, endPage - showPages + 1);
@@ -817,11 +814,10 @@ export default function TradeList() {
                         <button
                           key={1}
                           onClick={() => setCurrentPage(1)}
-                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                            currentPage === 1
-                              ? 'bg-orange-500/20 border border-orange-500/40 text-orange-400'
-                              : 'bg-[#1C1719] border border-white/20 text-white hover:bg-blue-600/20'
-                          }`}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${currentPage === 1
+                            ? 'bg-[#553527] border-2 border-[#886652] text-white'
+                            : 'bg-[#171717] border border-white/20 text-white hover:bg-[#553527]'
+                            }`}
                         >
                           1
                         </button>
@@ -841,11 +837,10 @@ export default function TradeList() {
                         <button
                           key={i}
                           onClick={() => setCurrentPage(i)}
-                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                            i === currentPage
-                              ? 'bg-orange-500/20 border border-orange-500/40 text-orange-400'
-                              : 'bg-[#1C1719] border border-white/20 text-white hover:bg-blue-600/20'
-                          }`}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${i === currentPage
+                            ? 'bg-[#553527] border-2 border-[#886652] text-white'
+                            : 'bg-[#171717] border border-white/20 text-white hover:bg-[#553527]'
+                            }`}
                         >
                           {i}
                         </button>
@@ -865,11 +860,10 @@ export default function TradeList() {
                         <button
                           key={totalPages}
                           onClick={() => setCurrentPage(totalPages)}
-                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                            currentPage === totalPages
-                              ? 'bg-orange-500/20 border border-orange-500/40 text-orange-400'
-                              : 'bg-[#1C1719] border border-white/20 text-white hover:bg-blue-600/20'
-                          }`}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${currentPage === totalPages
+                            ? 'bg-[#553527] border-2 border-[#886652] text-white'
+                            : 'bg-[#171717] border border-white/20 text-white hover:bg-[#553527]'
+                            }`}
                         >
                           {totalPages}
                         </button>
@@ -883,11 +877,10 @@ export default function TradeList() {
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages || isLoadingAllTrades}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1 ${
-                    currentPage === totalPages || isLoadingAllTrades
-                      ? 'bg-[#1C1719]/50 border border-white/10 text-gray-400 cursor-not-allowed'
-                      : 'bg-[#1C1719] border border-white/20 text-white hover:bg-blue-600/20'
-                  }`}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1 ${currentPage === totalPages || isLoadingAllTrades
+                    ? 'bg-[#171717]/50 border border-white/10 text-gray-400 cursor-not-allowed'
+                    : 'bg-[#171717] border border-white/20 text-white hover:bg-[#553527]'
+                    }`}
                 >
                   Next
                   <ChevronRight size={16} />
@@ -900,12 +893,13 @@ export default function TradeList() {
 
       {/* Trade Details Modal */}
       {selectedTradeDetails && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={() => setSelectedTradeDetails(null)}
         >
-          <div 
-            className="bg-gradient-to-br from-[#141015] to-[#0f0b0d] border border-[#2e2a2c] rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+          <div
+            className="bg-[#131313] rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+            style={{ border: '0.2px solid #D9FE43' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
@@ -931,7 +925,7 @@ export default function TradeList() {
                       {selectedTradeDetails.symbol.replace(/USDT$/, '')}
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">{t('type')}</label>
                     <span
@@ -964,8 +958,8 @@ export default function TradeList() {
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">{t('entryPrice')}</label>
                     <div className="text-white font-medium">
-                      ${typeof selectedTradeDetails.entryPrice === 'number' 
-                        ? selectedTradeDetails.entryPrice.toString() 
+                      ${typeof selectedTradeDetails.entryPrice === 'number'
+                        ? selectedTradeDetails.entryPrice.toString()
                         : String(selectedTradeDetails.entryPrice || '0')}
                     </div>
                   </div>
@@ -973,8 +967,8 @@ export default function TradeList() {
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">{t('exitPrice')}</label>
                     <div className="text-white font-medium">
-                      ${typeof selectedTradeDetails.exitPrice === 'number' 
-                        ? selectedTradeDetails.exitPrice.toString() 
+                      ${typeof selectedTradeDetails.exitPrice === 'number'
+                        ? selectedTradeDetails.exitPrice.toString()
                         : String(selectedTradeDetails.exitPrice || '0')}
                     </div>
                   </div>
@@ -996,14 +990,14 @@ export default function TradeList() {
               </div>
 
               {/* P/L Section */}
-              <div className="rounded-xl p-5 mb-6 border border-[#2f2a2c] bg-gradient-to-br from-[#171317] to-[#181419]">
+              <div className="rounded-xl p-5 mb-6 border border-[#2f2a2c] bg-[#171717]">
                 <h4 className="text-white font-medium mb-4">{t('profitLoss')}</h4>
                 <div className="grid grid-cols-2 gap-6">
                   {(() => {
                     const pnl = selectedTradeDetails.pnlAmount != null ? Number(selectedTradeDetails.pnlAmount) : calculatePnL(selectedTradeDetails);
                     const pnlPercent = selectedTradeDetails.pnlPercentage != null ? Number(selectedTradeDetails.pnlPercentage) : calculatePnLPercentage(selectedTradeDetails);
                     const isProfitable = pnl > 0;
-                    
+
                     return (
                       <>
                         <div>

@@ -4,16 +4,16 @@ import { usePathname } from 'next/navigation';
 
 export default function ConditionalFooter() {
   const pathname = usePathname();
-  
+
   // Hide footer for admin pages
   if (pathname.startsWith('/admin')) {
     return null;
   }
-  
+
   return (
-    <footer 
+    <footer
       className="text-white shadow-md backdrop-blur-2xl border-t border-white/5"
-      style={{ backgroundColor: 'rgba(20, 16, 17, 0.70)' }}
+      style={{ backgroundColor: 'rgba(23, 23, 23, 0.70)' }}
       role="contentinfo"
       aria-label="Footer"
     >

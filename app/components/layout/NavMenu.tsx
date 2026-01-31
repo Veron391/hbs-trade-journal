@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
 import { useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { User, Settings, LogOut, House, CalendarDays, TrendingUp, Newspaper, Menu, X } from "lucide-react";
+import { User, Settings, LogOut, House, CalendarDays, PieChart, Newspaper, Menu, X } from "lucide-react";
 import { useI18n } from "../../context/I18nContext";
 import { useFormContext } from "../../context/FormContext";
 import LanguageSelector from "./LanguageSelector";
@@ -40,8 +40,8 @@ export default function NavMenu() {
   };
 
   // Active link style
-  const activeLinkClass = "text-green-300 font-bold";
-  const linkClass = "hover:text-green-400 transition-colors font-semibold";
+  const activeLinkClass = "text-[#D9FE43] font-bold";
+  const linkClass = "hover:text-[#D9FE43] transition-colors font-semibold";
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -103,11 +103,13 @@ export default function NavMenu() {
     };
   }, [isMenuOpen]);
 
+  const menuRef = useRef<HTMLUListElement | null>(null);
+
   // Update sliding indicator position based on active link
   useEffect(() => {
     const updateIndicator = () => {
       let activeRef: HTMLLIElement | null = null;
-      
+
       if (isActive("/") && journalRef.current) {
         activeRef = journalRef.current;
       } else if (isActive("/calendar") && calendarRef.current) {
@@ -116,32 +118,39 @@ export default function NavMenu() {
         activeRef = statsRef.current;
       }
 
-      if (activeRef && journalRef.current) {
-        const container = journalRef.current.parentElement;
-        if (container) {
-          const containerRect = container.getBoundingClientRect();
-          const activeRect = activeRef.getBoundingClientRect();
-          const left = activeRect.left - containerRect.left;
-          const width = activeRect.width;
-          
-          setIndicatorStyle({
-            width,
-            left,
-            opacity: 1,
-          });
-        }
+      if (activeRef && menuRef.current) {
+        const containerRect = menuRef.current.getBoundingClientRect();
+        const activeRect = activeRef.getBoundingClientRect();
+        const left = activeRect.left - containerRect.left;
+        const width = activeRect.width;
+
+        // Only update if metrics changed significantly to avoid loops
+        setIndicatorStyle(prev => {
+          if (Math.abs(prev.left - left) < 0.5 && Math.abs(prev.width - width) < 0.5 && prev.opacity === 1) {
+            return prev;
+          }
+          return { width, left, opacity: 1 };
+        });
       } else {
-        setIndicatorStyle({ width: 0, left: 0, opacity: 0 });
+        setIndicatorStyle(prev => prev.opacity === 0 ? prev : { width: 0, left: 0, opacity: 0 });
       }
     };
 
-    // Update on mount and pathname change
     updateIndicator();
-    
-    // Update on resize
-    window.addEventListener("resize", updateIndicator);
-    return () => window.removeEventListener("resize", updateIndicator);
-  }, [pathname, current]);
+
+    // Robust resize observation
+    const resizeObserver = new ResizeObserver(() => {
+      updateIndicator();
+    });
+
+    if (menuRef.current) {
+      resizeObserver.observe(menuRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [pathname, current, t, isTradeFormOpen, user]);
 
   // Don't show loading in nav - let ProtectedRoute handle it
   // This prevents duplicate loading animations
@@ -162,17 +171,17 @@ export default function NavMenu() {
         <>
           <div className="flex-1"></div>
           {/* Desktop Menu */}
-          <ul className="hidden md:flex items-center space-x-4 lg:space-x-8 relative" role="menubar">
+          <ul ref={menuRef} className="hidden md:flex items-center space-x-4 lg:space-x-8 relative" role="menubar">
             {/* Sliding indicator background - toggle switch style */}
-            <div 
-              className="absolute h-10 bg-[rgba(34,197,94,0.15)] rounded-20 transition-all duration-300 ease-in-out pointer-events-none"
+            <div
+              className="absolute h-10 bg-[rgba(217,254,67,0.15)] rounded-20 transition-all duration-300 ease-in-out pointer-events-none"
               style={{
                 width: `${indicatorStyle.width}px`,
                 left: `${indicatorStyle.left}px`,
                 opacity: indicatorStyle.opacity,
               }}
             />
-            
+
             <li role="none" className="relative z-10" ref={journalRef}>
               {isTradeFormOpen ? (
                 <span
@@ -186,11 +195,10 @@ export default function NavMenu() {
                 <Link
                   href="/"
                   prefetch={true}
-                  className={`relative z-10 px-4 py-2 rounded-20 flex items-center gap-2 transition-all duration-300 ${
-                    isActive("/") 
-                      ? "text-green-300 font-semibold" 
-                      : `${linkClass} px-3 py-1`
-                  }`}
+                  className={`relative z-10 px-4 py-2 rounded-20 flex items-center gap-2 transition-all duration-300 ${isActive("/")
+                    ? "text-[#D9FE43] font-semibold"
+                    : `${linkClass} px-3 py-1`
+                    }`}
                   role="menuitem"
                   aria-current={isActive("/") ? "page" : undefined}
                 >
@@ -212,11 +220,10 @@ export default function NavMenu() {
                 <Link
                   href="/calendar"
                   prefetch={true}
-                  className={`relative z-10 px-4 py-2 rounded-20 flex items-center gap-2 transition-all duration-300 ${
-                    isActive("/calendar") 
-                      ? "text-green-300 font-semibold" 
-                      : `${linkClass} px-3 py-1`
-                  }`}
+                  className={`relative z-10 px-4 py-2 rounded-20 flex items-center gap-2 transition-all duration-300 ${isActive("/calendar")
+                    ? "text-[#D9FE43] font-semibold"
+                    : `${linkClass} px-3 py-1`
+                    }`}
                 >
                   <CalendarDays size={18} />
                   {t('calendar')}
@@ -229,20 +236,19 @@ export default function NavMenu() {
                   className={`${linkClass} px-3 py-1 rounded-20 flex items-center gap-2 opacity-50 cursor-not-allowed relative z-10`}
                   title="Complete or cancel the trade form first"
                 >
-                  <TrendingUp size={18} />
+                  <PieChart size={18} />
                   {t('stats')}
                 </span>
               ) : (
                 <Link
                   href="/stats"
                   prefetch={true}
-                  className={`relative z-10 px-4 py-2 rounded-20 flex items-center gap-2 transition-all duration-300 ${
-                    isActive("/stats") 
-                      ? "text-green-300 font-semibold" 
-                      : `${linkClass} px-3 py-1`
-                  }`}
+                  className={`relative z-10 px-4 py-2 rounded-20 flex items-center gap-2 transition-all duration-300 ${isActive("/stats")
+                    ? "text-[#D9FE43] font-semibold"
+                    : `${linkClass} px-3 py-1`
+                    }`}
                 >
-                  <TrendingUp size={18} />
+                  <PieChart size={18} />
                   {t('stats')}
                 </Link>
               )}
@@ -256,23 +262,23 @@ export default function NavMenu() {
               >
                 <Newspaper size={18} />
                 {t('macroNews')}
-                <svg 
-                  className="w-3 h-3" 
-                  fill="none" 
-                  stroke="currentColor" 
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" 
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
                   />
                 </svg>
               </a>
             </li>
           </ul>
-          
+
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -281,7 +287,7 @@ export default function NavMenu() {
           >
             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
-          
+
           {/* Mobile Menu Dropdown */}
           {isMobileMenuOpen && (
             <div className="md:hidden absolute top-full left-0 right-0 mt-2 mx-2 bg-[#1C1719] border border-white/10 rounded-lg shadow-lg z-50">
@@ -289,9 +295,8 @@ export default function NavMenu() {
                 <Link
                   href="/"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 text-sm ${
-                    isActive("/") ? "text-green-300 font-semibold bg-green-500/10" : "text-gray-300 hover:bg-white/5"
-                  }`}
+                  className={`flex items-center gap-3 px-4 py-3 text-sm ${isActive("/") ? "text-[#D9FE43] font-semibold bg-[rgba(217,254,67,0.10)]" : "text-gray-300 hover:bg-white/5"
+                    }`}
                 >
                   <House size={18} />
                   {t('journal')}
@@ -299,9 +304,8 @@ export default function NavMenu() {
                 <Link
                   href="/calendar"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 text-sm ${
-                    isActive("/calendar") ? "text-green-300 font-semibold bg-green-500/10" : "text-gray-300 hover:bg-white/5"
-                  }`}
+                  className={`flex items-center gap-3 px-4 py-3 text-sm ${isActive("/calendar") ? "text-[#D9FE43] font-semibold bg-[rgba(217,254,67,0.10)]" : "text-gray-300 hover:bg-white/5"
+                    }`}
                 >
                   <CalendarDays size={18} />
                   {t('calendar')}
@@ -309,11 +313,10 @@ export default function NavMenu() {
                 <Link
                   href="/stats"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 text-sm ${
-                    isActive("/stats") ? "text-green-300 font-semibold bg-green-500/10" : "text-gray-300 hover:bg-white/5"
-                  }`}
+                  className={`flex items-center gap-3 px-4 py-3 text-sm ${isActive("/stats") ? "text-[#D9FE43] font-semibold bg-[rgba(217,254,67,0.10)]" : "text-gray-300 hover:bg-white/5"
+                    }`}
                 >
-                  <TrendingUp size={18} />
+                  <PieChart size={18} />
                   {t('stats')}
                 </Link>
                 <a
@@ -327,14 +330,6 @@ export default function NavMenu() {
                   {t('macroNews')}
                 </a>
                 <div className="border-t border-white/10 my-2"></div>
-                <Link
-                  href="/profile"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-white/5"
-                >
-                  <User size={18} />
-                  Profile
-                </Link>
                 <Link
                   href="/profile?tab=settings"
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -356,9 +351,9 @@ export default function NavMenu() {
               </div>
             </div>
           )}
-          
+
           <div className="flex-1"></div>
-          
+
           <div className="hidden md:flex items-center gap-2">
             <LanguageSelector />
             <div
@@ -368,11 +363,11 @@ export default function NavMenu() {
             >
               <button
                 onClick={handleToggleClick}
-                className="flex items-center space-x-2 text-gray-200 hover:text-white px-3 lg:px-4 py-2 rounded-20 bg-[rgba(34,197,94,0.15)] hover:bg-[rgba(34,197,94,0.23)] min-h-[44px]"
+                className="flex items-center space-x-2 text-gray-200 hover:text-white px-3 lg:px-4 py-2 rounded-20 bg-[rgba(217,254,67,0.15)] hover:bg-[rgba(217,254,67,0.23)] min-h-[44px]"
                 ref={buttonRef}
               >
                 <User size={16} />
-                <span className="whitespace-nowrap text-sm lg:text-base">{user.name}</span>
+                <span className="whitespace-nowrap text-sm lg:text-base font-bold">{user.name}</span>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-4 w-4"
@@ -409,14 +404,6 @@ export default function NavMenu() {
                           {user.email}
                         </div>
                         <Link
-                          href="/profile"
-                          className="flex items-center gap-3 px-4 py-2 text-sm text-white hover:bg-white/10 whitespace-nowrap"
-                          onClick={() => setIsMenuOpen(false)}
-                        >
-                          <User size={18} className="text-gray-300" />
-                          Profile
-                        </Link>
-                        <Link
                           href="/profile?tab=settings"
                           className="flex items-center gap-3 px-4 py-2 text-sm text-white hover:bg-white/5 whitespace-nowrap border-t border-white/8"
                           onClick={() => setIsMenuOpen(false)}
@@ -448,9 +435,8 @@ export default function NavMenu() {
           <li>
             <Link
               href="/auth/login"
-              className={`text-xs sm:text-sm ${
-                isActive("/auth/login") ? activeLinkClass : linkClass
-              }`}
+              className={`text-xs sm:text-sm ${isActive("/auth/login") ? activeLinkClass : linkClass
+                }`}
             >
               Login
             </Link>
@@ -458,11 +444,10 @@ export default function NavMenu() {
           <li>
             <Link
               href="/auth/register"
-              className={`text-xs sm:text-sm ${
-                isActive("/auth/register")
-                  ? activeLinkClass
-                  : "bg-green-600 hover:bg-green-700 text-white px-2 sm:px-3 py-1 rounded-md"
-              }`}
+              className={`text-xs sm:text-sm ${isActive("/auth/register")
+                ? activeLinkClass
+                : "bg-green-600 hover:bg-green-700 text-white px-2 sm:px-3 py-1 rounded-md"
+                }`}
             >
               Register
             </Link>

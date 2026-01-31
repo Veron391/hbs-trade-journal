@@ -35,7 +35,7 @@ export default function RootLayout({
       <body
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        style={{ backgroundColor: '#110D0F' }}
+        style={{ backgroundColor: '#090909' }}
       >
         <SWRConfig
           value={{
@@ -50,18 +50,18 @@ export default function RootLayout({
           <UIProtectionProvider>
             <AuthProvider>
               <I18nProvider>
-              <FormProvider>
-              <TimePeriodProvider>
-                <TradeProvider>
-                  <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#110D0F' }}>
-                    <main role="main" className="flex-1">
-                      {children}
-                    </main>
-                    <ConditionalFooter />
-                  </div>
-                </TradeProvider>
-              </TimePeriodProvider>
-              </FormProvider>
+                <FormProvider>
+                  <TimePeriodProvider>
+                    <TradeProvider>
+                      <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#090909' }}>
+                        <main role="main" className="flex-1">
+                          {children}
+                        </main>
+                        <ConditionalFooter />
+                      </div>
+                    </TradeProvider>
+                  </TimePeriodProvider>
+                </FormProvider>
               </I18nProvider>
             </AuthProvider>
           </UIProtectionProvider>

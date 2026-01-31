@@ -1,14 +1,14 @@
 "use client";
 
 import { useTrades } from '../../context/TradeContext';
-import { 
-  Chart as ChartJS, 
-  CategoryScale, 
-  LinearScale, 
-  BarElement, 
-  Title, 
-  Tooltip, 
-  Legend, 
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
   ArcElement,
   PointElement,
   LineElement,
@@ -25,11 +25,11 @@ import { TradeType } from '../../types';
 import { filterCompletedTrades } from '@/lib/utils/tradeUtils';
 
 ChartJS.register(
-  CategoryScale, 
-  LinearScale, 
-  BarElement, 
-  Title, 
-  Tooltip, 
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
   Legend,
   ArcElement,
   PointElement,
@@ -53,15 +53,15 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
   // Filter trades based on selected period and calculate stats
   const { filteredTrades, filteredStats } = useMemo(() => {
     let filtered = filterTradesByPeriod(trades, selectedPeriod);
-    
+
     // Filter by trade type if specified (not 'total')
     if (tradeType && tradeType !== 'total') {
       filtered = filtered.filter(trade => trade.type === tradeType);
     }
-    
+
     // Filter out pending trades - only calculate stats for completed trades
     filtered = filterCompletedTrades(filtered);
-    
+
     if (filtered.length === 0) {
       return {
         filteredTrades: [],
@@ -79,17 +79,17 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
       const entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : parseFloat(String(trade.entryPrice)) || 0;
       const exitPrice = typeof trade.exitPrice === 'number' ? trade.exitPrice : parseFloat(String(trade.exitPrice)) || 0;
       const quantity = typeof trade.quantity === 'number' ? trade.quantity : parseFloat(String(trade.quantity)) || 0;
-      
+
       const entryTotal = entryPrice * quantity;
       const exitTotal = exitPrice * quantity;
-      
+
       let profitLoss = 0;
       if (trade.direction === 'long') {
         profitLoss = exitTotal - entryTotal;
       } else {
         profitLoss = entryTotal - exitTotal;
       }
-      
+
       return {
         ...trade,
         profitLoss,
@@ -98,14 +98,14 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
         isBreakEven: Math.abs(profitLoss) <= 0.01,
       };
     });
-    
+
     // Filter trades by result
     const winningTrades = processedTrades.filter(t => t.isWinner);
     const losingTrades = processedTrades.filter(t => t.isLoser);
     const breakEvenTrades = processedTrades.filter(t => t.isBreakEven);
-    
+
     const winRate = processedTrades.length > 0 ? winningTrades.length / processedTrades.length : 0;
-    
+
     return {
       filteredTrades: filtered,
       filteredStats: {
@@ -120,8 +120,8 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
   if (filteredTrades.length === 0) {
     return (
       <div className="mt-8 space-y-8">
-        <h2 className="text-xl font-semibold text-white">Performance Charts</h2>
-        <div className="text-center py-12 bg-[#1C1719] rounded-lg">
+        <h2 className="text-xl font-semibold text-white">{t('performanceCharts')}</h2>
+        <div className="text-center py-12 bg-[#101010] rounded-lg">
           <p className="text-gray-300">No trades found for the selected period.</p>
         </div>
       </div>
@@ -235,7 +235,7 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
     ...winLossData,
     datasets: [{
       ...winLossData.datasets[0],
-      data: winLossData.datasets[0].data.map((value, index) => 
+      data: winLossData.datasets[0].data.map((value, index) =>
         hiddenSegments.has(index) ? 0 : value
       ),
       backgroundColor: (ctx: any) => {
@@ -261,11 +261,11 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
     afterDraw(chart: any, _args: any, pluginOptions?: any) {
       const { ctx, chartArea } = chart;
       if (!chartArea) return;
-      
+
       // Prefer the value provided via plugin options to avoid stale closures
       const providedText = pluginOptions && pluginOptions.text;
       const winRatePercent = providedText ?? `${(filteredStats.winRate * 100).toFixed(2)}%`;
-      
+
       // Debug logging
       console.log('Filtered Stats Data:', {
         winningTrades: filteredStats.winningTrades,
@@ -274,19 +274,19 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
         winRate: filteredStats.winRate,
         winRatePercent: winRatePercent
       });
-      
+
       const text = typeof winRatePercent === 'string' ? winRatePercent : `${winRatePercent}%`;
       ctx.save();
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       const x = (chartArea.left + chartArea.right) / 2;
       const y = (chartArea.top + chartArea.bottom) / 2;
-      
+
       // Main percent
       ctx.font = '600 26px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
       ctx.fillStyle = '#ffffff';
       ctx.fillText(text, x, y - 8);
-      
+
       // Subtitle: Win Rate (translated)
       ctx.font = '500 13px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
       ctx.fillStyle = 'rgba(229, 231, 235, 0.85)'; // text-gray-200-ish
@@ -301,20 +301,20 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
     afterDraw(chart: any, _args: any, pluginOptions?: any) {
       const { ctx, chartArea } = chart;
       if (!chartArea) return;
-      
+
       const totalTrades = allTradesForPeriod.length;
-      
+
       ctx.save();
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       const x = (chartArea.left + chartArea.right) / 2;
       const y = (chartArea.top + chartArea.bottom) / 2;
-      
+
       // Main number
       ctx.font = '600 26px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
       ctx.fillStyle = '#ffffff';
       ctx.fillText(totalTrades.toString(), x, y - 8);
-      
+
       // Subtitle: Total Trades (translated)
       ctx.font = '500 13px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
       ctx.fillStyle = 'rgba(229, 231, 235, 0.85)'; // text-gray-200-ish
@@ -408,7 +408,7 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
     .sort((a, b) => new Date(b.exitDate).getTime() - new Date(a.exitDate).getTime())
     .slice(0, 10)
     .reverse();
-  
+
   // Ensure we have exactly 10 trades, fill with empty data if needed
   while (last10Trades.length < 10) {
     last10Trades.push({
@@ -425,10 +425,10 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
     const entryPrice = typeof trade.entryPrice === 'number' ? trade.entryPrice : 0;
     const exitPrice = typeof trade.exitPrice === 'number' ? trade.exitPrice : 0;
     const quantity = typeof trade.quantity === 'number' ? trade.quantity : 0;
-    
+
     const entryValue = entryPrice * quantity;
     const exitValue = exitPrice * quantity;
-    
+
     if (trade.direction === 'long') {
       return exitValue - entryValue;
     } else {
@@ -541,7 +541,7 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
     ...tradeTypeData,
     datasets: [{
       ...tradeTypeData.datasets[0],
-      data: tradeTypeData.datasets[0].data.map((value, index) => 
+      data: tradeTypeData.datasets[0].data.map((value, index) =>
         hiddenTradeTypeSegments.has(index) ? 0 : value
       ),
       backgroundColor: [
@@ -556,7 +556,7 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
   };
 
   // Cumulative P&L over time
-  const sortedTrades = [...filteredTrades].sort((a, b) => 
+  const sortedTrades = [...filteredTrades].sort((a, b) =>
     new Date(a.exitDate).getTime() - new Date(b.exitDate).getTime()
   );
 
@@ -623,46 +623,43 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
   return (
     <div className="mt-8 space-y-8">
       <h2 className="text-xl font-semibold text-white">{t('performanceCharts')}</h2>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Win/Loss Ratio */}
-        <div className="bg-[#1C1719] p-6 rounded-lg shadow">
+        <div className="bg-[#101010] p-6 rounded-lg shadow">
           <h3 className="text-lg font-medium mb-4 text-gray-100">{t('winLossRatio')}</h3>
           <div className="h-80 flex items-center gap-8">
             {/* Custom legend (always white text) */}
             <div className="hidden md:flex flex-col text-white text-base space-y-6">
-              <div 
-                className={`flex items-center gap-4 cursor-pointer transition-all duration-200 ${
-                  hiddenSegments.has(0) ? 'opacity-50' : ''
-                }`}
+              <div
+                className={`flex items-center gap-4 cursor-pointer transition-all duration-200 ${hiddenSegments.has(0) ? 'opacity-50' : ''
+                  }`}
                 onClick={() => toggleSegment(0)}
               >
                 <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: '#399ed4', border: 'none' }} />
                 <span className={hiddenSegments.has(0) ? 'line-through' : ''}>{t('winningTrades')}</span>
               </div>
-              <div 
-                className={`flex items-center gap-4 cursor-pointer transition-all duration-200 ${
-                  hiddenSegments.has(1) ? 'opacity-50' : ''
-                }`}
+              <div
+                className={`flex items-center gap-4 cursor-pointer transition-all duration-200 ${hiddenSegments.has(1) ? 'opacity-50' : ''
+                  }`}
                 onClick={() => toggleSegment(1)}
               >
                 <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: '#D00000', border: 'none' }} />
                 <span className={hiddenSegments.has(1) ? 'line-through' : ''}>{t('losingTrades')}</span>
               </div>
-              <div 
-                className={`flex items-center gap-4 cursor-pointer transition-all duration-200 ${
-                  hiddenSegments.has(2) ? 'opacity-50' : ''
-                }`}
+              <div
+                className={`flex items-center gap-4 cursor-pointer transition-all duration-200 ${hiddenSegments.has(2) ? 'opacity-50' : ''
+                  }`}
                 onClick={() => toggleSegment(2)}
               >
                 <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: '#d6d5c9', border: 'none' }} />
                 <span className={hiddenSegments.has(2) ? 'line-through' : ''}>{t('breakEven')}</span>
               </div>
             </div>
-            <div 
+            <div
               className="flex-1 min-w-0 h-full flex items-center justify-center"
             >
-              <Doughnut 
+              <Doughnut
                 data={filteredWinLossData}
                 options={{
                   color: '#ffffff',
@@ -683,14 +680,14 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
                       bodyAlign: 'center',
                       boxPadding: 10,
                       callbacks: {
-                        label: function(context: TooltipItem<'doughnut'>) {
+                        label: function (context: TooltipItem<'doughnut'>) {
                           const value = context.parsed as number;
                           return `${value}`;
                         },
                       }
                     },
                   },
-                } as any} 
+                } as any}
                 plugins={[centerTextPlugin]}
               />
             </div>
@@ -698,34 +695,32 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
         </div>
 
         {/* Trade Type Distribution */}
-        <div className="bg-[#1C1719] p-6 rounded-lg shadow">
+        <div className="bg-[#101010] p-6 rounded-lg shadow">
           <h3 className="text-lg font-medium mb-4 text-gray-100">{t('tradeTypeDistribution')}</h3>
           <div className="h-80 flex">
             <div className="flex flex-col justify-center gap-6 pr-8">
-              <div 
-                className={`flex items-center gap-4 cursor-pointer transition-all duration-200 ${
-                  hiddenTradeTypeSegments.has(0) ? 'opacity-50' : ''
-                }`}
+              <div
+                className={`flex items-center gap-4 cursor-pointer transition-all duration-200 ${hiddenTradeTypeSegments.has(0) ? 'opacity-50' : ''
+                  }`}
                 onClick={() => toggleTradeTypeSegment(0)}
               >
                 <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: '#EBD9D1', border: 'none' }} />
                 <span className={hiddenTradeTypeSegments.has(0) ? 'line-through' : ''}>{t('stock')}</span>
               </div>
-              <div 
-                className={`flex items-center gap-4 cursor-pointer transition-all duration-200 ${
-                  hiddenTradeTypeSegments.has(1) ? 'opacity-50' : ''
-                }`}
+              <div
+                className={`flex items-center gap-4 cursor-pointer transition-all duration-200 ${hiddenTradeTypeSegments.has(1) ? 'opacity-50' : ''
+                  }`}
                 onClick={() => toggleTradeTypeSegment(1)}
               >
                 <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: '#F59E0B', border: 'none' }} />
                 <span className={hiddenTradeTypeSegments.has(1) ? 'line-through' : ''}>{t('crypto')}</span>
               </div>
             </div>
-            <div 
+            <div
               className="flex-1 min-w-0 h-full flex items-center justify-center"
             >
-              <Doughnut 
-                data={filteredTradeTypeData} 
+              <Doughnut
+                data={filteredTradeTypeData}
                 options={{
                   color: '#ffffff',
                   responsive: true,
@@ -744,14 +739,14 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
                       bodyAlign: 'center',
                       boxPadding: 10,
                       callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                           const value = context.parsed as number;
                           return `${value}`;
                         },
                       }
                     },
                   },
-                }} 
+                }}
                 plugins={[tradeTypeCenterTextPlugin]}
               />
             </div>
@@ -759,11 +754,11 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
         </div>
 
         {/* P&L per Trade (Last 10) */}
-        <div className="bg-[#1C1719] p-6 rounded-lg shadow">
+        <div className="bg-[#101010] p-6 rounded-lg shadow">
           <h3 className="text-lg font-medium mb-4 text-gray-100">{t('pnlPerTrade')}</h3>
           <div className="h-80">
-            <Bar 
-              data={pnlPerTradeData} 
+            <Bar
+              data={pnlPerTradeData}
               options={{
                 responsive: true,
                 maintainAspectRatio: false,
@@ -787,19 +782,19 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
                     boxWidth: 6,
                     boxHeight: 6,
                     callbacks: {
-                      title: function(context: TooltipItem<'bar'>[]) {
+                      title: function (context: TooltipItem<'bar'>[]) {
                         return context[0].label; // Aktiv tikeri
                       },
-                      label: function(context: TooltipItem<'bar'>) {
+                      label: function (context: TooltipItem<'bar'>) {
                         const value = context.parsed.y as number;
                         const sign = value >= 0 ? '+' : '';
                         const pad = "\u00a0\u00a0\u00a0\u00a0"; // extra gap after color dot
                         return `${pad}${sign}${value.toFixed(2)}$`; // +30$ / -30$
                       },
-                      labelPointStyle: function(context: TooltipItem<'bar'>) {
+                      labelPointStyle: function (context: TooltipItem<'bar'>) {
                         return { pointStyle: 'circle', rotation: 0 } as any;
                       },
-                      labelColor: function(context: TooltipItem<'bar'>) {
+                      labelColor: function (context: TooltipItem<'bar'>) {
                         const value = (context.parsed.y as number) ?? 0;
                         const color = value >= 0 ? '#2DDD1A' : '#FF4D4D';
                         return {
