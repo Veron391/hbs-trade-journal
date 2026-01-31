@@ -159,8 +159,15 @@ export default function StatsOverview({ selectedPeriod, tradeType }: StatsOvervi
       <h2 className="text-xl font-semibold mb-6 text-white">{t('statsSummary')}</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Total P&L */}
-        <div className="bg-[#171717] rounded-lg shadow p-6 transform-gpu transition-transform duration-200 hover:scale-[1.05]">
+        {/* Total P&L — gradient matches icon: green or red, 5% opacity */}
+        <div
+          className="rounded-lg shadow p-6 transform-gpu transition-transform duration-200 hover:scale-[1.05] relative overflow-hidden"
+          style={{
+            background: filteredStats.totalProfitLoss >= 0
+              ? 'linear-gradient(225deg, rgba(4, 223, 114, 0.10) 0%, transparent 80%), #101010'
+              : 'linear-gradient(225deg, rgba(239, 68, 68, 0.10) 0%, transparent 80%), #101010',
+          }}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-400 mb-1">{t('totalProfitLoss')}</p>
@@ -187,8 +194,11 @@ export default function StatsOverview({ selectedPeriod, tradeType }: StatsOvervi
           </div>
         </div>
 
-        {/* Win Rate */}
-        <div className="bg-[#171717] rounded-lg shadow p-6 transform-gpu transition-transform duration-200 hover:scale-[1.05]">
+        {/* Win Rate — gradient matches icon: blue, 5% opacity */}
+        <div
+          className="rounded-lg shadow p-6 transform-gpu transition-transform duration-200 hover:scale-[1.05] relative overflow-hidden"
+          style={{ background: 'linear-gradient(225deg, rgba(59, 130, 246, 0.10) 0%, transparent 80%), #101010' }}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-400 mb-1">{t('winRate')}</p>
@@ -211,8 +221,11 @@ export default function StatsOverview({ selectedPeriod, tradeType }: StatsOvervi
           </div>
         </div>
 
-        {/* Risk/Reward Ratio */}
-        <div className="bg-[#171717] rounded-lg shadow p-6 transform-gpu transition-transform duration-200 hover:scale-[1.05]">
+        {/* Risk/Reward Ratio — gradient matches icon: blue, 5% opacity */}
+        <div
+          className="rounded-lg shadow p-6 transform-gpu transition-transform duration-200 hover:scale-[1.05] relative overflow-hidden"
+          style={{ background: 'linear-gradient(225deg, rgba(59, 130, 246, 0.10) 0%, transparent 80%), #101010' }}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-400 mb-1">{t('riskRewardRatio')}</p>
@@ -235,8 +248,11 @@ export default function StatsOverview({ selectedPeriod, tradeType }: StatsOvervi
           </div>
         </div>
 
-        {/* Average Winning Trade */}
-        <div className="bg-[#171717] rounded-lg shadow p-6 transform-gpu transition-transform duration-200 hover:scale-[1.05]">
+        {/* Average Winning Trade — gradient matches icon: green, 5% opacity */}
+        <div
+          className="rounded-lg shadow p-6 transform-gpu transition-transform duration-200 hover:scale-[1.05] relative overflow-hidden"
+          style={{ background: 'linear-gradient(225deg, rgba(4, 223, 114, 0.10) 0%, transparent 80%), #101010' }}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-400 mb-1">{t('avgWinningTrade')}</p>
@@ -259,8 +275,11 @@ export default function StatsOverview({ selectedPeriod, tradeType }: StatsOvervi
           </div>
         </div>
 
-        {/* Average Losing Trade */}
-        <div className="bg-[#171717] rounded-lg shadow p-6 transform-gpu transition-transform duration-200 hover:scale-[1.05]">
+        {/* Average Losing Trade — gradient matches icon: red, 5% opacity */}
+        <div
+          className="rounded-lg shadow p-6 transform-gpu transition-transform duration-200 hover:scale-[1.05] relative overflow-hidden"
+          style={{ background: 'linear-gradient(225deg, rgba(239, 68, 68, 0.10) 0%, transparent 80%), #101010' }}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-400 mb-1">{t('avgLosingTrade')}</p>
@@ -283,8 +302,11 @@ export default function StatsOverview({ selectedPeriod, tradeType }: StatsOvervi
           </div>
         </div>
 
-        {/* Average Hold Time */}
-        <div className="bg-[#171717] rounded-lg shadow p-6 transform-gpu transition-transform duration-200 hover:scale-[1.05]">
+        {/* Average Hold Time — gradient matches icon: gray, 5% opacity */}
+        <div
+          className="rounded-lg shadow p-6 transform-gpu transition-transform duration-200 hover:scale-[1.05] relative overflow-hidden"
+          style={{ background: 'linear-gradient(225deg, rgba(156, 163, 175, 0.10) 0%, transparent 80%), #101010' }}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-400 mb-1">{t('avgHoldTime')}</p>

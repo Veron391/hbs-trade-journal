@@ -84,40 +84,45 @@ export default function MonthSummary({ currentMonth }: MonthSummaryProps) {
   };
 
   return (
-    <div className="bg-[#101010] rounded-lg shadow p-6 mb-4">
+    <div
+      className="rounded-lg shadow p-6 mb-4 relative overflow-hidden"
+      style={{
+        background: 'linear-gradient(225deg, rgba(217, 254, 67, 0.03) 0%, transparent 55%), #101010',
+      }}
+    >
       <h2 className="text-xl font-semibold text-[#D9FE43] mb-4">
         {getMonthName(currentMonth)} {currentMonth.getFullYear()} {t('tradingStatistics').toLowerCase()}
       </h2>
 
       {!isLoading && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 justify-center">
-          <div className="bg-[#101010] p-4 rounded-lg text-center">
+          <div className="p-4 rounded-lg text-center">
             <div className="text-gray-400 text-sm">{t('totalTrades')}</div>
             <div className="text-white text-xl font-bold">{monthStats.totalTrades}</div>
           </div>
 
-          <div className="bg-[#101010] p-4 rounded-lg text-center">
+          <div className="p-4 rounded-lg text-center">
             <div className="text-gray-400 text-sm">{t('totalPL')}</div>
             <div className={`text-xl font-bold ${monthStats.totalPnL > 0 ? 'text-success' : monthStats.totalPnL < 0 ? 'text-danger' : 'text-gray-300'}`}>
               {formatCurrency(monthStats.totalPnL)}
             </div>
           </div>
 
-          <div className="bg-[#101010] p-4 rounded-lg text-center">
+          <div className="p-4 rounded-lg text-center">
             <div className="text-gray-400 text-sm">{t('winRate')}</div>
             <div className="text-white text-xl font-bold">
               {monthStats.winRate.toFixed(1)}%
             </div>
           </div>
 
-          <div className="bg-[#101010] p-4 rounded-lg text-center">
+          <div className="p-4 rounded-lg text-center">
             <div className="text-gray-400 text-sm">{t('winningTrades')}</div>
             <div className="text-success text-xl font-bold">
               {monthStats.winCount}
             </div>
           </div>
 
-          <div className="bg-[#101010] p-4 rounded-lg text-center">
+          <div className="p-4 rounded-lg text-center">
             <div className="text-gray-400 text-sm">{t('losingTrades')}</div>
             <div className="text-danger text-xl font-bold">
               {monthStats.lossCount}

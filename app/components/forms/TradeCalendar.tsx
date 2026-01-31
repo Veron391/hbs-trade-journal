@@ -335,7 +335,12 @@ export default function TradeCalendar() {
       <MonthSummary currentMonth={currentMonth} />
 
       {/* Calendar */}
-      <div className="bg-[#101010] rounded-lg shadow p-6">
+      <div
+        className="rounded-lg shadow p-6 relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(225deg, rgba(217, 254, 67, 0.03) 0%, transparent 55%), #101010',
+        }}
+      >
         {/* Calendar header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-[#D9FE43]">
@@ -469,13 +474,8 @@ export default function TradeCalendar() {
             </div>
           ))}
 
-          {/* Empty cells before start of month */}
-          {Array.from({ length: startDay }).map((_, index) => (
-            <div key={`empty-start-${index}`} className="p-1 rounded-md min-h-[100px]"></div>
-          ))}
-
-          {/* Calendar days */}
-          {calendarDays.map((day) => {
+          {/* Calendar days (only current month; first day positioned by gridColumnStart) */}
+          {calendarDays.map((day, dayIndex) => {
             const dateKey = format(day, 'yyyy-MM-dd');
             const dayData = tradesByDate.get(dateKey);
             const backend = backendDays.get(dateKey);
@@ -491,8 +491,9 @@ export default function TradeCalendar() {
             return (
               <div
                 key={dateKey}
+                style={dayIndex === 0 ? { gridColumnStart: startDay + 1 } : undefined}
                 onClick={(e) => handleDayClick(dateKey, e)}
-                className={`p-1 rounded-md min-h-[100px] transition-all duration-200 ${hasTrades
+                className={`p-1 rounded-md min-h-[100px] transition-all duration-200 backdrop-blur-md ${hasTrades
                   ? 'cursor-pointer hover:scale-105 hover:shadow-lg hover:border-blue-500/50'
                   : 'cursor-default opacity-60'
                   } ${!isSameMonth(day, currentMonth)
@@ -500,15 +501,14 @@ export default function TradeCalendar() {
                     : ''
                   } ${hasTrades
                     ? isProfitable
-                      ? 'bg-green-900/30 border border-green-400/30 hover:border-green-400/50'
+                      ? 'bg-green-900/20 border border-green-400/30 hover:border-green-400/50'
                       : isBreakEven
-                        ? 'bg-yellow-900/30 border border-yellow-400/30 hover:border-yellow-400/50'
-                        : 'bg-red-900/30 border border-red-400/30 hover:border-red-400/50'
+                        ? 'bg-yellow-900/20 border border-yellow-400/30 hover:border-yellow-400/50'
+                        : 'bg-red-900/20 border border-red-400/30 hover:border-red-400/50'
                     : isWeekend
-                      ? 'border border-[#D9FE43]/20 hover:border-[#D9FE43]/40'
-                      : 'border border-gray-500/20 hover:border-gray-400/40'
+                      ? 'bg-white/5 border border-[#D9FE43]/20 hover:border-[#D9FE43]/40'
+                      : 'bg-white/5 border border-gray-500/20 hover:border-gray-400/40'
                   }`}
-                style={{ backgroundColor: hasTrades ? undefined : '#171717' }}
               >
                 <div className="text-left mb-1 px-1">
                   <div className={`inline-flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 ${isToday(day)
@@ -543,21 +543,9 @@ export default function TradeCalendar() {
                     </div>
                   </div>
                 )}
-
-                {/* Weekend indicator */}
-                {isWeekend && !hasTrades && (
-                  <div className="absolute top-1 right-1">
-                    <div className="w-2 h-2 bg-orange-400 rounded-full opacity-60"></div>
-                  </div>
-                )}
               </div>
             );
           })}
-
-          {/* Empty cells after end of month */}
-          {Array.from({ length: 6 - ((getDay(monthEnd) + 6) % 7) }).map((_, index) => (
-            <div key={`empty-end-${index}`} className="p-1 rounded-md min-h-[100px]"></div>
-          ))}
         </div>
       </div>
 

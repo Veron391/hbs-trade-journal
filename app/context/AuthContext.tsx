@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 
 // Define user type
 export interface User {
@@ -85,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Real login using backend API
   const login = async (identifier: string, password: string) => {
-    setLoading(true);
+    flushSync(() => setLoading(true));
     try {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
@@ -126,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password: string,
     password_confirm: string
   ) => {
-    setLoading(true);
+    flushSync(() => setLoading(true));
     try {
     const res = await fetch('/api/auth/register', {
       method: 'POST',

@@ -190,7 +190,7 @@ export default function DatePicker({ value, onChange, placeholder, className, er
           type="button"
           onClick={() => handleDateClick(day)}
           className={`
-            w-8 h-8 flex items-center justify-center text-sm font-medium rounded-lg transition-colors
+            w-8 h-8 flex items-center justify-center text-sm font-medium rounded-lg transition-colors outline-none focus:outline-none focus:ring-0
             ${isSelected(day)
               ? 'bg-[#553527] text-white'
               : isToday(day)
@@ -211,7 +211,7 @@ export default function DatePicker({ value, onChange, placeholder, className, er
     <div ref={containerRef} className="relative">
       <div
         className={`
-          relative flex items-center w-full rounded-md border px-3 py-2 bg-[#171717] text-white cursor-pointer transition-colors
+          date-picker-trigger relative flex items-center w-full rounded-md border px-3 py-2 bg-[#202020] text-white cursor-pointer transition-colors
           ${error ? 'border-red-500 focus-within:border-red-500' : 'border-[#553527]/40 focus-within:border-[#553527]'}
           ${className || ''}
         `}
@@ -223,14 +223,14 @@ export default function DatePicker({ value, onChange, placeholder, className, er
           value={selectedDate ? formatDisplayDate(selectedDate) : ''}
           placeholder={placeholder}
           readOnly
-          className="flex-1 bg-transparent text-white placeholder-[#303030] outline-none cursor-pointer"
+          className="flex-1 bg-transparent text-white placeholder-[#303030] outline-none cursor-pointer focus:outline-none"
         />
         <Calendar className="w-4 h-4 text-gray-400 ml-2" />
       </div>
 
       {(isOpen || isAnimating) && (
         <div
-          className={`absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-50 bg-[#101010]/95 backdrop-blur-md border border-white/15 rounded-lg shadow-xl p-4 w-80 transition-all duration-200 ease-out ${isOpen && !isAnimating
+          className={`date-picker-dropdown absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-50 bg-[#101010]/95 backdrop-blur-md border border-white/15 rounded-lg shadow-xl p-4 w-80 transition-all duration-200 ease-out ${isOpen && !isAnimating
             ? 'opacity-100 scale-100 translate-y-0'
             : 'opacity-0 scale-95 -translate-y-2'
             }`}
@@ -242,7 +242,7 @@ export default function DatePicker({ value, onChange, placeholder, className, er
                 <button
                   type="button"
                   onClick={handlePreviousMonth}
-                  className="p-1 rounded-lg hover:bg-[#171717] text-gray-300 hover:text-white transition-colors"
+                  className="p-1 rounded-lg hover:bg-[#171717] text-gray-300 hover:text-white transition-colors outline-none focus:outline-none focus:ring-0"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -251,14 +251,14 @@ export default function DatePicker({ value, onChange, placeholder, className, er
                   <button
                     type="button"
                     onClick={() => setShowMonthSelector(true)}
-                    className="text-white font-medium hover:bg-[#171717] py-1 px-2 rounded-lg transition-colors"
+                    className="text-white font-medium hover:bg-[#171717] py-1 px-2 rounded-lg transition-colors outline-none focus:outline-none focus:ring-0"
                   >
                     {MONTHS[currentMonth]}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowYearSelector(true)}
-                    className="text-white font-medium hover:bg-[#171717] py-1 px-2 rounded-lg transition-colors"
+                    className="text-white font-medium hover:bg-[#171717] py-1 px-2 rounded-lg transition-colors outline-none focus:outline-none focus:ring-0"
                   >
                     {currentYear}
                   </button>
@@ -267,7 +267,7 @@ export default function DatePicker({ value, onChange, placeholder, className, er
                 <button
                   type="button"
                   onClick={handleNextMonth}
-                  className="p-1 rounded-lg hover:bg-[#171717] text-gray-300 hover:text-white transition-colors"
+                  className="p-1 rounded-lg hover:bg-[#171717] text-gray-300 hover:text-white transition-colors outline-none focus:outline-none focus:ring-0"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -279,7 +279,7 @@ export default function DatePicker({ value, onChange, placeholder, className, er
                 <button
                   type="button"
                   onClick={() => setShowYearSelector(false)}
-                  className="p-1 rounded-lg hover:bg-[#171717] text-gray-300 hover:text-white transition-colors"
+                  className="p-1 rounded-lg hover:bg-[#171717] text-gray-300 hover:text-white transition-colors outline-none focus:outline-none focus:ring-0"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -297,7 +297,7 @@ export default function DatePicker({ value, onChange, placeholder, className, er
                 <button
                   type="button"
                   onClick={() => setShowMonthSelector(false)}
-                  className="p-1 rounded-lg hover:bg-[#171717] text-gray-300 hover:text-white transition-colors"
+                  className="p-1 rounded-lg hover:bg-[#171717] text-gray-300 hover:text-white transition-colors outline-none focus:outline-none focus:ring-0"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -341,7 +341,7 @@ export default function DatePicker({ value, onChange, placeholder, className, er
                     type="button"
                     onClick={() => handleYearSelect(year)}
                     className={`
-                      px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                      px-3 py-2 rounded-lg text-sm font-medium transition-colors outline-none focus:outline-none focus:ring-0
                       ${year === currentYear
                         ? 'bg-[#553527] text-white'
                         : 'text-gray-200 hover:bg-[#553527]/50 hover:text-white'
@@ -363,7 +363,7 @@ export default function DatePicker({ value, onChange, placeholder, className, er
                   type="button"
                   onClick={() => handleMonthSelect(index)}
                   className={`
-                    px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                    px-3 py-2 rounded-lg text-sm font-medium transition-colors outline-none focus:outline-none focus:ring-0
                     ${index === currentMonth
                       ? 'bg-[#553527] text-white'
                       : 'text-gray-200 hover:bg-[#553527]/50 hover:text-white'

@@ -338,6 +338,66 @@ datalist option {
   color: white !important;
 }
 
+/* Add Trade form: inputs/buttons bg #202020, default outline 2px white 10% */
+.add-trade-form input,
+.add-trade-form select,
+.add-trade-form textarea,
+.add-trade-form .date-picker-trigger,
+.add-trade-form .add-trade-form-actions button {
+  background-color: #202020 !important;
+  outline: 2px solid rgba(255, 255, 255, 0.1);
+  outline-offset: 0;
+}
+
+/* Add Trade form: placeholder/sample text 30% opacity */
+.add-trade-form input::placeholder,
+.add-trade-form textarea::placeholder {
+  opacity: 0.3;
+}
+.add-trade-form input::-webkit-input-placeholder,
+.add-trade-form textarea::-webkit-input-placeholder {
+  opacity: 0.3;
+}
+.add-trade-form input:focus,
+.add-trade-form textarea:focus,
+.add-trade-form select:focus {
+  outline: 0.5px solid rgba(217, 254, 67, 0.7) !important;
+  outline-offset: 0;
+  box-shadow: none !important;
+}
+
+/* Date picker trigger: no inner border; inner input has no outline/border (remove inner rectangle) */
+.add-trade-form .date-picker-trigger {
+  border: none !important;
+}
+.add-trade-form .date-picker-trigger input,
+.add-trade-form .date-picker-trigger input:focus,
+.add-trade-form .date-picker-trigger:focus-within,
+.add-trade-form .date-picker-trigger:focus-within input {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.add-trade-form .date-picker-dropdown button:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Add Trade action buttons: hover — 50% opacity bg, outline color change */
+.add-trade-form .add-trade-cancel-btn:hover {
+  background-color: rgba(85, 53, 39, 0.5) !important;
+  color: white !important;
+  outline: 2px solid #553527 !important;
+  outline-offset: 0;
+}
+.add-trade-form .add-trade-submit-btn:hover {
+  background-color: rgba(217, 254, 67, 0.5) !important;
+  color: #D9FE43 !important;
+  outline: 2px solid #D9FE43 !important;
+  outline-offset: 0;
+}
+
 /* General input styling for dark theme */
 input[type="url"] {
   color: white !important;
