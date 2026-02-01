@@ -356,29 +356,44 @@ export default function TradeCalendar() {
           <div className="flex space-x-2">
             <button
               onClick={() => setShowDatePicker(!showDatePicker)}
-              className="p-2 rounded-full text-white transition-colors duration-200 flex items-center gap-2 px-3"
-              style={{ backgroundColor: '#171717' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#553527'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#171717'}
+              className="p-2 rounded-full text-white transition-colors duration-200 flex items-center gap-2 px-3 bg-white/5 backdrop-blur-md"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#D9FE43';
+                e.currentTarget.style.color = '#000';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '';
+                e.currentTarget.style.color = '';
+              }}
             >
               <Calendar size={16} />
               <span className="text-sm">{t('customDate')}</span>
             </button>
             <button
               onClick={prevMonth}
-              className="p-2 rounded-full text-white transition-colors duration-200"
-              style={{ backgroundColor: '#171717' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#553527'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#171717'}
+              className="p-2 rounded-full text-white transition-colors duration-200 bg-white/5 backdrop-blur-md"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#D9FE43';
+                e.currentTarget.style.color = '#000';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '';
+                e.currentTarget.style.color = '';
+              }}
             >
               <ChevronLeft size={20} />
             </button>
             <button
               onClick={nextMonth}
-              className="p-2 rounded-full text-white transition-colors duration-200"
-              style={{ backgroundColor: '#171717' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#553527'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#171717'}
+              className="p-2 rounded-full text-white transition-colors duration-200 bg-white/5 backdrop-blur-md"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#D9FE43';
+                e.currentTarget.style.color = '#000';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '';
+                e.currentTarget.style.color = '';
+              }}
             >
               <ChevronRight size={20} />
             </button>
