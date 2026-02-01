@@ -349,16 +349,15 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
       const top = Math.min(y, base) - inflateY;
       const bottom = Math.max(y, base) + inflateY;
 
-      const radius = 22; // keep corners rounded nicely
+      const radius = 6; // subtle rounded corners (sharper like reference)
       const color = value >= 0 ? '#2DDD1A' : '#FF4D4D';
 
       ctx.save();
       ctx.beginPath();
-      // rounded rectangle path
-      const rTopLeft = value >= 0 ? radius : 4;
-      const rTopRight = value >= 0 ? radius : 4;
-      const rBottomLeft = value >= 0 ? 4 : radius;
-      const rBottomRight = value >= 0 ? 4 : radius;
+      const rTopLeft = value >= 0 ? radius : 2;
+      const rTopRight = value >= 0 ? radius : 2;
+      const rBottomLeft = value >= 0 ? 2 : radius;
+      const rBottomRight = value >= 0 ? 2 : radius;
       const w = right - left;
       const h = bottom - top;
       const x0 = left;
@@ -463,21 +462,9 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
         borderRadius: (ctx: any) => {
           const value = ctx.parsed.y;
           if (value >= 0) {
-            // Profit: tepa uchlari yumaloq
-            return {
-              topLeft: 20,
-              topRight: 20,
-              bottomLeft: 0,
-              bottomRight: 0,
-            };
+            return { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 };
           } else {
-            // Loss: pastki uchlari yumaloq
-            return {
-              topLeft: 0,
-              topRight: 0,
-              bottomLeft: 20,
-              bottomRight: 20,
-            };
+            return { topLeft: 0, topRight: 0, bottomLeft: 4, bottomRight: 4 };
           }
         },
         borderSkipped: false,
@@ -492,21 +479,9 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
         hoverBorderRadius: (ctx: any) => {
           const value = ctx.parsed.y;
           if (value >= 0) {
-            // Profit: tepa uchlari yumaloq
-            return {
-              topLeft: 25,
-              topRight: 25,
-              bottomLeft: 0,
-              bottomRight: 0,
-            };
+            return { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 };
           } else {
-            // Loss: pastki uchlari yumaloq
-            return {
-              topLeft: 0,
-              topRight: 0,
-              bottomLeft: 25,
-              bottomRight: 25,
-            };
+            return { topLeft: 0, topRight: 0, bottomLeft: 6, bottomRight: 6 };
           }
         },
         // Hover qilinganda barchartdagi faqat tanlangan bar vizual ravishda ajralib turadi
