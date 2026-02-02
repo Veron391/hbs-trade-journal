@@ -3,11 +3,12 @@
 import { useMemo } from 'react';
 import { useTrades } from '../../context/TradeContext';
 import { filterTradesByPeriod, TimePeriod } from '../dashboard/TimePeriodSelector';
-import { ArrowUpCircle, ArrowDownCircle, DollarSign, Calendar, BarChart3, Percent } from 'lucide-react';
+import { ArrowUpCircle, ArrowDownCircle, DollarSign, Calendar, BarChart3, Target } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
 import { TradeType } from '../../types';
 import { useI18n } from '../../context/I18nContext';
 import { filterCompletedTrades } from '@/lib/utils/tradeUtils';
+import StatCard from '../ui/StatCard';
 
 interface StatsOverviewProps {
   selectedPeriod: TimePeriod;
@@ -126,13 +127,12 @@ export default function StatsOverview({ selectedPeriod, tradeType }: StatsOvervi
   }, [trades, selectedPeriod, tradeType]);
 
   const formatCurrency = (value: number) => {
-    const formatted = new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(Math.abs(value));
-    return value >= 0 ? `+${formatted}` : `-${formatted}`;
   };
 
   const formatPercent = (value: number) => {
@@ -154,180 +154,51 @@ export default function StatsOverview({ selectedPeriod, tradeType }: StatsOvervi
     );
   }
 
+  // KPI cards: same UI/UX as admin dashboard — StatCard (panel bg, icon glow, hover scale + shadow)
   return (
     <div>
       <h2 className="text-xl font-semibold mb-6 text-white">{t('statsSummary')}</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Total P&L — gradient matches icon: green or red, 5% opacity */}
-        <div
-          className="rounded-lg shadow p-6 transform-gpu transition-transform duration-200 hover:scale-[1.05] relative overflow-hidden"
-          style={{
-            background: filteredStats.totalProfitLoss >= 0
-              ? 'linear-gradient(225deg, rgba(4, 223, 114, 0.10) 0%, transparent 80%), #101010'
-              : 'linear-gradient(225deg, rgba(239, 68, 68, 0.10) 0%, transparent 80%), #101010',
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-400 mb-1">{t('totalProfitLoss')}</p>
-              <p className={`text-2xl font-bold ${filteredStats.totalProfitLoss >= 0 ? 'text-[#04DF72]' : 'text-danger'}`}>
-                {formatCurrency(filteredStats.totalProfitLoss)}
-              </p>
-            </div>
-            <div
-              className={`p-3 rounded-full ${filteredStats.totalProfitLoss >= 0 ? 'bg-green-900' : 'bg-red-900'}`}
-              style={{
-                boxShadow: filteredStats.totalProfitLoss >= 0
-                  ? '0 0 8px 2px rgba(16, 185, 129, 0.3)'
-                  : '0 0 8px 2px rgba(239, 68, 68, 0.3)'
-              }}
-            >
-              <DollarSign
-                size={24}
-                className={`${filteredStats.totalProfitLoss >= 0 ? 'text-[#04DF72]' : 'text-danger'}`}
-                style={{
-                  filter: `drop-shadow(0 0 10px ${filteredStats.totalProfitLoss >= 0 ? 'rgba(16, 185, 129, 0.6)' : 'rgba(239, 68, 68, 0.6)'})`
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Win Rate — gradient matches icon: blue, 5% opacity */}
-        <div
-          className="rounded-lg shadow p-6 transform-gpu transition-transform duration-200 hover:scale-[1.05] relative overflow-hidden"
-          style={{ background: 'linear-gradient(225deg, rgba(59, 130, 246, 0.10) 0%, transparent 80%), #101010' }}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-400 mb-1">{t('winRate')}</p>
-              <p className="text-2xl font-bold text-primary">
-                {formatPercent(filteredStats.winRate * 100)}
-              </p>
-            </div>
-            <div
-              className="p-3 rounded-full bg-blue-900"
-              style={{ boxShadow: '0 0 8px 2px rgba(59, 130, 246, 0.3)' }}
-            >
-              <Percent
-                size={24}
-                className="text-primary"
-                style={{
-                  filter: 'drop-shadow(0 0 10px rgba(59, 130, 246, 0.6))'
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Risk/Reward Ratio — gradient matches icon: blue, 5% opacity */}
-        <div
-          className="rounded-lg shadow p-6 transform-gpu transition-transform duration-200 hover:scale-[1.05] relative overflow-hidden"
-          style={{ background: 'linear-gradient(225deg, rgba(59, 130, 246, 0.10) 0%, transparent 80%), #101010' }}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-400 mb-1">{t('riskRewardRatio')}</p>
-              <p className="text-2xl font-bold text-primary">
-                {filteredStats.riskRewardRatio.toFixed(2)}
-              </p>
-            </div>
-            <div
-              className="p-3 rounded-full bg-blue-900"
-              style={{ boxShadow: '0 0 8px 2px rgba(59, 130, 246, 0.3)' }}
-            >
-              <BarChart3
-                size={24}
-                className="text-primary"
-                style={{
-                  filter: 'drop-shadow(0 0 10px rgba(59, 130, 246, 0.6))'
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Average Winning Trade — gradient matches icon: green, 5% opacity */}
-        <div
-          className="rounded-lg shadow p-6 transform-gpu transition-transform duration-200 hover:scale-[1.05] relative overflow-hidden"
-          style={{ background: 'linear-gradient(225deg, rgba(4, 223, 114, 0.10) 0%, transparent 80%), #101010' }}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-400 mb-1">{t('avgWinningTrade')}</p>
-              <p className="text-2xl font-bold text-[#04DF72]">
-                {formatCurrency(filteredStats.averageWinningTrade)}
-              </p>
-            </div>
-            <div
-              className="p-3 rounded-full bg-green-900"
-              style={{ boxShadow: '0 0 8px 2px rgba(16, 185, 129, 0.3)' }}
-            >
-              <ArrowUpCircle
-                size={24}
-                className="text-[#04DF72]"
-                style={{
-                  filter: 'drop-shadow(0 0 10px rgba(16, 185, 129, 0.6))'
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Average Losing Trade — gradient matches icon: red, 5% opacity */}
-        <div
-          className="rounded-lg shadow p-6 transform-gpu transition-transform duration-200 hover:scale-[1.05] relative overflow-hidden"
-          style={{ background: 'linear-gradient(225deg, rgba(239, 68, 68, 0.10) 0%, transparent 80%), #101010' }}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-400 mb-1">{t('avgLosingTrade')}</p>
-              <p className="text-2xl font-bold text-danger">
-                {formatCurrency(filteredStats.averageLosingTrade)}
-              </p>
-            </div>
-            <div
-              className="p-3 rounded-full bg-red-900"
-              style={{ boxShadow: '0 0 8px 2px rgba(239, 68, 68, 0.3)' }}
-            >
-              <ArrowDownCircle
-                size={24}
-                className="text-danger"
-                style={{
-                  filter: 'drop-shadow(0 0 10px rgba(239, 68, 68, 0.6))'
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Average Hold Time — gradient matches icon: gray, 5% opacity */}
-        <div
-          className="rounded-lg shadow p-6 transform-gpu transition-transform duration-200 hover:scale-[1.05] relative overflow-hidden"
-          style={{ background: 'linear-gradient(225deg, rgba(156, 163, 175, 0.10) 0%, transparent 80%), #101010' }}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-400 mb-1">{t('avgHoldTime')}</p>
-              <p className="text-2xl font-bold text-gray-100">
-                {filteredStats.averageHoldTime.toFixed(1)} {t('days')}
-              </p>
-            </div>
-            <div
-              className="p-3 rounded-full bg-gray-700"
-              style={{ boxShadow: '0 0 8px 2px rgba(156, 163, 175, 0.3)' }}
-            >
-              <Calendar
-                size={24}
-                className="text-gray-300"
-                style={{
-                  filter: 'drop-shadow(0 0 10px rgba(156, 163, 175, 0.6))'
-                }}
-              />
-            </div>
-          </div>
-        </div>
+      <div className="stats-kpi-cards grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+        <StatCard
+          title={t('totalProfitLoss')}
+          value={formatCurrency(filteredStats.totalProfitLoss)}
+          icon={<DollarSign className="h-6 w-6 text-white" />}
+          intent={filteredStats.totalProfitLoss >= 0 ? 'green' : 'red'}
+          valueTone={filteredStats.totalProfitLoss >= 0 ? 'profit' : 'loss'}
+        />
+        <StatCard
+          title={t('winRate')}
+          value={formatPercent(filteredStats.winRate * 100)}
+          icon={<Target className="h-6 w-6 text-white" />}
+          intent="purple"
+        />
+        <StatCard
+          title={t('riskRewardRatio')}
+          value={filteredStats.riskRewardRatio.toFixed(2)}
+          icon={<BarChart3 className="h-6 w-6 text-white" />}
+          intent="blue"
+        />
+        <StatCard
+          title={t('avgWinningTrade')}
+          value={formatCurrency(filteredStats.averageWinningTrade)}
+          icon={<ArrowUpCircle className="h-6 w-6 text-white" />}
+          intent="green"
+          valueTone="profit"
+        />
+        <StatCard
+          title={t('avgLosingTrade')}
+          value={formatCurrency(filteredStats.averageLosingTrade)}
+          icon={<ArrowDownCircle className="h-6 w-6 text-white" />}
+          intent="red"
+          valueTone="loss"
+        />
+        <StatCard
+          title={t('avgHoldTime')}
+          value={`${filteredStats.averageHoldTime.toFixed(1)} ${t('days')}`}
+          icon={<Calendar className="h-6 w-6 text-black" />}
+          intent="lime"
+        />
       </div>
     </div>
   );

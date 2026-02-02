@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 
 interface DatePickerProps {
   value: string;
@@ -192,10 +192,10 @@ export default function DatePicker({ value, onChange, placeholder, className, er
           className={`
             w-8 h-8 flex items-center justify-center text-sm font-medium rounded-lg transition-colors outline-none focus:outline-none focus:ring-0
             ${isSelected(day)
-              ? 'bg-[#553527] text-white'
+              ? 'bg-[#D9FE43] text-gray-800'
               : isToday(day)
-                ? 'bg-[#553527]/70 text-white ring-2 ring-[#553527]'
-                : 'text-gray-200 hover:bg-[#553527]/50 hover:text-white'
+                ? 'bg-[#D9FE43]/70 text-gray-800 ring-2 ring-[#D9FE43]'
+                : 'text-gray-200 hover:bg-[#D9FE43]/50 hover:text-gray-800'
             }
           `}
         >
@@ -212,7 +212,7 @@ export default function DatePicker({ value, onChange, placeholder, className, er
       <div
         className={`
           date-picker-trigger relative flex items-center w-full rounded-md border px-3 py-2 bg-[#202020] text-white cursor-pointer transition-colors
-          ${error ? 'border-red-500 focus-within:border-red-500' : 'border-[#553527]/40 focus-within:border-[#553527]'}
+          ${error ? 'border-red-500 focus-within:border-red-500' : 'border-[#D9FE43]/40 focus-within:border-[#D9FE43]'}
           ${className || ''}
         `}
         onClick={handleToggle}
@@ -225,15 +225,18 @@ export default function DatePicker({ value, onChange, placeholder, className, er
           readOnly
           className="flex-1 bg-transparent text-white placeholder-[#303030] outline-none cursor-pointer focus:outline-none"
         />
-        <Calendar className="w-4 h-4 text-gray-400 ml-2" />
+        <CalendarDays className="w-4 h-4 text-gray-400 ml-2 shrink-0" />
       </div>
 
       {(isOpen || isAnimating) && (
         <div
-          className={`date-picker-dropdown absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-50 bg-[#101010]/95 backdrop-blur-md border border-white/15 rounded-lg shadow-xl p-4 w-80 transition-all duration-200 ease-out ${isOpen && !isAnimating
+          className={`date-picker-dropdown absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-50 backdrop-blur-md border border-white/15 rounded-lg shadow-xl p-4 w-80 transition-all duration-200 ease-out overflow-hidden ${isOpen && !isAnimating
             ? 'opacity-100 scale-100 translate-y-0'
             : 'opacity-0 scale-95 -translate-y-2'
             }`}
+          style={{
+            background: 'linear-gradient(225deg, rgba(217, 254, 67, 0.03) 0%, transparent 55%), rgba(16, 16, 16, 0.95)',
+          }}
         >
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
@@ -343,8 +346,8 @@ export default function DatePicker({ value, onChange, placeholder, className, er
                     className={`
                       px-3 py-2 rounded-lg text-sm font-medium transition-colors outline-none focus:outline-none focus:ring-0
                       ${year === currentYear
-                        ? 'bg-[#553527] text-white'
-                        : 'text-gray-200 hover:bg-[#553527]/50 hover:text-white'
+                        ? 'bg-[#D9FE43] text-gray-800'
+                        : 'text-gray-200 hover:bg-[#D9FE43]/50 hover:text-gray-800'
                       }
                     `}
                   >
@@ -365,8 +368,8 @@ export default function DatePicker({ value, onChange, placeholder, className, er
                   className={`
                     px-3 py-2 rounded-lg text-sm font-medium transition-colors outline-none focus:outline-none focus:ring-0
                     ${index === currentMonth
-                      ? 'bg-[#553527] text-white'
-                      : 'text-gray-200 hover:bg-[#553527]/50 hover:text-white'
+                      ? 'bg-[#D9FE43] text-gray-800'
+                      : 'text-gray-200 hover:bg-[#D9FE43]/50 hover:text-gray-800'
                     }
                   `}
                 >

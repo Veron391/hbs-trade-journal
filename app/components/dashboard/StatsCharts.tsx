@@ -283,12 +283,12 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
       const y = (chartArea.top + chartArea.bottom) / 2;
 
       // Main percent
-      ctx.font = '600 26px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+      ctx.font = '600 26px "Arial Rounded MT", "Arial Rounded MT Bold", Arial, sans-serif';
       ctx.fillStyle = '#ffffff';
       ctx.fillText(text, x, y - 8);
 
       // Subtitle: Win Rate (translated)
-      ctx.font = '500 13px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+      ctx.font = '500 13px "Arial Rounded MT", Arial, sans-serif';
       ctx.fillStyle = 'rgba(229, 231, 235, 0.85)'; // text-gray-200-ish
       ctx.fillText(t('winRate'), x, y + 16);
       ctx.restore();
@@ -311,12 +311,12 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
       const y = (chartArea.top + chartArea.bottom) / 2;
 
       // Main number
-      ctx.font = '600 26px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+      ctx.font = '600 26px "Arial Rounded MT", "Arial Rounded MT Bold", Arial, sans-serif';
       ctx.fillStyle = '#ffffff';
       ctx.fillText(totalTrades.toString(), x, y - 8);
 
       // Subtitle: Total Trades (translated)
-      ctx.font = '500 13px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+      ctx.font = '500 13px "Arial Rounded MT", Arial, sans-serif';
       ctx.fillStyle = 'rgba(229, 231, 235, 0.85)'; // text-gray-200-ish
       ctx.fillText(t('totalTrades'), x, y + 16);
       ctx.restore();
@@ -599,7 +599,7 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
     <div className="mt-8 space-y-8">
       <h2 className="text-xl font-semibold text-white">{t('performanceCharts')}</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="performance-charts-doughnuts grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Win/Loss Ratio */}
         <div className="bg-[#101010] p-6 rounded-lg shadow">
           <h3 className="text-lg font-medium mb-4 text-gray-100">{t('winLossRatio')}</h3>
@@ -654,6 +654,8 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
                       titleAlign: 'center',
                       bodyAlign: 'center',
                       boxPadding: 10,
+                      titleFont: { family: '"Arial Rounded MT", Arial, sans-serif' },
+                      bodyFont: { family: '"Arial Rounded MT", Arial, sans-serif' },
                       callbacks: {
                         label: function (context: TooltipItem<'doughnut'>) {
                           const value = context.parsed as number;
@@ -713,6 +715,8 @@ export default function StatsCharts({ selectedPeriod, tradeType }: StatsChartsPr
                       titleAlign: 'center',
                       bodyAlign: 'center',
                       boxPadding: 10,
+                      titleFont: { family: '"Arial Rounded MT", Arial, sans-serif' },
+                      bodyFont: { family: '"Arial Rounded MT", Arial, sans-serif' },
                       callbacks: {
                         label: function (context) {
                           const value = context.parsed as number;

@@ -338,15 +338,24 @@ datalist option {
   color: white !important;
 }
 
-/* Add Trade form: inputs/buttons bg #202020, default outline 2px white 10% */
+/* Add Trade form: inputs/buttons bg #202020, outline #1e1e1e 60% default, 100% on hover */
 .add-trade-form input,
 .add-trade-form select,
 .add-trade-form textarea,
 .add-trade-form .date-picker-trigger,
 .add-trade-form .add-trade-form-actions button {
   background-color: #202020 !important;
-  outline: 2px solid rgba(255, 255, 255, 0.1);
+  outline: 2px solid rgba(30, 30, 30, 0.6);
   outline-offset: 0;
+  transition: outline-color 0.2s;
+}
+.add-trade-form input:hover,
+.add-trade-form select:hover,
+.add-trade-form textarea:hover,
+.add-trade-form .date-picker-trigger:hover,
+.add-trade-form .add-trade-form-actions button:hover,
+.add-trade-form .add-trade-toggle-track:hover {
+  outline-color: #1e1e1e;
 }
 
 /* Add Trade form: placeholder/sample text 30% opacity */
@@ -396,6 +405,45 @@ datalist option {
   color: #D9FE43 !important;
   outline: 2px solid #D9FE43 !important;
   outline-offset: 0;
+}
+
+/* Stats KPI cards: Arial Rounded MT */
+.stats-kpi-cards,
+.stats-kpi-cards * {
+  font-family: "Arial Rounded MT", "Arial Rounded MT Bold", Arial, sans-serif;
+}
+
+/* Performance Charts – doughnut section: Arial Rounded MT */
+.performance-charts-doughnuts,
+.performance-charts-doughnuts * {
+  font-family: "Arial Rounded MT", "Arial Rounded MT Bold", Arial, sans-serif;
+}
+
+/* Stats page: tab switch content fade-in */
+.stats-tab-content {
+  animation: statsTabFadeIn 0.35s ease-out forwards;
+}
+@keyframes statsTabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* StatCard (KPI) border/outline: #1e1e1e 60% default, 100% on hover */
+.stat-card-border {
+  border: 1px solid rgba(30, 30, 30, 0.6);
+  outline: 1px solid rgba(30, 30, 30, 0.6);
+  outline-offset: 0;
+  transition: border-color 0.3s, outline 0.3s;
+}
+.stat-card-border:hover {
+  border-color: #1e1e1e;
+  outline: 1px solid #1e1e1e;
 }
 
 /* General input styling for dark theme */

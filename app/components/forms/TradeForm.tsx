@@ -6,9 +6,10 @@ import { Trade, TradeType, Direction } from '../../types';
 import { useI18n } from '../../context/I18nContext';
 import { useTrades } from '../../context/TradeContext';
 import { useFormContext } from '../../context/FormContext';
-import { X, CheckCircle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import clsx from 'clsx';
 import DatePicker from '../ui/DatePicker';
+import AddTradeToggle from '../ui/AddTradeToggle';
 
 interface TradeFormProps {
   existingTrade?: Trade;
@@ -36,7 +37,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
       setupNotes: existingTrade.setupNotes,
       link: existingTrade.link,
     } : {
-      type: '' as unknown as TradeType,
+      type: 'stock' as TradeType,
       symbol: '',
       direction: 'long' as Direction,
       entryDate: '',
@@ -141,24 +142,52 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
       <form onSubmit={handleSubmit(onSubmit)} className="add-trade-form space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium mb-1 text-gray-200">{t('tradeType')}</label>
-            <select
-              {...register('type', { required: 'Trade type is required' })}
-              className={clsx(
-                "w-full rounded-md border px-3 py-2 bg-[#202020] text-white",
-                errors.type ? "border-danger" : "border-[#553527]/40"
+            <Controller
+              name="type"
+              control={control}
+              rules={{ required: 'Trade type is required' }}
+              render={({ field }) => (
+                <AddTradeToggle
+                  label={t('tradeType')}
+                  options={[
+                    { value: 'stock', label: t('stock') },
+                    { value: 'crypto', label: t('crypto') },
+                  ]}
+                  value={field.value || 'stock'}
+                  onChange={field.onChange}
+                  activeColor="#F07E3B"
+                  activeColorMap={{ stock: '#2563EB', crypto: '#EA580C' }}
+                  error={!!errors.type}
+                />
               )}
-            >
-              <option value="" disabled hidden>{t('selectType')}</option>
-              {(tradeTypes.length > 0 ? tradeTypes : [
-                { id: 2, name: 'STOCK', slug: 'stock' },
-                { id: 1, name: 'CRYPTO', slug: 'crypto' },
-              ]).map(t => (
-                <option key={t.id} value={t.slug.toLowerCase()}>{t.name}</option>
-              ))}
-            </select>
+            />
             {errors.type && (
               <p className="text-danger text-sm mt-1">{errors.type.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Controller
+              name="direction"
+              control={control}
+              rules={{ required: 'Direction is required' }}
+              render={({ field }) => (
+                <AddTradeToggle
+                  label={t('direction')}
+                  options={[
+                    { value: 'long', label: 'Long' },
+                    { value: 'short', label: 'Short' },
+                  ]}
+                  value={field.value || 'long'}
+                  onChange={field.onChange}
+                  activeColor="#4EB676"
+                  activeColorMap={{ long: '#16A34A', short: '#DC2626' }}
+                  error={!!errors.direction}
+                />
+              )}
+            />
+            {errors.direction && (
+              <p className="text-danger text-sm mt-1">{errors.direction.message}</p>
             )}
           </div>
 
@@ -170,7 +199,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
               placeholder="AAPL, BTC, etc."
               className={clsx(
                 "w-full rounded-md border px-3 py-2 bg-[#202020] text-white placeholder-[#303030]",
-                errors.symbol ? "border-danger" : "border-[#553527]/40"
+                errors.symbol ? "border-danger" : "border-[#1e1e1e]/60"
               )}
               style={{
                 WebkitBoxShadow: '0 0 0 1000px #202020 inset',
@@ -180,23 +209,6 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
             />
             {errors.symbol && (
               <p className="text-danger text-sm mt-1">{errors.symbol.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-200">{t('direction')}</label>
-            <select
-              {...register('direction', { required: 'Direction is required' })}
-              className={clsx(
-                "w-full rounded-md border px-3 py-2 bg-[#202020] text-white",
-                errors.direction ? "border-danger" : "border-[#553527]/40"
-              )}
-            >
-              <option value="long">Long</option>
-              <option value="short">Short</option>
-            </select>
-            {errors.direction && (
-              <p className="text-danger text-sm mt-1">{errors.direction.message}</p>
             )}
           </div>
 
@@ -212,7 +224,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
               placeholder="0"
               className={clsx(
                 "w-full rounded-md border px-3 py-2 bg-[#202020] text-white placeholder-[#303030]",
-                errors.quantity ? "border-danger" : "border-[#553527]/40"
+                errors.quantity ? "border-danger" : "border-[#1e1e1e]/60"
               )}
               style={{
                 WebkitBoxShadow: '0 0 0 1000px #202020 inset',
@@ -285,7 +297,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
               placeholder="0.00"
               className={clsx(
                 "w-full rounded-md border px-3 py-2 bg-[#202020] text-white placeholder-[#303030]",
-                errors.entryPrice ? "border-danger" : "border-[#553527]/40"
+                errors.entryPrice ? "border-danger" : "border-[#1e1e1e]/60"
               )}
               style={{
                 WebkitBoxShadow: '0 0 0 1000px #202020 inset',
@@ -316,7 +328,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
               placeholder="0.00"
               className={clsx(
                 "w-full rounded-md border px-3 py-2 bg-[#202020] text-white placeholder-[#303030]",
-                errors.exitPrice ? "border-danger" : "border-[#553527]/40"
+                errors.exitPrice ? "border-danger" : "border-[#1e1e1e]/60"
               )}
               style={{
                 WebkitBoxShadow: '0 0 0 1000px #202020 inset',
@@ -344,7 +356,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
             placeholder="https://example.com/trade-screenshot"
             className={clsx(
               "w-full rounded-md border px-3 py-2 bg-[#202020] text-white placeholder-[#303030]",
-              errors.link ? "border-danger" : "border-[#553527]/40"
+              errors.link ? "border-danger" : "border-[#1e1e1e]/60"
             )}
             style={{
               WebkitBoxShadow: '0 0 0 1000px #202020 inset',
@@ -366,7 +378,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
             {...register('setupNotes')}
             rows={4}
             placeholder="Describe your trade setup and strategy..."
-            className="w-full rounded-md border border-[#553527]/40 px-3 py-2 bg-[#202020] text-white placeholder-[#303030]"
+            className="w-full rounded-md border border-[#1e1e1e]/60 px-3 py-2 bg-[#202020] text-white placeholder-[#303030]"
           ></textarea>
         </div>
 
@@ -374,7 +386,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
         <div className="add-trade-form-actions flex justify-end gap-4">
           <button
             type="button"
-            className="add-trade-cancel-btn px-4 py-2 border border-[#553527]/40 rounded-md bg-[#202020] text-white transition-colors duration-200"
+            className="add-trade-cancel-btn px-4 py-2 border border-[#1e1e1e]/60 rounded-md bg-[#202020] text-white transition-colors duration-200"
             onClick={() => {
               setIsFormOpen(false); // Allow navigation when canceling
               onComplete();
