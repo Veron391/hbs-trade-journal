@@ -60,7 +60,8 @@ export default function AddTradeToggle({
   const [pillStyle, setPillStyle] = useState({ left: 6, width: 0 });
 
   const pillColor = (activeColorMap && activeColorMap[value]) || activeColor;
-  const pillGradient = `linear-gradient(180deg, ${lightenHex(pillColor)} 0%, ${pillColor} 45%, ${darkenHex(pillColor)} 100%)`;
+  const pillOpacity = 0.88; /* ichki fon biroz shaffof, outline o‘zgarmaydi */
+  const pillGradient = `linear-gradient(180deg, ${hexToRgba(lightenHex(pillColor), pillOpacity)} 0%, ${hexToRgba(pillColor, pillOpacity)} 45%, ${hexToRgba(darkenHex(pillColor), pillOpacity)} 100%)`;
   const pillGlow = `0 0 17px 5px ${hexToRgba(pillColor, 0.34)}`;
   const pill3DShadow = `2px 2px 4px rgba(0,0,0,0.28), 0 1px 0 ${hexToRgba(darkenHex(pillColor, 12), 0.5)}`;
   const pillBoxShadow = `${pillGlow}, ${pill3DShadow}`;
@@ -98,13 +99,13 @@ export default function AddTradeToggle({
       <div
         ref={containerRef}
         className={`
-          add-trade-toggle-track relative flex rounded-full p-0.5 min-h-[40px]
+          add-trade-toggle-track relative flex rounded-full p-0.5 min-h-[48px]
           transition-[outline-color] duration-200
           ${error ? 'ring-1 ring-red-500' : ''}
         `}
         style={{
-          backgroundColor: '#202020',
-          outline: '2px solid rgba(30, 30, 30, 0.6)',
+          backgroundColor: 'rgba(32, 32, 32, 0.82)',
+          outline: '0.4px solid rgba(255, 255, 255, 0.1)',
           outlineOffset: 0,
         }}
       >
@@ -131,7 +132,7 @@ export default function AddTradeToggle({
               onClick={() => onChange(opt.value)}
               className={`
                 relative z-10 flex items-center justify-center gap-1.5 flex-1 min-w-0
-                py-2 px-3 rounded-full text-xs font-medium
+                py-2.5 px-3 rounded-full text-xs font-medium
                 transition-colors duration-300 ease-out
                 active:scale-[0.98]
                 ${isActive ? 'text-white' : 'text-[#A0A0A0] hover:text-[#B0B0B0]'}

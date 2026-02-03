@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useTrades as useTradesContext } from '../../context/TradeContext';
 import { useTrades } from '@/lib/hooks/useTrades';
-import { listAllTrades } from '@/lib/api/trades';
 import { Trade } from '../../types';
 import { format } from 'date-fns';
 import { Pencil, Trash2, ArrowUp, ArrowDown, AlertTriangle, ExternalLink, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -12,7 +11,7 @@ import { useI18n } from '../../context/I18nContext';
 
 export default function TradeList() {
   const { t } = useI18n();
-  const { deleteTrade: deleteTradeContext, clearAllTrades } = useTradesContext();
+  const { trades: contextTrades, deleteTrade: deleteTradeContext, clearAllTrades, isLoading: isLoadingTrades } = useTradesContext();
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,9 +55,8 @@ export default function TradeList() {
   // Build ordering parameter for backend API
   const ordering = sortBy ? `${sortDirection === 'desc' ? '-' : ''}${mapFieldToBackend(sortBy)}` : undefined;
 
-  // State for all trades (for sorting across all pages)
-  const [allTrades, setAllTrades] = useState<Trade[]>([]);
-  const [isLoadingAllTrades, setIsLoadingAllTrades] = useState(false);
+  // Use trades from context (single source of truth) — yangi savdo qo‘shilganda avtomatik yangilanadi
+  const allTrades = Array.isArray(contextTrades) ? contextTrades : [];
 
   // Fetch trades with pagination and sorting (for mutate)
   const { mutate } = useTrades(tradesPerPage, offset, ordering);
@@ -67,34 +65,6 @@ export default function TradeList() {
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [selectedTradeDetails, setSelectedTradeDetails] = useState<Trade | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
-
-  // Load all trades when sort changes
-  useEffect(() => {
-    const loadAllTrades = async () => {
-      setIsLoadingAllTrades(true);
-      try {
-        const trades = await listAllTrades(ordering);
-        setAllTrades(trades as Trade[]);
-      } catch (error) {
-        console.error('Error loading all trades:', error);
-        setAllTrades([]);
-      } finally {
-        setIsLoadingAllTrades(false);
-      }
-    };
-
-    loadAllTrades();
-  }, [ordering, sortBy, sortDirection]);
-
-  // Refresh all trades after delete or update
-  const refreshAllTrades = async () => {
-    try {
-      const trades = await listAllTrades(ordering);
-      setAllTrades(trades as Trade[]);
-    } catch (error) {
-      console.error('Error refreshing all trades:', error);
-    }
-  };
 
   // Sort all trades on frontend
   const sortTrades = (trades: Trade[]): Trade[] => {
@@ -163,8 +133,7 @@ export default function TradeList() {
       setCurrentPage(prev => prev - 1);
     }
 
-    await mutate(); // Refresh the list
-    await refreshAllTrades(); // Refresh all trades
+    await mutate(); // Refresh paginated cache
   };
 
   // Reset to page 1 if current page exceeds total pages
@@ -397,7 +366,6 @@ export default function TradeList() {
                 onClick={async () => {
                   try {
                     await clearAllTrades();
-                    setAllTrades([]); // Clear all trades
                     setApiMessage({
                       type: 'success',
                       text: `Successfully deleted all ${sortedAllTrades.length} trade${sortedAllTrades.length !== 1 ? 's' : ''}!`
@@ -409,7 +377,6 @@ export default function TradeList() {
                     }, 5000);
 
                     setShowDeleteAllModal(false);
-                    await refreshAllTrades(); // Refresh all trades
                   } catch (error) {
                     setApiMessage({
                       type: 'error',
@@ -444,7 +411,7 @@ export default function TradeList() {
         </div>
       )}
 
-      {isLoadingAllTrades ? (
+      {isLoadingTrades ? (
         <div className="flex justify-center items-center py-12">
           <div className="loader"></div>
         </div>
@@ -786,8 +753,8 @@ export default function TradeList() {
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1 || isLoadingAllTrades}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1 ${currentPage === 1 || isLoadingAllTrades
+                  disabled={currentPage === 1 || isLoadingTrades}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1 ${currentPage === 1 || isLoadingTrades
                     ? 'bg-[#171717]/50 border border-white/10 text-gray-400 cursor-not-allowed'
                     : 'bg-[#171717] border border-white/20 text-white hover:bg-[#553527]'
                     }`}
@@ -876,8 +843,8 @@ export default function TradeList() {
 
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages || isLoadingAllTrades}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1 ${currentPage === totalPages || isLoadingAllTrades
+                  disabled={currentPage === totalPages || isLoadingTrades}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1 ${currentPage === totalPages || isLoadingTrades
                     ? 'bg-[#171717]/50 border border-white/10 text-gray-400 cursor-not-allowed'
                     : 'bg-[#171717] border border-white/20 text-white hover:bg-[#553527]'
                     }`}

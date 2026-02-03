@@ -211,8 +211,8 @@ export default function DatePicker({ value, onChange, placeholder, className, er
     <div ref={containerRef} className="relative">
       <div
         className={`
-          date-picker-trigger relative flex items-center w-full rounded-md border px-3 py-2 bg-[#202020] text-white cursor-pointer transition-colors
-          ${error ? 'border-red-500 focus-within:border-red-500' : 'border-[#D9FE43]/40 focus-within:border-[#D9FE43]'}
+          date-picker-trigger relative flex items-center w-full rounded-md border px-3 py-2 min-h-[48px] bg-[#202020] text-white cursor-pointer transition-colors
+          ${error ? 'border-red-500 focus-within:border-red-500' : 'border-[0.4px] border-white/10 focus-within:border-[0.4px] focus-within:border-[#D9FE43]'}
           ${className || ''}
         `}
         onClick={handleToggle}
@@ -223,9 +223,9 @@ export default function DatePicker({ value, onChange, placeholder, className, er
           value={selectedDate ? formatDisplayDate(selectedDate) : ''}
           placeholder={placeholder}
           readOnly
-          className="flex-1 bg-transparent text-white placeholder-[#303030] outline-none cursor-pointer focus:outline-none"
+          className="flex-1 bg-transparent text-white placeholder:text-[#636363] outline-none cursor-pointer focus:outline-none"
         />
-        <CalendarDays className="w-4 h-4 text-gray-400 ml-2 shrink-0" />
+        <CalendarDays className="w-5 h-5 text-gray-400 ml-2 shrink-0" />
       </div>
 
       {(isOpen || isAnimating) && (

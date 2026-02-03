@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { Trade, TradeType, Direction } from '../../types';
 import { useI18n } from '../../context/I18nContext';
 import { useTrades } from '../../context/TradeContext';
 import { useFormContext } from '../../context/FormContext';
-import { CheckCircle } from 'lucide-react';
 import clsx from 'clsx';
 import DatePicker from '../ui/DatePicker';
 import AddTradeToggle from '../ui/AddTradeToggle';
@@ -21,8 +20,8 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
   const { addTrade, updateTrade } = useTrades();
   const { setIsTradeFormOpen } = useFormContext();
   const [showSuccess, setShowSuccess] = useState(false);
-  const [tradeTypes, setTradeTypes] = useState<Array<{ id: number; name: string; slug: string }>>([]);
   const [isFormOpen, setIsFormOpen] = useState(true);
+  const dotlottieContainerRef = useRef<HTMLDivElement>(null);
 
   const { register, handleSubmit, control, watch, formState: { errors } } = useForm<Omit<Trade, 'id'>>({
     defaultValues: existingTrade ? {
@@ -49,24 +48,6 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
       link: '',
     }
   });
-
-  // Fetch trade types from backend (via internal proxy)
-  useEffect(() => {
-    const fetchTypes = async () => {
-      try {
-        const res = await fetch('/api/journal/trades/type', { cache: 'no-store' });
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data.results)) {
-            setTradeTypes(data.results);
-          }
-        }
-      } catch {
-        // ignore
-      }
-    };
-    fetchTypes();
-  }, []);
 
   const entryDate = watch('entryDate');
 
@@ -122,19 +103,36 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
       }
 
       setShowSuccess(true);
-      setIsFormOpen(false); // Allow navigation after successful submission
-      setTimeout(() => {
-        onComplete();
-      }, 800);
+      setIsFormOpen(false);
     } catch (error) {
       console.error('Error saving trade:', error);
       setShowSuccess(true);
-      setIsFormOpen(false); // Allow navigation after error
-      setTimeout(() => {
-        onComplete();
-      }, 800);
+      setIsFormOpen(false);
     }
   };
+
+  // When confirmation is shown, wait for the Lottie animation to finish before calling onComplete
+  useEffect(() => {
+    if (!showSuccess) return;
+    const fallbackTimer = setTimeout(() => onComplete(), 4000);
+    const handleComplete = () => {
+      clearTimeout(fallbackTimer);
+      onComplete();
+    };
+    let removeComplete: (() => void) | undefined;
+    const t = setTimeout(() => {
+      const el = dotlottieContainerRef.current?.querySelector('dotlottie-wc') as (HTMLElement & { dotLottie?: { addEventListener: (e: string, fn: () => void) => void; removeEventListener: (e: string, fn: () => void) => void } }) | null;
+      if (el?.dotLottie) {
+        el.dotLottie.addEventListener('complete', handleComplete);
+        removeComplete = () => el.dotLottie?.removeEventListener?.('complete', handleComplete);
+      }
+    }, 100);
+    return () => {
+      clearTimeout(fallbackTimer);
+      clearTimeout(t);
+      removeComplete?.();
+    };
+  }, [showSuccess, onComplete]);
 
 
   return (
@@ -198,8 +196,8 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
               {...register('symbol', { required: 'Symbol is required' })}
               placeholder="AAPL, BTC, etc."
               className={clsx(
-                "w-full rounded-md border px-3 py-2 bg-[#202020] text-white placeholder-[#303030]",
-                errors.symbol ? "border-danger" : "border-[#1e1e1e]/60"
+                "w-full rounded-md border px-3 py-2 min-h-[48px] bg-[#202020] text-white placeholder-[#303030]",
+                errors.symbol ? "border-danger" : "border-[0.4px] border-white/10"
               )}
               style={{
                 WebkitBoxShadow: '0 0 0 1000px #202020 inset',
@@ -223,8 +221,8 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
               step="any"
               placeholder="0"
               className={clsx(
-                "w-full rounded-md border px-3 py-2 bg-[#202020] text-white placeholder-[#303030]",
-                errors.quantity ? "border-danger" : "border-[#1e1e1e]/60"
+                "w-full rounded-md border px-3 py-2 min-h-[48px] bg-[#202020] text-white placeholder-[#303030]",
+                errors.quantity ? "border-danger" : "border-[0.4px] border-white/10"
               )}
               style={{
                 WebkitBoxShadow: '0 0 0 1000px #202020 inset',
@@ -296,8 +294,8 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
               step="any"
               placeholder="0.00"
               className={clsx(
-                "w-full rounded-md border px-3 py-2 bg-[#202020] text-white placeholder-[#303030]",
-                errors.entryPrice ? "border-danger" : "border-[#1e1e1e]/60"
+                "w-full rounded-md border px-3 py-2 min-h-[48px] bg-[#202020] text-white placeholder-[#303030]",
+                errors.entryPrice ? "border-danger" : "border-[0.4px] border-white/10"
               )}
               style={{
                 WebkitBoxShadow: '0 0 0 1000px #202020 inset',
@@ -318,8 +316,8 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
               {...register('exitPrice', {
                 setValueAs: (v) => (v === '' || v === null ? undefined : Number(v)),
                 validate: (v) => {
-                  // Allow empty for pending trades; if provided, must be > 0
-                  if (v === '' || v == null) return true;
+                  // Allow empty for pending trades; if provided, must be >= 0
+                  if (v == null || v === undefined) return true;
                   const num = typeof v === 'number' ? v : Number(v);
                   return num >= 0 || 'Exit price must be zero or positive';
                 }
@@ -327,8 +325,8 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
               step="any"
               placeholder="0.00"
               className={clsx(
-                "w-full rounded-md border px-3 py-2 bg-[#202020] text-white placeholder-[#303030]",
-                errors.exitPrice ? "border-danger" : "border-[#1e1e1e]/60"
+                "w-full rounded-md border px-3 py-2 min-h-[48px] bg-[#202020] text-white placeholder-[#303030]",
+                errors.exitPrice ? "border-danger" : "border-[0.4px] border-white/10"
               )}
               style={{
                 WebkitBoxShadow: '0 0 0 1000px #202020 inset',
@@ -355,8 +353,8 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
             })}
             placeholder="https://example.com/trade-screenshot"
             className={clsx(
-              "w-full rounded-md border px-3 py-2 bg-[#202020] text-white placeholder-[#303030]",
-              errors.link ? "border-danger" : "border-[#1e1e1e]/60"
+              "w-full rounded-md border px-3 py-2 min-h-[48px] bg-[#202020] text-white placeholder-[#303030]",
+              errors.link ? "border-danger" : "border-[0.4px] border-white/10"
             )}
             style={{
               WebkitBoxShadow: '0 0 0 1000px #202020 inset',
@@ -378,7 +376,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
             {...register('setupNotes')}
             rows={4}
             placeholder="Describe your trade setup and strategy..."
-            className="w-full rounded-md border border-[#1e1e1e]/60 px-3 py-2 bg-[#202020] text-white placeholder-[#303030]"
+            className="w-full rounded-md border-[0.4px] border-white/10 px-3 py-2 bg-[#202020] text-white placeholder-[#303030]"
           ></textarea>
         </div>
 
@@ -386,7 +384,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
         <div className="add-trade-form-actions flex justify-end gap-4">
           <button
             type="button"
-            className="add-trade-cancel-btn px-4 py-2 border border-[#1e1e1e]/60 rounded-md bg-[#202020] text-white transition-colors duration-200"
+            className="add-trade-cancel-btn px-4 py-2 border border-[#1e1e1e]/60 rounded-md bg-[#202020] text-white transition-colors duration-200 focus:outline-none focus:ring-0"
             onClick={() => {
               setIsFormOpen(false); // Allow navigation when canceling
               onComplete();
@@ -396,7 +394,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
           </button>
           <button
             type="submit"
-            className="add-trade-submit-btn px-4 py-2 bg-[#202020] text-white rounded-md transition-colors duration-200"
+            className="add-trade-submit-btn px-4 py-2 bg-[#202020] text-white rounded-md transition-colors duration-200 focus:outline-none focus:ring-0"
             aria-label={existingTrade ? 'Update trade information' : 'Add new trade'}
           >
             {existingTrade ? 'Update Trade' : 'Add Trade'}
@@ -404,13 +402,22 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
         </div>
 
         {showSuccess && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div className="bg-gray-800 rounded-lg p-6 shadow-lg flex flex-col items-center">
-              <CheckCircle className="text-success h-16 w-16 mb-4" />
-              <h3 className="text-xl font-bold text-white mb-2">
-                {existingTrade ? 'Trade Updated!' : 'Trade Added!'}
-              </h3>
-              <p className="text-gray-300 mb-4">Your trade has been successfully saved.</p>
+          <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/70 backdrop-blur-sm">
+            <div className="confirmation-done flex flex-col items-center justify-center rounded-2xl p-8 max-w-sm text-center">
+              <div ref={dotlottieContainerRef} className="lottie-success-done mb-5 flex items-center justify-center flex-shrink-0">
+                {/* @ts-expect-error dotlottie-wc web component */}
+                <dotlottie-wc
+                  src="https://lottie.host/f8d70e51-c7b3-416b-81ee-c685d2cde7da/oQc6G8AypK.lottie"
+                  style={{ width: '200px', height: '200px' }}
+                  autoplay
+                />
+              </div>
+              <h2 className="text-xl font-semibold text-white mb-1">
+                {existingTrade ? 'Trade updated' : 'Trade added'}
+              </h2>
+              <p className="text-sm text-neutral-400">
+                {existingTrade ? 'Your changes have been saved.' : 'Your trade has been saved successfully.'}
+              </p>
             </div>
           </div>
         )}

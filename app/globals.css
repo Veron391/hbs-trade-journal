@@ -338,24 +338,32 @@ datalist option {
   color: white !important;
 }
 
-/* Add Trade form: inputs/buttons bg #202020, outline #1e1e1e 60% default, 100% on hover */
+/* Add Trade form: inputs/textarea/date-picker bg #202020, outline oq 10% 0.4px (Cancel/Add Trade bu blokda emas) */
 .add-trade-form input,
 .add-trade-form select,
 .add-trade-form textarea,
 .add-trade-form .date-picker-trigger,
-.add-trade-form .add-trade-form-actions button {
+.add-trade-form .add-trade-toggle-track {
   background-color: #202020 !important;
-  outline: 2px solid rgba(30, 30, 30, 0.6);
+  outline: 0.4px solid rgba(255, 255, 255, 0.1);
   outline-offset: 0;
   transition: outline-color 0.2s;
+}
+/* Entry/Exit date bilan bir xil balandlik – faqat input, select, date-picker (Cancel / Add Trade o‘zgartirilmaydi) */
+.add-trade-form input,
+.add-trade-form select,
+.add-trade-form .date-picker-trigger {
+  min-height: 48px;
+}
+.add-trade-form textarea {
+  min-height: auto;
 }
 .add-trade-form input:hover,
 .add-trade-form select:hover,
 .add-trade-form textarea:hover,
 .add-trade-form .date-picker-trigger:hover,
-.add-trade-form .add-trade-form-actions button:hover,
 .add-trade-form .add-trade-toggle-track:hover {
-  outline-color: #1e1e1e;
+  outline-color: rgba(255, 255, 255, 0.1);
 }
 
 /* Add Trade form: placeholder/sample text 30% opacity */
@@ -366,6 +374,15 @@ datalist option {
 .add-trade-form input::-webkit-input-placeholder,
 .add-trade-form textarea::-webkit-input-placeholder {
   opacity: 0.3;
+}
+/* Entry/Exit date placeholder: 100% opacity, #636363 */
+.add-trade-form .date-picker-trigger input::placeholder {
+  opacity: 1;
+  color: #636363;
+}
+.add-trade-form .date-picker-trigger input::-webkit-input-placeholder {
+  opacity: 1;
+  color: #636363;
 }
 .add-trade-form input:focus,
 .add-trade-form textarea:focus,
@@ -393,18 +410,34 @@ datalist option {
   box-shadow: none !important;
 }
 
-/* Add Trade action buttons: hover — 50% opacity bg, outline color change */
-.add-trade-form .add-trade-cancel-btn:hover {
+/* Add Trade action buttons: default/focus — oq outline/ring yo‘q; hover — rangli outline */
+.add-trade-form .add-trade-cancel-btn,
+.add-trade-form .add-trade-cancel-btn:focus,
+.add-trade-form .add-trade-cancel-btn:focus-visible,
+.add-trade-form .add-trade-submit-btn,
+.add-trade-form .add-trade-submit-btn:focus,
+.add-trade-form .add-trade-submit-btn:focus-visible {
+  outline: none !important;
+  outline-offset: 0;
+  box-shadow: none !important;
+}
+.add-trade-form .add-trade-cancel-btn:hover,
+.add-trade-form .add-trade-cancel-btn:hover:focus,
+.add-trade-form .add-trade-cancel-btn:hover:focus-visible {
   background-color: rgba(85, 53, 39, 0.5) !important;
   color: white !important;
   outline: 2px solid #553527 !important;
   outline-offset: 0;
+  box-shadow: none !important;
 }
-.add-trade-form .add-trade-submit-btn:hover {
+.add-trade-form .add-trade-submit-btn:hover,
+.add-trade-form .add-trade-submit-btn:hover:focus,
+.add-trade-form .add-trade-submit-btn:hover:focus-visible {
   background-color: rgba(217, 254, 67, 0.5) !important;
   color: #D9FE43 !important;
   outline: 2px solid #D9FE43 !important;
   outline-offset: 0;
+  box-shadow: none !important;
 }
 
 /* Stats KPI cards: Arial Rounded MT */
@@ -472,4 +505,46 @@ input[type="url"]:focus {
 .recharts-responsive-container:focus-visible {
   outline: none !important;
   box-shadow: none !important;
+}
+
+/* Add Trade – confirmation done (Lottie + message) */
+.confirmation-done {
+  background-color: #101010;
+  border: 1px solid rgba(30, 30, 30, 0.6);
+  outline: 1px solid rgba(30, 30, 30, 0.6);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+}
+
+/* Lottie done animation – orange to #D9FE43 */
+.lottie-success-done {
+  filter: hue-rotate(45deg) saturate(1.05) brightness(1.08);
+}
+.lottie-success-done canvas {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* Confirmation done tick – circle + check in #D9FE43 (fallback) */
+.confirmation-done-tick svg {
+  display: block;
+}
+.confirmation-tick-circle {
+  stroke-dasharray: 226;
+  stroke-dashoffset: 226;
+  animation: confirmation-circle-draw 0.5s ease-out forwards;
+}
+.confirmation-tick-path {
+  stroke-dasharray: 65;
+  stroke-dashoffset: 65;
+  animation: confirmation-tick-draw 0.4s ease-out 0.45s forwards;
+}
+@keyframes confirmation-circle-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes confirmation-tick-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
 }
