@@ -18,7 +18,7 @@ export default function ConditionalFooter() {
       aria-label="Footer"
     >
       <div className="container mx-auto px-4 py-4 text-center">
-        <p className="text-xl font-bold">HBS treyder jurnali</p>
+        <p className="text-xl font-bold">Treyding jurnali</p>
       </div>
     </footer>
   );

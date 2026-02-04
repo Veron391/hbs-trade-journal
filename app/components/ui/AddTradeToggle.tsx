@@ -104,7 +104,7 @@ export default function AddTradeToggle({
           ${error ? 'ring-1 ring-red-500' : ''}
         `}
         style={{
-          backgroundColor: 'rgba(32, 32, 32, 0.82)',
+          backgroundColor: '#202020',
           outline: '0.4px solid rgba(255, 255, 255, 0.1)',
           outlineOffset: 0,
         }}

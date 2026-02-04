@@ -22,7 +22,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Trade Journal App",
+  title: "Saraf Trading Journal",
   description: "Track and analyze your stock and crypto trades",
 };
 

@@ -17,9 +17,9 @@ export default function StudentLayout({
         <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-4 flex justify-between items-center">
           <Link href="/" className="text-lg sm:text-xl font-bold flex items-center gap-2">
             <img
-              src="https://online.hbsakademiya.uz/images/svg/logo.svg"
-              alt="HBS Academy"
-              className="h-6 sm:h-8 w-auto logo-partial-white"
+              src="/saraf-logo.png"
+              alt="Saraf"
+              className="h-6 sm:h-8 w-auto"
             />
           </Link>
           <NavMenu />
