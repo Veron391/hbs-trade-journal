@@ -197,7 +197,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
               placeholder="AAPL, BTC, etc."
               className={clsx(
                 "w-full rounded-md border px-3 py-2 min-h-[48px] bg-[#202020] text-white placeholder-[#303030]",
-                errors.symbol ? "border-danger" : "border-[0.4px] border-white/10"
+                errors.symbol ? "border-danger" : "border border-white/10"
               )}
               style={{
                 WebkitBoxShadow: '0 0 0 1000px #202020 inset',
@@ -222,7 +222,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
               placeholder="0"
               className={clsx(
                 "w-full rounded-md border px-3 py-2 min-h-[48px] bg-[#202020] text-white placeholder-[#303030]",
-                errors.quantity ? "border-danger" : "border-[0.4px] border-white/10"
+                errors.quantity ? "border-danger" : "border border-white/10"
               )}
               style={{
                 WebkitBoxShadow: '0 0 0 1000px #202020 inset',
@@ -295,7 +295,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
               placeholder="0.00"
               className={clsx(
                 "w-full rounded-md border px-3 py-2 min-h-[48px] bg-[#202020] text-white placeholder-[#303030]",
-                errors.entryPrice ? "border-danger" : "border-[0.4px] border-white/10"
+                errors.entryPrice ? "border-danger" : "border border-white/10"
               )}
               style={{
                 WebkitBoxShadow: '0 0 0 1000px #202020 inset',
@@ -326,7 +326,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
               placeholder="0.00"
               className={clsx(
                 "w-full rounded-md border px-3 py-2 min-h-[48px] bg-[#202020] text-white placeholder-[#303030]",
-                errors.exitPrice ? "border-danger" : "border-[0.4px] border-white/10"
+                errors.exitPrice ? "border-danger" : "border border-white/10"
               )}
               style={{
                 WebkitBoxShadow: '0 0 0 1000px #202020 inset',
@@ -354,7 +354,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
             placeholder="https://example.com/trade-screenshot"
             className={clsx(
               "w-full rounded-md border px-3 py-2 min-h-[48px] bg-[#202020] text-white placeholder-[#303030]",
-              errors.link ? "border-danger" : "border-[0.4px] border-white/10"
+              errors.link ? "border-danger" : "border border-white/10"
             )}
             style={{
               WebkitBoxShadow: '0 0 0 1000px #202020 inset',
@@ -376,7 +376,7 @@ export default function TradeForm({ existingTrade, onComplete }: TradeFormProps)
             {...register('setupNotes')}
             rows={4}
             placeholder="Describe your trade setup and strategy..."
-            className="w-full rounded-md border-[0.4px] border-white/10 px-3 py-2 bg-[#202020] text-white placeholder-[#303030]"
+            className="w-full rounded-md border border-white/10 px-3 py-2 bg-[#202020] text-white placeholder-[#303030]"
           ></textarea>
         </div>
 

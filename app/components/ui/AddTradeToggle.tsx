@@ -105,7 +105,7 @@ export default function AddTradeToggle({
         `}
         style={{
           backgroundColor: '#202020',
-          outline: '0.4px solid rgba(255, 255, 255, 0.1)',
+          outline: '1px solid rgba(255, 255, 255, 0.1)',
           outlineOffset: 0,
         }}
       >

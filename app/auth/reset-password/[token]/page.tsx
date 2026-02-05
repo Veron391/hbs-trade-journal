@@ -75,10 +75,10 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md">
         <div className="p-6 bg-[#1C1719] rounded-lg shadow-lg">
         <div className="flex items-center justify-center mb-6">
-                      <img 
-                src="https://online.hbsakademiya.uz/images/svg/logo.svg" 
-                alt="HBS Academy" 
-                className="h-8 w-auto logo-partial-white"
+                      <img
+                src="/saraf-logo.png"
+                alt="Saraf"
+                className="h-6 sm:h-7 w-auto"
               />
         </div>
         <h1 className="text-2xl font-bold text-white mb-6 text-center">Reset Your Password</h1>

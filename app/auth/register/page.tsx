@@ -101,13 +101,16 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#090909] px-2 sm:px-4 py-4 sm:py-8">
-      <div className="max-w-md w-full p-4 sm:p-6 bg-[#131313] rounded-lg shadow-lg">
+    <div
+      className="min-h-screen flex items-center justify-center px-3 sm:px-6 py-6 sm:py-10 bg-[#050505] bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: 'url(\"/auth-bg.png\")' }}
+    >
+      <div className="max-w-lg w-full p-6 sm:p-8 rounded-2xl border border-white/15 bg-[rgba(10,10,10,0.2)] backdrop-blur-2xl shadow-[0_24px_60px_rgba(0,0,0,0.85)]">
         <div className="flex items-center justify-center mb-4 sm:mb-6">
           <img
-            src="https://online.hbsakademiya.uz/images/svg/logo.svg"
-            alt="HBS Academy"
-            className="h-7 sm:h-8 w-auto logo-partial-white"
+            src="/saraf-logo.png"
+            alt="Saraf"
+            className="h-6 sm:h-7 w-auto"
           />
         </div>
         <h1 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6 text-center">Hisob yaratish</h1>
@@ -118,7 +121,7 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} autoComplete="off">
+        <form className="auth-form" onSubmit={handleSubmit} autoComplete="off">
           <FormInput
             id="fullName"
             label="To'liq ism-familiyangiz"
@@ -128,7 +131,7 @@ export default function RegisterPage() {
             required
             error={errors.fullName}
             autoComplete="off"
-            backgroundColor="#202020"
+            backgroundColor="#3E433E"
           />
           <FormInput
             id="username"
@@ -139,7 +142,7 @@ export default function RegisterPage() {
             required
             error={errors.username}
             autoComplete="off"
-            backgroundColor="#202020"
+            backgroundColor="#3E433E"
           />
 
           <FormInput
@@ -151,7 +154,7 @@ export default function RegisterPage() {
             required
             error={errors.phoneNumber}
             autoComplete="off"
-            backgroundColor="#202020"
+            backgroundColor="#3E433E"
           />
 
           <FormInput
@@ -163,7 +166,7 @@ export default function RegisterPage() {
             required
             error={errors.email}
             autoComplete="off"
-            backgroundColor="#202020"
+            backgroundColor="#3E433E"
           />
 
           <FormInput
@@ -175,7 +178,7 @@ export default function RegisterPage() {
             required
             error={errors.password}
             autoComplete="new-password"
-            backgroundColor="#202020"
+            backgroundColor="#3E433E"
           />
 
           <FormInput
@@ -187,7 +190,7 @@ export default function RegisterPage() {
             required
             error={errors.confirmPassword}
             autoComplete="new-password"
-            backgroundColor="#202020"
+            backgroundColor="#3E433E"
           />
 
           <div className="mt-4 sm:mt-6">

@@ -212,7 +212,7 @@ export default function DatePicker({ value, onChange, placeholder, className, er
       <div
         className={`
           date-picker-trigger relative flex items-center w-full rounded-md border px-3 py-2 min-h-[48px] bg-[#202020] text-white cursor-pointer transition-colors
-          ${error ? 'border-red-500 focus-within:border-red-500' : 'border-[0.4px] border-white/10 focus-within:border-[0.4px] focus-within:border-[#D9FE43]'}
+          ${error ? 'border-red-500 focus-within:border-red-500' : 'border border-white/10 focus-within:border focus-within:border-[#D9FE43]'}
           ${className || ''}
         `}
         onClick={handleToggle}

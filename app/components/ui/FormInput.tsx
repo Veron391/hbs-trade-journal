@@ -35,6 +35,19 @@ export default function FormInput({
   const hasValue = value.length > 0;
   const isLabelFloating = isFocused || hasValue;
 
+  // Ma'lumotlar to'ldiriladigan inputlar: bo'sh 15% shaffof, to'ldirilganda 20% o'z rangida
+  const parseHexToRgba = (hex: string, alpha: number) => {
+    const m = hex.replace(/^#/, '').match(/^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+    if (!m) return null;
+    const r = parseInt(m[1], 16);
+    const g = parseInt(m[2], 16);
+    const b = parseInt(m[3], 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+  const emptyBg = parseHexToRgba(backgroundColor, 0.15) ?? backgroundColor;
+  const filledBg = parseHexToRgba(backgroundColor, 0.2) ?? backgroundColor;
+  const resolvedBg = hasValue ? filledBg : emptyBg;
+
   // Check for autofill on mount and after a delay
   useEffect(() => {
     const checkAutofill = () => {
@@ -88,33 +101,38 @@ export default function FormInput({
           }}
           required={required}
           autoComplete={autoComplete}
-          className={`w-full px-2 sm:px-3 border-2 rounded-md text-base
+          className={`w-full px-2 sm:px-3 border rounded-md text-base bg-transparent
             focus:outline-none focus:ring-1 
             ${error ? 'border-danger focus:ring-red-500' : 'border-[#534E50]/30 focus:border-white/60 focus:ring-white/60'}
             ${isLabelFloating ? 'pt-4 pb-3' : 'py-2.5'}
             ${isPassword ? 'pr-10 sm:pr-10' : ''}`}
           style={{
-            WebkitBoxShadow: `0 0 0 1000px ${backgroundColor} inset`,
-            boxShadow: `0 0 0 1000px ${backgroundColor} inset`,
-            backgroundColor: backgroundColor,
+            WebkitBoxShadow: `0 0 0 1000px ${resolvedBg} inset`,
+            boxShadow: `0 0 0 1000px ${resolvedBg} inset`,
+            backgroundColor: resolvedBg,
             WebkitTextFillColor: value ? 'rgba(255, 255, 255, 1)' : 'rgba(156, 163, 175, 0.4)',
             color: value ? 'rgba(255, 255, 255, 1)' : 'rgba(156, 163, 175, 0.4)',
             caretColor: 'rgba(255, 255, 255, 1)',
             lineHeight: '1.5',
+            backdropFilter: 'blur(18px)',
+            WebkitBackdropFilter: 'blur(18px)',
             transition: 'background-color 5000s ease-in-out 0s, color 0.2s ease-in-out'
           }}
         />
         <label
           htmlFor={id}
-          className={`absolute left-2 sm:left-3 pointer-events-none transition-all duration-200 ${isLabelFloating
-            ? 'top-0 -translate-y-1/2 text-xs text-gray-300 px-1 rounded'
-            : 'top-1/2 -translate-y-1/2 text-xs sm:text-sm text-gray-400'
+          className={`absolute left-2 sm:left-3 pointer-events-none transition-all duration-200 z-[1] ${isLabelFloating
+            ? 'top-0 -translate-y-1/2 text-xs rounded'
+            : 'top-1/2 -translate-y-1/2 text-xs sm:text-sm'
             }`}
           style={isLabelFloating ? {
-            background: backgroundColor,
-            paddingLeft: '4px',
-            paddingRight: '4px'
-          } : {}}
+            background: 'var(--floating-label-bg, #141B16)',
+            color: '#7c7c7c',
+            paddingLeft: '6px',
+            paddingRight: '6px',
+            paddingTop: '2px',
+            paddingBottom: '2px',
+          } : { color: '#939393' }}
         >
           {label} {required && <span className="text-danger">*</span>}
         </label>

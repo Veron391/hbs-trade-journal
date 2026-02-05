@@ -164,9 +164,13 @@ export default function NavMenu() {
     );
   }
 
+  // Guest menu (Login/Register) faqat auth sahifalarida — asosiy sahifalarda flash oldini olish
+  const isAuthPage = current === '/auth/login' || current === '/auth/register' || current.startsWith('/auth/forgot-password') || current.startsWith('/auth/reset-password');
+  const showGuestMenu = !user && isAuthPage;
+
   return (
     <nav className="flex items-center justify-between w-full" role="navigation" aria-label="Main navigation">
-      {user && !loading ? (
+      {user ? (
         // Authenticated user menu
         <>
           <div className="flex-1"></div>
@@ -429,8 +433,8 @@ export default function NavMenu() {
             </div>
           </div>
         </>
-      ) : !loading ? (
-        // Guest menu - only show when not loading
+      ) : showGuestMenu ? (
+        // Guest menu — faqat login/register sahifalarida, logo yonida flash bo‘lmasin
         <ul className="flex space-x-2 sm:space-x-4">
           <li>
             <Link
@@ -453,7 +457,10 @@ export default function NavMenu() {
             </Link>
           </li>
         </ul>
-      ) : null}
+      ) : (
+        // Asosiy sahifalarda user yo‘q bo‘lsa bo‘sh nav (Login/Register flash yo‘q)
+        <div className="flex-1" />
+      )}
     </nav>
   );
 } 
